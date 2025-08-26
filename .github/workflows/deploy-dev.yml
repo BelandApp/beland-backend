@@ -1,0 +1,73 @@
+name: Manual Deploy - Develop
+
+on:
+  workflow_dispatch:
+    inputs:
+      bitbucket_branch:
+        description: 'Environment to deploy'
+        required: true
+        default: 'develop'
+
+env:
+  GCLOUD_PROJECT_DEV: ${{ secrets.GCLOUD_PROJECT_DEV }}
+  REGION_DEV: us-east4
+  GCLOUD_API_KEYFILE_DEV: ${{ secrets.GCLOUD_API_KEYFILE_DEV }}
+  REPO_NAME: ${{ secrets.REPO_NAME }}
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    env:
+      BITBUCKET_BRANCH: ${{ github.event.inputs.bitbucket_branch }}
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # equivalente a clone: depth: full
+
+      - name: Autenticación con GCP
+        run: |
+          echo "${GCLOUD_API_KEYFILE_DEV}" | base64 -d > ./gcloud-api-key.json
+          gcloud auth activate-service-account --key-file=gcloud-api-key.json
+          gcloud config set project $GCLOUD_PROJECT_DEV
+
+      - name: Build & Push Docker
+        run: |
+          export DOCKER_BUILDKIT=0
+          PROYECT_NAME="beland-backend"
+          SERVICE_NAME="beland-backend"
+          LOCATION=$REGION_DEV
+
+          docker build --no-cache --platform linux/amd64 -t $PROYECT_NAME -f Dockerfile .
+          gcloud auth configure-docker $LOCATION-docker.pkg.dev
+
+          IMAGE_NAME=$LOCATION-docker.pkg.dev/$GCLOUD_PROJECT_DEV/$REPO_NAME/$PROYECT_NAME
+          docker tag $PROYECT_NAME $IMAGE_NAME
+          docker push $IMAGE_NAME
+
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
+          echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
+
+      - name: Cargar archivo de variables de entorno
+        run: |
+          BRANCH=$(echo "${{ github.event.inputs.bitbucket_branch }}" | tr '[:lower:]' '[:upper:]')
+          SECRET_NAME="ENV_VARS_JSON_${BRANCH}"
+
+          echo "Usando secret: $SECRET_NAME"
+
+          # Usa eval para acceder dinámicamente al secret
+          SECRET_VALUE="${{ toJSON(secrets) }}"
+          VALUE=$(echo "$SECRET_VALUE" | jq -r ".\"$SECRET_NAME\"")
+
+          echo "$VALUE" | base64 -d > env-vars.json
+
+      - name: Deploy en Cloud Run
+        run: |
+          gcloud run deploy $SERVICE_NAME \
+            --image $IMAGE_NAME \
+            --region=$REGION_DEV \
+            --platform managed \
+            --quiet \
+            --allow-unauthenticated \
+            --env-vars-file=env-vars.json
