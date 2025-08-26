@@ -50,25 +50,12 @@ jobs:
           echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
           echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
 
-      - name: Cargar archivo de variables de entorno
-        run: |
-          BRANCH=$(echo "${{ github.event.inputs.bitbucket_branch }}" | tr '[:lower:]' '[:upper:]')
-          SECRET_NAME="ENV_VARS_JSON_${BRANCH}"
-
-          echo "Usando secret: $SECRET_NAME"
-
-          # Usa eval para acceder dinámicamente al secret
-          SECRET_VALUE="${{ toJSON(secrets) }}"
-          VALUE=$(echo "$SECRET_VALUE" | jq -r ".\"$SECRET_NAME\"")
-
-          echo "$VALUE" | base64 -d > env-vars.json
-
       - name: Deploy en Cloud Run
         run: |
           gcloud run deploy $SERVICE_NAME \
             --image $IMAGE_NAME \
             --region=$REGION_DEV \
             --platform managed \
-            --quiet \
             --allow-unauthenticated \
-            --env-vars-file=env-vars.json
+            --env-vars-file=develop.json
+
