@@ -17,6 +17,7 @@ env:
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
+    environment: develop
     env:
       BITBUCKET_BRANCH: ${{ github.event.inputs.bitbucket_branch }}
 
