@@ -1,7 +1,7 @@
 {
     "JWT_SECRET": "super_secret_key",
     "DB_TYPE": "postgres",
-    "DB_HOST": "34.139.74.1",
+    "DB_HOST": "172.19.16.3",
     "DB_PORT": "5432",
     "DB_USERNAME":"belandUser",
     "DB_PASSWORD": "k4OXYo4SxxK0NXAV#",
