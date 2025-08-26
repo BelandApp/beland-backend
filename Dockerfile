@@ -1,6 +1,6 @@
 FROM node:23
 
-# update and install dependencies
+# Actualizar e instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     fonts-liberation \
     libasound2 \
@@ -25,27 +25,27 @@ RUN apt-get update && apt-get install -y \
     xdg-utils && \
     apt-get clean && \
     apt-get autoclean && \
-    apt-get update && apt-get upgrade -y && apt-get clean
+    apt-get upgrade -y && \
+    apt-get clean
 
-# create root application folder
+# Establecer directorio de trabajo
 WORKDIR /app
 
-# copy configs to /app folder
+# Copiar archivos de configuración
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY tsconfig.build.json ./
 
-# copy source code to /app/src folder
+# Copiar el código fuente
 COPY src /app/src
 
-# install app dependencies & build
-RUN npm install -g npm@9.6.5 typescript && \
-    npm install -s && \
-    npm run build
+# Instalar dependencias y compilar por pasos para ver errores si ocurren
+RUN npm install -g npm@9.6.5 typescript
+RUN npm install
+RUN npm run build
 
-
-# port
+# Exponer puerto
 EXPOSE 3000
 
-# start command
+# Comando para iniciar
 CMD [ "node", "./dist/main.js" ]
