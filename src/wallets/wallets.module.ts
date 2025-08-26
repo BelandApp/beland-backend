@@ -4,13 +4,11 @@ import { WalletsController } from './wallets.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Wallet } from './entities/wallet.entity';
 import { WalletsRepository } from './wallets.repository';
-import { Transaction } from 'src/transactions/entities/transaction.entity';
 import { HttpModule } from '@nestjs/axios';
-import { TransactionType } from 'src/transaction-type/entities/transaction-type.entity';
-import { TransactionState } from 'src/transaction-state/entities/transaction-state.entity';
+import { NotificationsSocketModule } from 'src/notification-socket/notification-socket.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Wallet, Transaction, TransactionType, TransactionState]), HttpModule],
+  imports: [NotificationsSocketModule, TypeOrmModule.forFeature([Wallet]), HttpModule],
   controllers: [WalletsController],
   providers: [WalletsService, WalletsRepository],
 })

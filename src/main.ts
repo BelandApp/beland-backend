@@ -1,67 +1,129 @@
-// src/main.ts
-import * as crypto from "crypto";
-
-// Solo si crypto no existe o no tiene "subtle"
+import * as crypto from 'crypto';
+// Polyfill para crypto.subtle si no está disponible (ej. en algunos entornos Node)
 if (!(globalThis as any).crypto?.subtle) {
   (globalThis as any).crypto = crypto.webcrypto;
 }
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger, LogLevel } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { json, raw } from 'express';
+import { ConfigService } from '@nestjs/config';
 
-// import { RequestLoggerMiddleware } from './middleware/request-logger.middleware'; // Nombre corregido 'middleware'
+// Importaciones de middlewares de seguridad
+import compression from 'compression';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
+    // Configuración del logger basada en el entorno
     logger:
       process.env.NODE_ENV === 'production'
         ? ['error', 'warn', 'log']
         : (['debug', 'log', 'warn', 'error', 'verbose'] as LogLevel[]),
   });
 
-  // Prefijo global API
+  const configService = app.get(ConfigService);
+  const appLogger = new Logger('main.ts');
+
+  // --- Seguridad y Middleware ---
+  app.use(helmet());
+  app.use(compression());
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: configService.get<number>('THROTTLE_LIMIT') || 100,
+      message:
+        'Demasiadas solicitudes desde esta IP, por favor intente de nuevo después de 15 minutos.',
+    }),
+  );
+
   app.setGlobalPrefix('api');
-
-  // Filtro global para excepciones HTTP
   app.useGlobalFilters(new HttpExceptionFilter());
-
-  // Validaciones globales: Seguridad, conversión y limpieza de DTOs
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Elimina propiedades no declaradas en DTO
-      forbidNonWhitelisted: true, // Lanza error si hay extra props
-      transform: true, // Convierte strings de query a int, etc
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // permite @Type(() => Number) y cast automático
+        enableImplicitConversion: true,
       },
     }),
   );
 
-  // CORS para dominios permitidos
+  // --- Configuración de CORS simplificada y segura ---
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  const appMainUrlProd = configService.get<string>('APP_MAIN_URL_PROD');
+  const appMainUrlLocal = configService.get<string>('APP_MAIN_URL_LOCAL');
+  const appLandingUrlProd = configService.get<string>('APP_LANDING_URL_PROD');
+  const appLandingUrlLocal = configService.get<string>('APP_LANDING_URL_LOCAL');
+
+  appLogger.debug(`${appMainUrlProd}`, 'URL PRODUCCION');
+  appLogger.debug(`${appMainUrlLocal}`, 'URL local MAIN');
+  appLogger.debug(`${appLandingUrlProd}`, 'URL lANDING PRODUCCION');
+  appLogger.debug(`${appLandingUrlLocal}`, 'URL LANDING LOCAL');
+
+  const allowedOrigins: (string | RegExp)[] = isProduction
+    ? [
+        appMainUrlProd,
+        appLandingUrlProd,
+        'https://beland-project.netlify.app',
+        'https://beland-production.up.railway.app/api',
+        'https://belandlanding.vercel.app',
+        configService.get<string>('CORS_ADDITIONAL_ORIGINS_PROD'),
+        configService.get<string>('AUTH0_AUDIENCE'),
+      ].filter(Boolean)
+    : [
+        appMainUrlLocal,
+        appLandingUrlLocal,
+        configService.get<string>('CORS_ADDITIONAL_ORIGINS_LOCAL'),
+        configService.get<string>('AUTH0_AUDIENCE'),
+        'http://localhost:3001',
+        'http://[::1]:3001',
+        'https://beland-project.netlify.app',
+        'https://beland-production.up.railway.app/api',
+        'https://belandlanding.vercel.app',
+        /https:\/\/\w+\-beland\-\d+\.exp\.direct$/,
+        /https:\/\/\w+\-anonymous\-\d+\.exp\.direct$/,
+      ].filter(Boolean);
+
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://beland.app',
-      'https://*-beland-8081.exp.direct',
-      'http://localhost:8081',
-      'https://auth.expo.io/@beland/Beland',
-      'belandnative://redirect',
-      'http://localhost:8081/api',
-      'https://eoy0nfm-beland-8081.exp.direct',
-      'https://nl6egxw-anonymous-8081.exp.direct',
-      'https://zef_jly-anonymous-8081.exp.direct',
-    ],
+    origin: (origin, callback) => {
+      if (!origin) {
+        appLogger.debug(`CORS: Origen no proporcionado, permitiendo acceso.`);
+        return callback(null, true);
+      }
+
+      const isAllowed = allowedOrigins.some((allowedOrigin) => {
+        if (typeof allowedOrigin === 'string') {
+          return allowedOrigin === origin;
+        }
+        return allowedOrigin.test(origin);
+      });
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        appLogger.warn(`CORS: Origen "${origin}" NO permitido.`);
+        callback(new Error(`Not allowed by CORS: ${origin}`));
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Swagger/OpenAPI setup
-  const config = new DocumentBuilder()
+  appLogger.log(
+    `✅ CORS permitidos: ${allowedOrigins
+      .map((o) => (typeof o === 'string' ? o : o.source))
+      .join(', ')}`,
+  );
+  // --- Fin de la configuración de CORS simplificada ---
+
+  // Configuración de Swagger/OpenAPI
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('Beland API')
     .setDescription('Documentación de la API para la aplicación Beland')
     .setVersion('1.0')
@@ -74,34 +136,30 @@ async function bootstrap() {
         description: 'Ingresa el token JWT (Bearer Token)',
         in: 'header',
       },
-      'JWT-auth', // <--- usa exactamente este nombre en @ApiBearerAuth() en controllers
+      'JWT-auth',
     )
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {
-      docExpansion: 'none', // <--- Esto contrae todo por defecto
+      docExpansion: 'none',
       displayRequestDuration: true,
       filter: true,
       operationsSorter: 'alpha',
     },
   });
 
-  // Middleware para parsear JSON normal en todas las rutas excepto webhooks
+  // Middleware para parsear JSON y raw (para webhooks)
   app.use(json());
-
-  // Middleware para exponer rawBody SOLO en /webhook/payphone
   app.use('/webhook/payphone', raw({ type: 'application/json' }));
 
-  const port = process.env.PORT || 3001;
+  // Inicio de la aplicación en el puerto configurado
+  const port = configService.get<number>('PORT') || 3001;
   await app.listen(port);
 
-  Logger.log(`✅ Beland API corriendo en: ${await app.getUrl()}`, 'BelandAPI');
-  Logger.log(
-    `📘 Swagger disponible en: ${await app.getUrl()}/api/docs`,
-    'Swagger',
-  );
+  appLogger.log(`✅ Beland API corriendo en: http://localhost:${port}`);
+  appLogger.log(`📘 Swagger disponible en: http://localhost:${port}/api/docs`);
 }
 
 void bootstrap();
