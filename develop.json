@@ -1,11 +1,11 @@
 {
     "JWT_SECRET": "super_secret_key",
     "DB_TYPE": "postgres",
-    "DB_HOST": "aws-0-us-east-2.pooler.supabase.com",
-    "DB_PORT": "6543",
-    "DB_USERNAME":"postgres.jqyvwwlxvarvebxuabuh",
-    "DB_PASSWORD": "k4OXYo4SxxK0NXAV",
-    "DB_DATABASE": "postgres",
+    "DB_HOST": "34.139.74.1",
+    "DB_PORT": "5432",
+    "DB_USERNAME":"belandUser",
+    "DB_PASSWORD": "k4OXYo4SxxK0NXAV#",
+    "DB_DATABASE": "belandDev",
     "SUPABASE_URL": "https://jqyvwwlxvarvebxuabuh.supabase.co",
     "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxeXZ3d2x4dmFydmVieHVhYnVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzODYzMjcsImV4cCI6MjA2ODk2MjMyN30.XqhEZ91JFbYy4Y_c_5R64_9y3UqTyMiQOiGpVwd6APE",
     "AUTH0_AUDIENCE": "https://beland.onrender.com/api",
@@ -15,7 +15,7 @@
     "AUTH0_CONNECTION": "Username-Password-Authentication",
     "AUTH0_MANAGEMENT_CLIENT_ID": "TzhaMrSTRVqD0HCUPRX1XLezDk9IRivP",
     "AUTH0_MANAGEMENT_CLIENT_SECRET": "Ku0YKIKX3tbItAg3hBXdrWdV9cUNmSBo7fooytr42AY17aUDH04cgHCHXyJiyp2r",
-    "AUTH0_NAMESPACE"="https://beland.app/",
+    "AUTH0_NAMESPACE": "https://beland.app/",
     "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
     "THROTTLE_TTL": "60",
     "THROTTLE_LIMIT": "200",
@@ -35,5 +35,5 @@
     "PAYPHONE_CODIFICATION_PASSWORD": "195bc70ab87d4bb8be16a92f9bf87b40",
     "EMAIL_USER": "belandproject@gmail.com",
     "EMAIL_PASS": "gmkndsuvdehkwsgp",
-    "PORT"="3001",
+    "PORT": "3000"
 }
