@@ -11,10 +11,9 @@ export class SuperadminConfigService implements OnModuleInit {
   async onModuleInit() {
     // Podés cambiar el criterio de búsqueda si lo manejás con un flag en la DB
      const superadminWallet = await this.walletRepository.findSuperadminWallet();
-     if (!superadminWallet) {
-       throw new Error('No se encontró la wallet del superadmin');
+     if (superadminWallet) {
+       this.superadminWalletId = superadminWallet.id;
      }
-     this.superadminWalletId = superadminWallet.id;
   }
 
   getWalletId(): string {
