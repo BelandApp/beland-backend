@@ -1,7 +1,7 @@
 // src/database/migrations
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddCartTotalsTrigger1681023456789 implements MigrationInterface {
+export class AddCartTotalsTrigger1756232670788 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE OR REPLACE FUNCTION update_cart_totals()
