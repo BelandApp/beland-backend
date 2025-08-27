@@ -10,7 +10,7 @@ on:
 
 env:
   GCLOUD_PROJECT_DEV: ${{ secrets.GCLOUD_PROJECT_DEV }}
-  REGION_DEV: us-east4
+  REGION_DEV: us-east1
   GCLOUD_API_KEYFILE_DEV: ${{ secrets.GCLOUD_API_KEYFILE_DEV }}
   REPO_NAME: ${{ secrets.REPO_NAME }}
 
