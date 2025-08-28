@@ -531,10 +531,8 @@ async updateRolToSuperadmin(
     throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
   }
 
-  // 3. Actualizar solo el rol
+  // 3. Actualizar solo el rol_name
   user.role_name = role.name;
-  user.role = role;
-  user.role_id = role.role_id; // asegurás la FK también
 
   const updatedUser = await userRepo.save(user);
 
