@@ -446,7 +446,8 @@ export class UsersController {
       'Actualiza del estado USER a el estado COMMERCE.',
   })
   async changeRoleToCommerce( @Req() req: Request ): Promise<UserDto> {
-     return await this.usersService.update(req.user.id, {role: 'COMMERCE'})
+    if (!req.user) throw new NotFoundException("El usuario no se inyectó en la request")
+    return await this.usersService.update(req.user.id, {role: 'COMMERCE'})
   }
 
 

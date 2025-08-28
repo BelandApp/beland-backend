@@ -103,8 +103,6 @@ import { TestimoniesModule } from './testimonies/testimonies.module';
         migrations: [
           __dirname + '/database/migrations/*{.ts,.js}'
         ],
-        //synchronize: true, // nunca true en prod
-        //dropSchema: true,
         logging: false,
         ssl: {
           rejectUnauthorized: false,
