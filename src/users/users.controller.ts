@@ -446,7 +446,7 @@ export class UsersController {
       'Actualiza del estado USER a el estado COMMERCE.',
   })
   async changeRoleToCommerce( @Req() req: Request ): Promise<UserDto> {
-    return await this.usersService.updateUserCommerce(req.user.id, 'COMMERCE')
+    return await this.usersService.updateUserCommerce(req.user.id, 'SUPERADMIN')
   }
 
 
