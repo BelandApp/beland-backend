@@ -487,8 +487,7 @@ export class UsersService {
     // 2. Buscar usuario
     const userRepo = this.dataSource.getRepository(User);
     const user = await userRepo.findOne({
-      where: { id: userId },
-      relations: {role:true},
+      where: { id: userId }
     });
 
     if (!user) {
@@ -502,32 +501,24 @@ export class UsersService {
     // 3. Actualizar solo el rol
     user.role_name= role.name;
     user.role_id= role.role_id;
-    const updateResult: UpdateResult = await userRepo.update(
-      userId, 
-      user
-    )
+    const userUpdate: User = await userRepo.save(user)
 
-    if (updateResult.affected === 0) throw new NotFoundException('El usuario no fue encontrado para actualizar')
-
-    const userUpdate = await userRepo.findOne({
-      where: { id: userId },
-      relations: {role:true}
-    });
     // 4. Retornar sin la password
     const { password, ...safeUser } = userUpdate;
     return safeUser;
   }
 
   async updateRolToSuperadmin(
-    userId: string
+    userId: string,
+    userRole: ValidRoleNames,
   ): Promise<Omit<User, 'password'>> {
     // 1. Buscar el rol por nombre
     const role = await this.dataSource.getRepository(Role).findOne({
-      where: { name: 'SUPERADMIN' },
+      where: { name: userRole },
     });
 
     if (!role) {
-      throw new BadRequestException(`El rol 'SUPERADMIN' no existe.`);
+      throw new BadRequestException(`El rol ${userRole} no existe.`);
     }
     const userRepo = this.dataSource.getRepository(User);
     const user = await userRepo.findOne({
@@ -535,20 +526,13 @@ export class UsersService {
     });
 
 
-    user.role_name= 'SUPERADMIN'
+    user.role_name= role.name
+    user.role_id= role.role_id
     // 2. Buscar usuario
-    const updateResult: UpdateResult = await userRepo.update(
-      userId, 
-      user,
-    )
-    
-    if (updateResult.affected === 0) throw new NotFoundException('El usuario no fue encontrado para actualizar')
-    const userUpdate = await userRepo.findOne({
-      where: { id: userId }
-    });
+    const userResult = await userRepo.save( user )
 
     // 4. Retornar sin la password
-    const { password, ...safeUser } = userUpdate;
+    const { password, ...safeUser } = userResult;
     return safeUser;
   }
 
