@@ -446,8 +446,7 @@ export class UsersController {
       'Actualiza del estado USER a el estado COMMERCE.',
   })
   async changeRoleToCommerce( @Req() req: Request ): Promise<UserDto> {
-    throw new NotFoundException("error de prueba. si lo tira el error esta en el update del service")
-    return await this.usersService.update(req.user.id, {role: 'COMMERCE'})
+    return await this.usersService.updateUserCommerce(req.user.id, 'COMMERCE')
   }
 
 

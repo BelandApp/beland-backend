@@ -29,15 +29,16 @@ import { UserCard } from '../../user-cards/entities/user-card.entity';
 import { GroupInvitation } from '../../group-invitations/entities/group-invitation.entity';
 import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';
 import { Testimony } from '../../testimonies/entities/testimony.entity';
+import { ValidRoleNames } from 'src/roles/enum/role-validate.enum';
 
-// Definición de tipo para todos los roles válidos (importante para consistencia)
-export type ValidRoleNames =
-  | 'USER'
-  | 'LEADER'
-  | 'ADMIN'
-  | 'SUPERADMIN'
-  | 'COMMERCE'
-  | 'FUNDATION';
+// // Definición de tipo para todos los roles válidos (importante para consistencia)
+// export type ValidRoleNames =
+//   | 'USER'
+//   | 'LEADER'
+//   | 'ADMIN'
+//   | 'SUPERADMIN'
+//   | 'COMMERCE'
+//   | 'FUNDATION';
 
 @Entity('users')
 export class User {

@@ -23,6 +23,7 @@ import * as bcrypt from 'bcrypt';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { Wallet } from 'src/wallets/entities/wallet.entity';
 import { Cart } from 'src/cart/entities/cart.entity';
+import { ValidRoleNames } from 'src/roles/enum/role-validate.enum';
 
 // Constantes para los nombres de roles
 const ROLE_USER = 'USER';
@@ -31,14 +32,14 @@ const ROLE_ADMIN = 'ADMIN';
 const ROLE_SUPERADMIN = 'SUPERADMIN';
 const ROLE_EMPRESA = 'EMPRESA';
 
-// Definición de tipo para todos los roles válidos
-type ValidRoleNames =
-  | 'USER'
-  | 'LEADER'
-  | 'ADMIN'
-  | 'SUPERADMIN'
-  | 'COMMERCE'
-  | 'FUNDATION';
+// // Definición de tipo para todos los roles válidos
+// type ValidRoleNames =
+//   | 'USER'
+//   | 'LEADER'
+//   | 'ADMIN'
+//   | 'SUPERADMIN'
+//   | 'COMMERCE'
+//   | 'FUNDATION';
 
 @Injectable()
 export class UsersService {
@@ -469,6 +470,41 @@ export class UsersService {
       await queryRunner.release();
     }
   }
+
+async updateUserCommerce(
+  userId: string,
+  roleName: ValidRoleNames,
+): Promise<Omit<User, 'password'>> {
+  // 1. Buscar el rol por nombre
+  const role = await this.dataSource.getRepository(Role).findOne({
+    where: { name: roleName },
+  });
+
+  if (!role) {
+    throw new BadRequestException(`El rol "${roleName}" no existe.`);
+  }
+
+  // 2. Buscar usuario
+  const userRepo = this.dataSource.getRepository(User);
+  const user = await userRepo.findOne({
+    where: { id: userId }
+  });
+
+  if (!user) {
+    throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+  }
+
+  // 3. Actualizar solo el rol
+  user.role_name = role.name;
+  user.role_id = role.role_id; // asegurás la FK también
+
+  const updatedUser = await userRepo.save(user);
+
+  // 4. Retornar sin la password
+  const { password, ...safeUser } = updatedUser;
+  return safeUser;
+}
+
 
   /**
    * Actualiza un usuario existente por su ID.
