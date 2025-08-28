@@ -439,8 +439,7 @@ export class UsersController {
 
   @Patch('changeRoleToCommerce')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard, RolesGuard)
-  @Roles('USER')
+  @UseGuards(FlexibleAuthGuard)
   @ApiOperation({
     summary:
       'Actualiza del estado USER a el estado COMMERCE.',
@@ -451,8 +450,7 @@ export class UsersController {
 
   @Patch('superadmin-role')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', 'COMMERCE')
+  @UseGuards(FlexibleAuthGuard)
   @ApiOperation({
     summary:
       'Actualiza del rol SUPERADMIN.',
