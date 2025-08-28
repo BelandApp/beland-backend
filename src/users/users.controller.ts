@@ -452,7 +452,7 @@ export class UsersController {
   @Patch('superadmin-role')
   @HttpCode(HttpStatus.OK)
   @UseGuards(FlexibleAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN')
+  @Roles('SUPERADMIN', 'COMMERCE')
   @ApiOperation({
     summary:
       'Actualiza del rol SUPERADMIN.',
