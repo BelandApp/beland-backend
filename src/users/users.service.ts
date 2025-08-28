@@ -500,9 +500,11 @@ async updateUserCommerce(
   }
 
   // 3. Actualizar solo el rol
+  user.role_name= role.name;
+  user.role_id= role.role_id;
   const updateResult: UpdateResult = await userRepo.update(
     userId, 
-    {role_name: role.name, role_id: role.role_id}
+    user
   )
 
   if (updateResult.affected === 0) throw new NotFoundException('El usuario no fue encontrado para actualizar')
