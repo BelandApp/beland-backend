@@ -48,6 +48,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
 import { RequiredPermissions } from 'src/auth/decorators/permissions.decorator';
 import { Request } from 'express'; // Importar la interfaz Request de express para su correcto tipado
+import { RoleEnum, ValidRoleNames } from 'src/roles/enum/role-validate.enum';
 
 // DTO para la ruta de bloqueo/desbloqueo (puede vivir aquí o en un archivo separado)
 class BlockUserDto extends PickType(UpdateUserDto, ['isBlocked'] as const) {
@@ -448,15 +449,16 @@ export class UsersController {
     return await this.usersService.updateUserCommerce(req.user.id, 'COMMERCE')
   }
 
-  @Patch('superadmin-role')
+  @Patch('change-role')
   @HttpCode(HttpStatus.OK)
   @UseGuards(FlexibleAuthGuard)
+  @ApiQuery({ name: 'role_name', required: true, enum: RoleEnum , example: RoleEnum.SUPERADMIN, description: 'Rol' })
   @ApiOperation({
     summary:
-      'Actualiza del rol SUPERADMIN.',
+      'Cambia el rol del usuario al que se pase por parametro.',
   })
-  async changeRolToSuperadmin( @Req() req: Request ): Promise<UserDto> {
-    return await this.usersService.updateRolToSuperadmin(req.user.id)
+  async changeRolToSuperadmin( @Query('role_name') role_name: ValidRoleNames, @Req() req: Request ): Promise<UserDto> {
+    return await this.usersService.updateRolToSuperadmin(req.user.id, role_name)
   }
 
 
