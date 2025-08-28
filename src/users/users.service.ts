@@ -471,78 +471,86 @@ export class UsersService {
     }
   }
 
-async updateUserCommerce(
-  userId: string,
-  roleName: ValidRoleNames,
-): Promise<Omit<User, 'password'>> {
-  // 1. Buscar el rol por nombre
-  const role = await this.dataSource.getRepository(Role).findOne({
-    where: { name: roleName },
-  });
+  async updateUserCommerce(
+    userId: string,
+    roleName: ValidRoleNames,
+  ): Promise<Omit<User, 'password'>> {
+    // 1. Buscar el rol por nombre
+    const role = await this.dataSource.getRepository(Role).findOne({
+      where: { name: roleName },
+    });
 
-  if (!role) {
-    throw new BadRequestException(`El rol "${roleName}" no existe.`);
+    if (!role) {
+      throw new BadRequestException(`El rol "${roleName}" no existe.`);
+    }
+
+    // 2. Buscar usuario
+    const userRepo = this.dataSource.getRepository(User);
+    const user = await userRepo.findOne({
+      where: { id: userId },
+      relations: {role:true},
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+    }
+
+    if (user.role.name !== "USER") {
+      throw new BadRequestException(`El rol actual de usuario no le permite usar esta opción`)
+    }
+
+    // 3. Actualizar solo el rol
+    user.role_name= role.name;
+    user.role_id= role.role_id;
+    const updateResult: UpdateResult = await userRepo.update(
+      userId, 
+      user
+    )
+
+    if (updateResult.affected === 0) throw new NotFoundException('El usuario no fue encontrado para actualizar')
+
+    const userUpdate = await userRepo.findOne({
+      where: { id: userId },
+      relations: {role:true}
+    });
+    // 4. Retornar sin la password
+    const { password, ...safeUser } = userUpdate;
+    return safeUser;
   }
 
-  // 2. Buscar usuario
-  const userRepo = this.dataSource.getRepository(User);
-  const user = await userRepo.findOne({
-    where: { id: userId },
-    relations: {role:true},
-  });
+  async updateRolToSuperadmin(
+    userId: string
+  ): Promise<Omit<User, 'password'>> {
+    // 1. Buscar el rol por nombre
+    const role = await this.dataSource.getRepository(Role).findOne({
+      where: { name: 'SUPERADMIN' },
+    });
 
-  if (!user) {
-    throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+    if (!role) {
+      throw new BadRequestException(`El rol 'SUPERADMIN' no existe.`);
+    }
+    const userRepo = this.dataSource.getRepository(User);
+    const user = await userRepo.findOne({
+      where: { id: userId }
+    });
+
+
+    user.role_name= 'SUPERADMIN'
+    // 2. Buscar usuario
+    const updateResult: UpdateResult = await userRepo.update(
+      userId, 
+      user,
+    )
+    
+    if (updateResult.affected === 0) throw new NotFoundException('El usuario no fue encontrado para actualizar')
+    const userUpdate = await userRepo.findOne({
+      where: { id: userId }
+    });
+
+    // 4. Retornar sin la password
+    const { password, ...safeUser } = userUpdate;
+    return safeUser;
   }
-
-  if (user.role.name !== "USER") {
-    throw new BadRequestException(`El rol actual de usuario no le permite usar esta opción`)
-  }
-
-  // 3. Actualizar solo el rol
-  user.role_name= role.name;
-  user.role_id= role.role_id;
-  const updateResult: UpdateResult = await userRepo.update(
-    userId, 
-    user
-  )
-
-  if (updateResult.affected === 0) throw new NotFoundException('El usuario no fue encontrado para actualizar')
-
-  const userUpdate = await userRepo.findOne({
-    where: { id: userId },
-    relations: {role:true}
-  });
-  // 4. Retornar sin la password
-  const { password, ...safeUser } = userUpdate;
-  return safeUser;
-}
-
-async updateRolToSuperadmin(
-  userId: string
-): Promise<Omit<User, 'password'>> {
-  // 1. Buscar el rol por nombre
-  const role = await this.dataSource.getRepository(Role).findOne({
-    where: { name: 'SUPERADMIN' },
-  });
-
-  if (!role) {
-    throw new BadRequestException(`El rol 'SUPERADMIN' no existe.`);
-  }
-
-  // 2. Buscar usuario
-  const userRepo = this.dataSource.getRepository(User);
-  const updateResult: UpdateResult = await userRepo.update(userId, {role_name: role.name})
-  
-  if (updateResult.affected === 0) throw new NotFoundException('El usuario no fue encontrado para actualizar')
-  const user = await userRepo.findOne({
-    where: { id: userId }
-  });
-
-  // 4. Retornar sin la password
-  const { password, ...safeUser } = user;
-  return safeUser;
-}
 
 
   /**
