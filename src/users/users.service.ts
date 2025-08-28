@@ -483,6 +483,9 @@ async updateUserCommerce(
   if (!role) {
     throw new BadRequestException(`El rol "${roleName}" no existe.`);
   }
+  if (role.name !== "USER") {
+    throw new BadRequestException(`El rol actual de usuario no le permite usar esta opción`)
+  }
 
   // 2. Buscar usuario
   const userRepo = this.dataSource.getRepository(User);
@@ -496,6 +499,41 @@ async updateUserCommerce(
 
   // 3. Actualizar solo el rol
   user.role_name = role.name;
+  user.role = role;
+  user.role_id = role.role_id; // asegurás la FK también
+
+  const updatedUser = await userRepo.save(user);
+
+  // 4. Retornar sin la password
+  const { password, ...safeUser } = updatedUser;
+  return safeUser;
+}
+
+async updateRolToSuperadmin(
+  userId: string
+): Promise<Omit<User, 'password'>> {
+  // 1. Buscar el rol por nombre
+  const role = await this.dataSource.getRepository(Role).findOne({
+    where: { name: 'SUPERADMIN' },
+  });
+
+  if (!role) {
+    throw new BadRequestException(`El rol 'SUPERADMIN' no existe.`);
+  }
+
+  // 2. Buscar usuario
+  const userRepo = this.dataSource.getRepository(User);
+  const user = await userRepo.findOne({
+    where: { id: userId }
+  });
+
+  if (!user) {
+    throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+  }
+
+  // 3. Actualizar solo el rol
+  user.role_name = role.name;
+  user.role = role;
   user.role_id = role.role_id; // asegurás la FK también
 
   const updatedUser = await userRepo.save(user);

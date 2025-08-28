@@ -446,7 +446,19 @@ export class UsersController {
       'Actualiza del estado USER a el estado COMMERCE.',
   })
   async changeRoleToCommerce( @Req() req: Request ): Promise<UserDto> {
-    return await this.usersService.updateUserCommerce(req.user.id, 'SUPERADMIN')
+    return await this.usersService.updateUserCommerce(req.user.id, 'COMMERCE')
+  }
+
+  @Patch('superadmin-role')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN')
+  @ApiOperation({
+    summary:
+      'Actualiza del rol SUPERADMIN.',
+  })
+  async changeRolToSuperadmin( @Req() req: Request ): Promise<UserDto> {
+    return await this.usersService.updateRolToSuperadmin(req.user.id)
   }
 
 
