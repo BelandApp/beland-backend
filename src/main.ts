@@ -70,6 +70,8 @@ async function bootstrap() {
     ? [
         appMainUrlProd,
         appLandingUrlProd,
+        appMainUrlLocal,
+        appLandingUrlLocal,
         'https://beland-project.netlify.app',
         'https://beland-production.up.railway.app/api',
         'https://belandlanding.vercel.app',
