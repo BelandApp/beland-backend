@@ -17,7 +17,7 @@ import { Role } from '../roles/entities/role.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { OrderDto } from 'src/common/dto/order.dto';
 import { UserDto } from './dto/user.dto';
-import { DataSource, Not, IsNull, Or } from 'typeorm';
+import { DataSource, Not, IsNull, Or, UpdateResult } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
@@ -483,29 +483,36 @@ async updateUserCommerce(
   if (!role) {
     throw new BadRequestException(`El rol "${roleName}" no existe.`);
   }
-  if (role.name !== "USER") {
-    throw new BadRequestException(`El rol actual de usuario no le permite usar esta opción`)
-  }
 
   // 2. Buscar usuario
   const userRepo = this.dataSource.getRepository(User);
   const user = await userRepo.findOne({
-    where: { id: userId }
+    where: { id: userId },
+    relations: {role:true},
   });
 
   if (!user) {
     throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
   }
 
+  if (user.role.name !== "USER") {
+    throw new BadRequestException(`El rol actual de usuario no le permite usar esta opción`)
+  }
+
   // 3. Actualizar solo el rol
-  user.role_name = role.name;
-  user.role = role;
-  user.role_id = role.role_id; // asegurás la FK también
+  const updateResult: UpdateResult = await userRepo.update(
+    userId, 
+    {role_name: role.name, role_id: role.role_id}
+  )
 
-  const updatedUser = await userRepo.save(user);
+  if (updateResult.affected === 0) throw new NotFoundException('El usuario no fue encontrado para actualizar')
 
+  const userUpdate = await userRepo.findOne({
+    where: { id: userId },
+    relations: {role:true}
+  });
   // 4. Retornar sin la password
-  const { password, ...safeUser } = updatedUser;
+  const { password, ...safeUser } = userUpdate;
   return safeUser;
 }
 
@@ -523,21 +530,15 @@ async updateRolToSuperadmin(
 
   // 2. Buscar usuario
   const userRepo = this.dataSource.getRepository(User);
+  const updateResult: UpdateResult = await userRepo.update(userId, {role_name: role.name})
+  
+  if (updateResult.affected === 0) throw new NotFoundException('El usuario no fue encontrado para actualizar')
   const user = await userRepo.findOne({
     where: { id: userId }
   });
 
-  if (!user) {
-    throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
-  }
-
-  // 3. Actualizar solo el rol_name
-  user.role_name = role.name;
-
-  const updatedUser = await userRepo.save(user);
-
   // 4. Retornar sin la password
-  const { password, ...safeUser } = updatedUser;
+  const { password, ...safeUser } = user;
   return safeUser;
 }
 
