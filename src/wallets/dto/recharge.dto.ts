@@ -1,9 +1,11 @@
 import { IsNumber, IsString, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class RechargeDto {
   @ApiProperty({ example: 50.0, description: 'Amount in USD to recharge' })
   @IsNumber()
+  @Type(() => Number)
   amountUsd: number;
 
   @ApiProperty({
