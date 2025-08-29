@@ -12,7 +12,7 @@ import * as jwt from 'jsonwebtoken';
 import {
   Injectable,
 } from '@nestjs/common';
-import jwksClient from 'jwks-rsa';
+import jwksClient, { JwksClient } from 'jwks-rsa';
 import { ConfigService } from '@nestjs/config';
 import { UsersRepository } from 'src/users/users.repository';
 
@@ -34,7 +34,7 @@ export class NotificationsGateway
   @WebSocketServer()
   server: Server;
 
-  private jwks?: jwksClient.JwksClient;
+  private jwks?: JwksClient;
 
   constructor(
     private readonly configService: ConfigService,
