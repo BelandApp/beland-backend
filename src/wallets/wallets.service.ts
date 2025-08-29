@@ -24,6 +24,7 @@ import { UserResource } from 'src/user-resources/entities/user-resource.entity';
 import { NotificationsGateway } from 'src/notification-socket/notification-socket.gateway';
 import { RespTransferResult } from './dto/resp-tranfer-result.dto';
 import { UserEventBeland } from 'src/users/entities/users-event-beland.entity';
+import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
 
 @Injectable()
 export class WalletsService {
@@ -666,6 +667,42 @@ export class WalletsService {
       // Cierro el queryRunner
       await queryRunner.release();
     }
+  }
+
+  async purchase (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
+    
+    const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
+    if (priceOneBecoin !== 0.05) {
+      throw new InternalServerErrorException(
+        'El precio de BeCoin no es válido',
+      );
+    }
+    const walletRecharge = this.recharge(
+      user_id,
+      {
+        amountUsd: +dto.amountUsd,
+        referenceCode: dto.referenceCode,
+        payphone_transactionId: dto.payphone_transactionId,
+        clientTransactionId: dto.clientTransactionId,
+      }
+    ) 
+
+    if (!walletRecharge) throw new ConflictException("Fallo la recarga");
+
+    const amount_payment_id = dto.amount_payment_id;
+    const user_resource_id = dto.user_resource_id;
+
+    const amountBecoin = dto.amountUsd / priceOneBecoin;
+
+    return await this.transfer(
+        user_id,
+        {
+          toWalletId: to_wallet_id,
+          amountBecoin,
+          amount_payment_id,
+          user_resource_id,
+        },
+      );
   }
 
   async purchaseBeland(
