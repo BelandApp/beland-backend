@@ -31,15 +31,6 @@ import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-accoun
 import { Testimony } from '../../testimonies/entities/testimony.entity';
 import { ValidRoleNames } from 'src/roles/enum/role-validate.enum';
 
-// // Definición de tipo para todos los roles válidos (importante para consistencia)
-// export type ValidRoleNames =
-//   | 'USER'
-//   | 'LEADER'
-//   | 'ADMIN'
-//   | 'SUPERADMIN'
-//   | 'COMMERCE'
-//   | 'FUNDATION';
-
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -66,7 +57,12 @@ export class User {
   @Column({ type: 'numeric', nullable: true, default: 0 })
   current_balance: number | null;
 
-  @Column({ type: 'text', default: 'USER' })
+  // Actualizado para usar los roles que me indicaste
+  @Column({
+    type: 'enum',
+    enum: ['USER', 'LEADER', 'ADMIN', 'SUPERADMIN', 'COMMERCE', 'FUNDATION'],
+    default: 'USER',
+  })
   role_name: ValidRoleNames; // Nombre del rol (ej. 'USER', 'ADMIN')
 
   @Column({ type: 'text', nullable: true })

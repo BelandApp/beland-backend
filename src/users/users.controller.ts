@@ -49,6 +49,7 @@ import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
 import { RequiredPermissions } from 'src/auth/decorators/permissions.decorator';
 import { Request } from 'express'; // Importar la interfaz Request de express para su correcto tipado
 import { RoleEnum, ValidRoleNames } from 'src/roles/enum/role-validate.enum';
+import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 
 // DTO para la ruta de bloqueo/desbloqueo (puede vivir aquí o en un archivo separado)
 class BlockUserDto extends PickType(UpdateUserDto, ['isBlocked'] as const) {
@@ -104,6 +105,48 @@ export class UsersController {
       );
     }
     return user.id;
+  }
+
+  // --- NUEVA RUTA PÚBLICA PARA LOGIN/REGISTRO CON AUTH0 ---
+  @Post('auth0-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Login o registro de usuario a través de Auth0 (público).',
+    description:
+      'Verifica si un usuario con el `auth0_id` o `email` existe. Si existe, devuelve su perfil y un token JWT. Si no existe, crea un nuevo usuario y devuelve su perfil con un token JWT.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Usuario procesado exitosamente, devuelve perfil y token.',
+    schema: {
+      type: 'object',
+      properties: {
+        user: { $ref: '#/components/schemas/UserDto' },
+        token: { type: 'string', example: 'eyJhbGciOiJIUzI1Ni...' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
+  @ApiResponse({ status: 409, description: 'Conflicto de email.' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  async auth0Login(
+    @Body() auth0LoginDto: Auth0LoginDto,
+  ): Promise<{ user: UserDto; token: string }> {
+    this.logger.log(
+      `POST /users/auth0-login: Solicitud de login/registro Auth0 para email: ${auth0LoginDto.email}`,
+    );
+    try {
+      const { user, token } = await this.usersService.findOrCreateAuth0User(
+        auth0LoginDto,
+      );
+      const userDto = plainToInstance(UserDto, user); // Convertir la entidad a DTO
+      this.logger.log(
+        `Usuario con ID ${user.id} (${user.email}) procesado exitosamente via Auth0.`,
+      );
+      return { user: userDto, token };
+    } catch (error) {
+      this.handleError(error, 'procesar login/registro Auth0');
+    }
   }
 
   // --- RUTAS PÚBLICAS (NO REQUIEREN AUTENTICACIÓN) ---
@@ -442,25 +485,37 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(FlexibleAuthGuard)
   @ApiOperation({
-    summary:
-      'Actualiza del estado USER a el estado COMMERCE.',
+    summary: 'Actualiza del estado USER a el estado COMMERCE.',
   })
-  async changeRoleToCommerce( @Req() req: Request ): Promise<UserDto> {
-    return await this.usersService.updateUserCommerce(req.user.id, 'COMMERCE')
+  async changeRoleToCommerce(@Req() req: Request): Promise<UserDto> {
+    return plainToInstance(
+      UserDto,
+      await this.usersService.updateUserCommerce(req.user.id, 'COMMERCE'),
+    );
   }
 
   @Patch('change-role')
   @HttpCode(HttpStatus.OK)
   @UseGuards(FlexibleAuthGuard)
-  @ApiQuery({ name: 'role_name', required: true, enum: RoleEnum , example: RoleEnum.SUPERADMIN, description: 'Rol' })
-  @ApiOperation({
-    summary:
-      'Cambia el rol del usuario al que se pase por parametro.',
+  @ApiQuery({
+    name: 'role_name',
+    required: true,
+    enum: RoleEnum,
+    example: RoleEnum.SUPERADMIN,
+    description: 'Rol',
   })
-  async changeRolToSuperadmin( @Query('role_name') role_name: ValidRoleNames, @Req() req: Request ): Promise<UserDto> {
-    return await this.usersService.updateRolToSuperadmin(req.user.id, role_name)
+  @ApiOperation({
+    summary: 'Cambia el rol del usuario al que se pase por parametro.',
+  })
+  async changeRolToSuperadmin(
+    @Query('role_name') role_name: ValidRoleNames,
+    @Req() req: Request,
+  ): Promise<UserDto> {
+    return plainToInstance(
+      UserDto,
+      await this.usersService.updateRolToSuperadmin(req.user.id, role_name),
+    );
   }
-
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
