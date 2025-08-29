@@ -1,62 +1,77 @@
-name: CI / CD - Deploy to GCP
+name: CI/CD - Deploy to AWS
 
 on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy'
+        description: "Environment to deploy"
         required: true
-        default: 'develop'
+        default: "develop"
         type: choice
         options:
           - develop
+          - sandbox
           - production
 
+env:
+  NODE_VERSION: 20
+
 jobs:
-  deploy:
+  build:
+    name: Build project
     runs-on: ubuntu-latest
-    # Esto hace que use los secrets del environment elegido
-    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Copy environment file
+        run: |
+          if [ -f "${{ github.event.inputs.environment }}.env" ]; then
+            cp ${{ github.event.inputs.environment }}.env .env
+          else
+            echo "⚠️ No env file found for ${{ github.event.inputs.environment }}"
+          fi
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build project
+        run: npm run build --quiet
+
+      - name: Save dist as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
+  deploy:
+    name: Deploy to AWS S3
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }} # usa develop/sandbox/production
+    needs: build
     env:
       ENVIRONMENT: ${{ github.event.inputs.environment }}
-      GCLOUD_PROJECT: ${{ secrets.GCLOUD_PROJECT }}
-      GCLOUD_API_KEYFILE: ${{ secrets.GCLOUD_API_KEYFILE }}
-      REPO_NAME: ${{ secrets.REPO_NAME }}
-      REGION: ${{ secrets.REGION }} #us-east1
-
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
+          name: dist
+          path: dist
 
-      - name: Autenticación con GCP
-        run: |
-          echo "${GCLOUD_API_KEYFILE}" | base64 -d > gcloud-api-key.json
-          gcloud auth activate-service-account --key-file gcloud-api-key.json
-          gcloud config set project $GCLOUD_PROJECT
-
-      - name: Build & Push Docker
-        run: |
-          export DOCKER_BUILDKIT=0
-          PROJECT_NAME="beland-backend"
-          SERVICE_NAME="beland-backend"
-
-          docker build --no-cache --platform linux/amd64 -t $PROJECT_NAME -f Dockerfile .
-          gcloud auth configure-docker $REGION-docker.pkg.dev
-
-          IMAGE_NAME=$REGION-docker.pkg.dev/$GCLOUD_PROJECT/$REPO_NAME/$PROJECT_NAME
-          docker tag $PROJECT_NAME $IMAGE_NAME
-          docker push $IMAGE_NAME
-
-          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
-          echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
-
-      - name: Deploy en Cloud Run
-        run: |
-          gcloud run deploy $SERVICE_NAME \
-            --image $IMAGE_NAME \
-            --region=$REGION \
-            --platform managed \
-            --allow-unauthenticated \
-            --env-vars-file=${ENVIRONMENT}.json
+      - name: Sync files to S3
+        uses: aws-actions/s3-sync@v2
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          bucket: jetz-admin-${{ env.ENVIRONMENT }}
+          source-dir: dist
+          delete: true
