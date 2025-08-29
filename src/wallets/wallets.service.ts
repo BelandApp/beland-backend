@@ -234,7 +234,7 @@ export class WalletsService {
       const becoinAmount = amountUsd / priceOneBecoin;
 
       // 5) Actualizar saldo de la wallet
-      wallet.becoin_balance = Number(wallet.becoin_balance) + becoinAmount;
+      wallet.becoin_balance = Number(wallet.becoin_balance) + +becoinAmount;
       if (isNaN(wallet.becoin_balance)) {
         wallet.becoin_balance = 0;
       }
@@ -526,7 +526,7 @@ export class WalletsService {
         where: { user_id },
       });
       if (!from) throw new NotFoundException('No se encuentra la Billetera');
-      if (Number(from.becoin_balance) < dto.amountBecoin)
+      if (Number(from.becoin_balance) < +dto.amountBecoin)
         throw new BadRequestException('Saldo insuficiente');
 
       // 2) certifico que exista la wallet de destino
@@ -559,7 +559,7 @@ export class WalletsService {
             await queryRunner.manager.save(UserEventBeland, {
               user_payment_id: user_id,
               user_sale_id: user.id,
-              amount: dto.amountBecoin,
+              amount: +dto.amountBecoin,
               isRecycled: dto.amountBecoin === 0,
             });
             break;
@@ -677,7 +677,7 @@ export class WalletsService {
         'El precio de BeCoin no es válido',
       );
     }
-    const walletRecharge = this.recharge(
+    const walletRecharge = await this.recharge(
       user_id,
       {
         amountUsd: +dto.amountUsd,
@@ -692,7 +692,7 @@ export class WalletsService {
     const amount_payment_id = dto.amount_payment_id;
     const user_resource_id = dto.user_resource_id;
 
-    const amountBecoin = dto.amountUsd / priceOneBecoin;
+    const amountBecoin = +dto.amountUsd / +priceOneBecoin;
 
     return await this.transfer(
         user_id,
