@@ -30,7 +30,8 @@ const ROLE_USER = 'USER';
 const ROLE_LEADER = 'LEADER';
 const ROLE_ADMIN = 'ADMIN';
 const ROLE_SUPERADMIN = 'SUPERADMIN';
-const ROLE_EMPRESA = 'EMPRESA';
+const ROLE_COMMERCE = 'COMMERCE';
+const ROLE_FUNDATION = 'FUNDATION';
 
 // // Definición de tipo para todos los roles válidos
 // type ValidRoleNames =
