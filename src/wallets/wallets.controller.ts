@@ -318,4 +318,9 @@ export class WalletsController {
 
     return this.service.purchase(req.user.id, to_wallet_id,  dto);
   }
+
+  @Put('alias-qr')
+  async generateAliasAndQr (@Req() req: Request) {
+    return await this.service.generateAliasAndQr(req.user.id);
+  }
 }
