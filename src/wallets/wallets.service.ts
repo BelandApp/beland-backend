@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import * as QRCode from 'qrcode';
 import { WalletsRepository } from './wallets.repository';
 import { Wallet } from './entities/wallet.entity';
 import { DataSource } from 'typeorm';
@@ -766,6 +767,44 @@ export class WalletsService {
       // 6) Confirmar transacción
       await queryRunner.commitTransaction();
       return txSaved;
+    } catch (error) {
+      // Si algo falla, revertimos todo
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Liberar el queryRunner
+      await queryRunner.release();
+    }
+  }
+
+  async generateAliasAndQr (user_id: string): Promise<Wallet> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1) Chequear que exista la billetera 
+      const wallet: Wallet = await queryRunner.manager.findOne(Wallet, {
+        where: { user_id },
+        relations: {user:true},
+      });
+      if (!wallet) throw new NotFoundException('No se encuentra la billetera');
+
+      // genero qr
+      const qr = await QRCode.toDataURL(wallet.id);
+      // genero alias
+      const nombre = wallet.user.email.split('@')[0];
+      const random = Math.floor(100 + Math.random() * 900); 
+      const alias = `${nombre}${random}`;
+
+      if (!wallet.qr) wallet.qr = qr;
+      if (!wallet.alias) wallet.alias = alias;
+
+      const walletUpdate = await queryRunner.manager.save(wallet);
+
+      await queryRunner.commitTransaction();
+
+      return walletUpdate;
     } catch (error) {
       // Si algo falla, revertimos todo
       await queryRunner.rollbackTransaction();
