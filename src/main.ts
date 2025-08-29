@@ -75,6 +75,7 @@ async function bootstrap() {
         'https://beland-production.up.railway.app/api',
         'https://belandlanding.vercel.app',
         'https//beland.app',
+        'https://beland-backend-266662044893.us-east1.run.app',
         configService.get<string>('CORS_ADDITIONAL_ORIGINS_PROD'),
         configService.get<string>('AUTH0_AUDIENCE'),
       ].filter(Boolean)
@@ -90,6 +91,7 @@ async function bootstrap() {
         'https://beland-project.netlify.app',
         'https://beland-production.up.railway.app/api',
         'https://belandlanding.vercel.app',
+        'https://beland-backend-266662044893.us-east1.run.app',
         /https:\/\/\w+\-beland\-\d+\.exp\.direct$/,
         /https:\/\/\w+\-anonymous\-\d+\.exp\.direct$/,
       ].filter(Boolean);
