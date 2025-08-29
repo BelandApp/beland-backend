@@ -170,6 +170,13 @@ export class WalletsController {
     return await this.service.create(body);
   }
 
+  @Put('alias-qr')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Genera alias y qr si no lo tiene' })
+  async generateAliasAndQr (@Req() req: Request) {
+    return await this.service.generateAliasAndQr(req.user.id);
+  }
+
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una billetera existente' })
@@ -319,8 +326,4 @@ export class WalletsController {
     return this.service.purchase(req.user.id, to_wallet_id,  dto);
   }
 
-  @Put('alias-qr')
-  async generateAliasAndQr (@Req() req: Request) {
-    return await this.service.generateAliasAndQr(req.user.id);
-  }
 }
