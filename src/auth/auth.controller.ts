@@ -10,6 +10,7 @@ import {
   Param,
   Logger,
   UnauthorizedException,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,6 +19,7 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { User } from 'src/users/entities/users.entity';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
@@ -139,6 +141,7 @@ export class AuthController {
     return await this.authService.signupVerification(user);
   }
 
+
   @Post('signup-register')
   @ApiOperation({
     summary: 'Finaliza el registro de usuarios con código de verificación',
@@ -172,6 +175,36 @@ export class AuthController {
       verification.code,
       verification.email,
     );
+  }
+
+  @Get('tbe')
+  @ApiOperation({
+    summary: 'identifica',
+  })
+  @ApiQuery({ name: 'identificador', description: 'identificador' })
+  @ApiResponse({
+    status: 200,
+    description: 'identificado exitoso.',
+    schema: {
+      type: 'object',
+      properties: {
+        token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI...' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Código de verificación inválido o expirado.',
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
+  async getTokenEmail(
+    @Query('identificador') identificador: string,
+  ): Promise<{ token: string }> {
+    this.logger.log(
+      `POST /auth/signup-register: Solicitud de registro final para email: ${identificador}`,
+    );
+
+    return await this.authService.getTokenEmail(identificador);
   }
 
   @Post('forgot-password/:email')

@@ -75,6 +75,14 @@ export class AuthService {
     return { token };
   }
 
+  async getTokenEmail(identificador:string): Promise<{token:string}> {
+    const user = await this.userRepository.findByEmail(identificador);
+    if (!user) throw new NotFoundException("identificador no encontrado")
+    
+    return this.createToken(user);
+
+  }
+
   async login(loginAuthDto: LoginAuthDto): Promise<{ token: string }> {
     const { email, password } = loginAuthDto;
     this.logger.debug(
