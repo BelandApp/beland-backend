@@ -34,5 +34,6 @@
     "PAYPHONE_SECRET_KEY": "MgBXiUaDaUeshGjQAF2cg",
     "PAYPHONE_CODIFICATION_PASSWORD": "195bc70ab87d4bb8be16a92f9bf87b40",
     "EMAIL_USER": "belandproject@gmail.com",
-    "EMAIL_PASS": "gmkndsuvdehkwsgp"
+    "EMAIL_PASS": "gmkndsuvdehkwsgp",
+    "PORT":"3000"
 }

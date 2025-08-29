@@ -1,8 +1,4 @@
-import * as crypto from 'crypto';
-// Polyfill para crypto.subtle si no está disponible (ej. en algunos entornos Node)
-if (!(globalThis as any).crypto?.subtle) {
-  (globalThis as any).crypto = crypto.webcrypto;
-}
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger, LogLevel } from '@nestjs/common';
@@ -163,7 +159,7 @@ async function bootstrap() {
   app.use('/webhook/payphone', raw({ type: 'application/json' }));
 
   // Inicio de la aplicación en el puerto configurado
-  const port = configService.get<number>('PORT') || 3001;
+  const port = configService.get<number>('PORT') || 3000;
   await app.listen(port);
 
   appLogger.log(`✅ Beland API corriendo en: http://localhost:${port}`);
