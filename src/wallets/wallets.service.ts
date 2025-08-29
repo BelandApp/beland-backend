@@ -542,7 +542,7 @@ export class WalletsService {
           where: { wallet: {id: to.id} },
         });
         if (!user) throw new NotFoundException('Usuario destino no existe');
-        switch (user.role.name) {
+        switch (user.role_name) {
           case 'COMMERCE':
             code_transaction_send = TransactionCode.PURCHASE;
             code_transaction_received = TransactionCode.SALE;
