@@ -316,25 +316,6 @@ export class WalletsController {
     @Req() req: Request,
   ): Promise<{ wallet: Wallet }> {
 
-    let amountBecoin = 0;
-    const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
-    if (priceOneBecoin !== 0.05) {
-      throw new InternalServerErrorException(
-        'El precio de BeCoin no es válido',
-      );
-    }
-
-    const amount_payment_id = dto.amount_payment_id;
-    const user_resource_id = dto.user_resource_id;
-
-    return await this.service.transfer(
-        req.user?.id,
-        {
-          toWalletId: to_wallet_id,
-          amountBecoin,
-          amount_payment_id,
-          user_resource_id,
-        },
-      );
+    return this.service.purchase(req.user.id, to_wallet_id,  dto);
   }
 }
