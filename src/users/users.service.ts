@@ -17,28 +17,30 @@ import { Role } from '../roles/entities/role.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { OrderDto } from 'src/common/dto/order.dto';
 import { UserDto } from './dto/user.dto';
-import { DataSource, Not, IsNull, Or } from 'typeorm';
+import { DataSource, Not, IsNull, Or, UpdateResult } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { Wallet } from 'src/wallets/entities/wallet.entity';
 import { Cart } from 'src/cart/entities/cart.entity';
+import { ValidRoleNames } from 'src/roles/enum/role-validate.enum';
 
 // Constantes para los nombres de roles
 const ROLE_USER = 'USER';
 const ROLE_LEADER = 'LEADER';
 const ROLE_ADMIN = 'ADMIN';
 const ROLE_SUPERADMIN = 'SUPERADMIN';
-const ROLE_EMPRESA = 'EMPRESA';
+const ROLE_COMMERCE = 'COMMERCE';
+const ROLE_FUNDATION = 'FUNDATION';
 
-// Definición de tipo para todos los roles válidos
-type ValidRoleNames =
-  | 'USER'
-  | 'LEADER'
-  | 'ADMIN'
-  | 'SUPERADMIN'
-  | 'COMMERCE'
-  | 'FUNDATION';
+// // Definición de tipo para todos los roles válidos
+// type ValidRoleNames =
+//   | 'USER'
+//   | 'LEADER'
+//   | 'ADMIN'
+//   | 'SUPERADMIN'
+//   | 'COMMERCE'
+//   | 'FUNDATION';
 
 @Injectable()
 export class UsersService {
@@ -469,6 +471,72 @@ export class UsersService {
       await queryRunner.release();
     }
   }
+
+  async updateUserCommerce(
+    userId: string,
+    roleName: ValidRoleNames,
+  ): Promise<Omit<User, 'password'>> {
+    // 1. Buscar el rol por nombre
+    const role = await this.dataSource.getRepository(Role).findOne({
+      where: { name: roleName },
+    });
+
+    if (!role) {
+      throw new BadRequestException(`El rol "${roleName}" no existe.`);
+    }
+
+    // 2. Buscar usuario
+    const userRepo = this.dataSource.getRepository(User);
+    const user = await userRepo.findOne({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+    }
+
+    if (user.role.name !== "USER") {
+      throw new BadRequestException(`El rol actual de usuario no le permite usar esta opción`)
+    }
+
+    // 3. Actualizar solo el rol
+    user.role_name= role.name;
+    user.role_id= role.role_id;
+    const userUpdate: User = await userRepo.save(user)
+
+    // 4. Retornar sin la password
+    const { password, ...safeUser } = userUpdate;
+    return safeUser;
+  }
+
+  async updateRolToSuperadmin(
+    userId: string,
+    userRole: ValidRoleNames,
+  ): Promise<Omit<User, 'password'>> {
+    // 1. Buscar el rol por nombre
+    const role = await this.dataSource.getRepository(Role).findOne({
+      where: { name: userRole },
+    });
+
+    if (!role) {
+      throw new BadRequestException(`El rol ${userRole} no existe.`);
+    }
+    const userRepo = this.dataSource.getRepository(User);
+    const user = await userRepo.findOne({
+      where: { id: userId }
+    });
+
+
+    user.role_name= role.name
+    user.role_id= role.role_id
+    // 2. Buscar usuario
+    const userResult = await userRepo.save( user )
+
+    // 4. Retornar sin la password
+    const { password, ...safeUser } = userResult;
+    return safeUser;
+  }
+
 
   /**
    * Actualiza un usuario existente por su ID.

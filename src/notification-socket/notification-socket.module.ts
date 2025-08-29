@@ -1,10 +1,13 @@
 // notifications.module.ts
 import { Module } from '@nestjs/common';
 import { NotificationsGateway } from './notification-socket.gateway';
-import { NotificationsService } from './notification-socket.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from 'src/users/entities/users.entity';
+import { UsersRepository } from 'src/users/users.repository';
 
 @Module({
-  providers: [NotificationsGateway, NotificationsService],
+  imports: [TypeOrmModule.forFeature([User])],
+  providers: [NotificationsGateway, UsersRepository],
   exports: [NotificationsGateway], // <- para inyectarlo en otros servicios
 })
 export class NotificationsSocketModule {}

@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import * as QRCode from 'qrcode';
 import { WalletsRepository } from './wallets.repository';
 import { Wallet } from './entities/wallet.entity';
 import { DataSource } from 'typeorm';
@@ -24,6 +25,7 @@ import { UserResource } from 'src/user-resources/entities/user-resource.entity';
 import { NotificationsGateway } from 'src/notification-socket/notification-socket.gateway';
 import { RespTransferResult } from './dto/resp-tranfer-result.dto';
 import { UserEventBeland } from 'src/users/entities/users-event-beland.entity';
+import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
 
 @Injectable()
 export class WalletsService {
@@ -233,7 +235,7 @@ export class WalletsService {
       const becoinAmount = amountUsd / priceOneBecoin;
 
       // 5) Actualizar saldo de la wallet
-      wallet.becoin_balance = Number(wallet.becoin_balance) + becoinAmount;
+      wallet.becoin_balance = Number(wallet.becoin_balance) + +becoinAmount;
       if (isNaN(wallet.becoin_balance)) {
         wallet.becoin_balance = 0;
       }
@@ -525,7 +527,7 @@ export class WalletsService {
         where: { user_id },
       });
       if (!from) throw new NotFoundException('No se encuentra la Billetera');
-      if (Number(from.becoin_balance) < dto.amountBecoin)
+      if (Number(from.becoin_balance) < +dto.amountBecoin)
         throw new BadRequestException('Saldo insuficiente');
 
       // 2) certifico que exista la wallet de destino
@@ -541,7 +543,7 @@ export class WalletsService {
           where: { wallet: {id: to.id} },
         });
         if (!user) throw new NotFoundException('Usuario destino no existe');
-        switch (user.role.name) {
+        switch (user.role_name) {
           case 'COMMERCE':
             code_transaction_send = TransactionCode.PURCHASE;
             code_transaction_received = TransactionCode.SALE;
@@ -558,7 +560,7 @@ export class WalletsService {
             await queryRunner.manager.save(UserEventBeland, {
               user_payment_id: user_id,
               user_sale_id: user.id,
-              amount: dto.amountBecoin,
+              amount: +dto.amountBecoin,
               isRecycled: dto.amountBecoin === 0,
             });
             break;
@@ -648,16 +650,13 @@ export class WalletsService {
       // === EMITIR EVENTO AL COMERCIO (post-commit) ===
       // Identificá al comercio: según tu código, 'to' es la wallet del comercio:
       // const to = ... (ya lo tenías arriba)
-      // const payload:RespTransferResult = {
-      //    walletId: to.id,
-      //    success: true,
-      //    newBalance: to.becoin_balance,
-      //    message: 'Se acreditó tu pago',
-      //    amountPaymentIdDeleted: dto.amount_payment_id || null,
-      //  };
-
-      // // // Room por userId del comercio (recomendado)
-      //  this.notificationsGateway.notifyCommerceByUserId(to.user_id, payload);
+      this.notificationsGateway.notifyUser(to.user_id, {
+        wallet_id: to.id,
+        message: "Cobro Realizado con Éxito",
+        amount: +dto.amountBecoin* +this.superadminConfig.getPriceOneBecoin(),
+        success: true,
+        amount_payment_id_deleted: dto.amount_payment_id || null,
+      });   
 
       // se debe eliminar del front el amount to payment eliminado
       return { wallet: walletUpdate };
@@ -669,6 +668,42 @@ export class WalletsService {
       // Cierro el queryRunner
       await queryRunner.release();
     }
+  }
+
+  async purchase (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
+    
+    const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
+    if (priceOneBecoin !== 0.05) {
+      throw new InternalServerErrorException(
+        'El precio de BeCoin no es válido',
+      );
+    }
+    const walletRecharge = await this.recharge(
+      user_id,
+      {
+        amountUsd: +dto.amountUsd,
+        referenceCode: dto.referenceCode,
+        payphone_transactionId: dto.payphone_transactionId,
+        clientTransactionId: dto.clientTransactionId,
+      }
+    ) 
+
+    if (!walletRecharge) throw new ConflictException("Fallo la recarga");
+
+    const amount_payment_id = dto.amount_payment_id;
+    const user_resource_id = dto.user_resource_id;
+
+    const amountBecoin = +dto.amountUsd / +priceOneBecoin;
+
+    return await this.transfer(
+        user_id,
+        {
+          toWalletId: to_wallet_id,
+          amountBecoin,
+          amount_payment_id,
+          user_resource_id,
+        },
+      );
   }
 
   async purchaseBeland(
@@ -732,6 +767,44 @@ export class WalletsService {
       // 6) Confirmar transacción
       await queryRunner.commitTransaction();
       return txSaved;
+    } catch (error) {
+      // Si algo falla, revertimos todo
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Liberar el queryRunner
+      await queryRunner.release();
+    }
+  }
+
+  async generateAliasAndQr (user_id: string): Promise<Wallet> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1) Chequear que exista la billetera 
+      const wallet: Wallet = await queryRunner.manager.findOne(Wallet, {
+        where: { user_id },
+        relations: {user:true},
+      });
+      if (!wallet) throw new NotFoundException('No se encuentra la billetera');
+
+      // genero qr
+      const qr = await QRCode.toDataURL(wallet.id);
+      // genero alias
+      const nombre = wallet.user.email.split('@')[0];
+      const random = Math.floor(100 + Math.random() * 900); 
+      const alias = `${nombre}${random}`;
+
+      if (!wallet.qr) wallet.qr = qr;
+      if (!wallet.alias) wallet.alias = alias;
+
+      const walletUpdate = await queryRunner.manager.save(wallet);
+
+      await queryRunner.commitTransaction();
+
+      return walletUpdate;
     } catch (error) {
       // Si algo falla, revertimos todo
       await queryRunner.rollbackTransaction();

@@ -33,7 +33,7 @@ import { RecyclePricesModule } from './recycle_prices/recycle_prices.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { TransactionTypeModule } from './transaction-type/transaction-type.module';
 import { TransactionStateModule } from './transaction-state/transaction-state.module';
-import { DatabaseInitModule } from './database/init/database-init.module';
+//import { DatabaseInitModule } from './database/init/database-init.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AdminsModule } from './admins/admins.module';
 import { CartModule } from './cart/cart.module';
@@ -103,8 +103,6 @@ import { TestimoniesModule } from './testimonies/testimonies.module';
         migrations: [
           __dirname + '/database/migrations/*{.ts,.js}'
         ],
-        //synchronize: true, // nunca true en prod
-        //dropSchema: true,
         logging: false,
         ssl: {
           rejectUnauthorized: false,
@@ -115,7 +113,7 @@ import { TestimoniesModule } from './testimonies/testimonies.module';
     ScheduleModule.forRoot(),
 
     DatabaseModule,
-    DatabaseInitModule,
+    //DatabaseInitModule,
     UsersModule,
     RolesModule,
     WalletsModule,
