@@ -26,6 +26,9 @@ import { NotificationsGateway } from 'src/notification-socket/notification-socke
 import { RespTransferResult } from './dto/resp-tranfer-result.dto';
 import { UserEventBeland } from 'src/users/entities/users-event-beland.entity';
 import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
+import { CreateUserResourceDto } from 'src/user-resources/dto/create-user-resource.dto';
+import { UserResourcesService } from 'src/user-resources/user-resources.service';
+import { Resource } from 'src/resources/entities/resource.entity';
 
 @Injectable()
 export class WalletsService {
@@ -35,7 +38,8 @@ export class WalletsService {
     private readonly repository: WalletsRepository,
     private readonly superadminConfig: SuperadminConfigService,
     private readonly dataSource: DataSource, // 👈 acá lo inyectás
-   private readonly notificationsGateway: NotificationsGateway,)
+   private readonly notificationsGateway: NotificationsGateway,
+  private readonly userResourceService: UserResourcesService,)
   {}
 
   async findAll(
@@ -636,12 +640,18 @@ export class WalletsService {
       }
 
       // 10) Si vino user_resource_id entonces doy de baja el recurso.
+      let message = "";
       if (dto.user_resource_id) {
         await queryRunner.manager.update(
           UserResource,
           { id: dto.user_resource_id },
           { is_redeemed: true, redeemed_at: new Date() },
-        );
+        )
+        const userResource = await queryRunner.manager.findOne(UserResource, {
+          where: { id: dto.user_resource_id },
+          relations: {resource: true},
+        });
+        message = `Cobro Exitoso. Recurso: ${userResource.resource.name}. Cant: ${userResource.quantity}`
       }
 
       // COMMIT
@@ -650,12 +660,14 @@ export class WalletsService {
       // === EMITIR EVENTO AL COMERCIO (post-commit) ===
       // Identificá al comercio: según tu código, 'to' es la wallet del comercio:
       // const to = ... (ya lo tenías arriba)
+      message = message !== "" ? message : "Cobro Realizado con Éxito";
       this.notificationsGateway.notifyUser(to.user_id, {
         wallet_id: to.id,
-        message: "Cobro Realizado con Éxito",
+        message,
         amount: +dto.amountBecoin* +this.superadminConfig.getPriceOneBecoin(),
         success: true,
         amount_payment_id_deleted: dto.amount_payment_id || null,
+        noHidden: message !== "Cobro Realizado con Éxito",
       });   
 
       // se debe eliminar del front el amount to payment eliminado
@@ -668,6 +680,32 @@ export class WalletsService {
       // Cierro el queryRunner
       await queryRunner.release();
     }
+  }
+
+  async purchaseResource (user_id: string, dto:CreateUserResourceDto): Promise<{wallet: Wallet}> {
+    const resourceRepo = this.dataSource.getRepository(Resource);
+    const resource = await resourceRepo.findOne({
+      where: {id: dto.resource_id}
+    })
+    if (!resource) throw new NotFoundException("Recurso Beland no encontrado")  
+    const toWallet = await this.dataSource.manager.findOne(Wallet, {
+      where: {user_id: resource.user_commerce_id}
+    })
+    if (!toWallet) throw new NotFoundException("Billetera destino no encontrada")  
+    const wallet = await this.transfer(
+      user_id,
+      { 
+        toWalletId: toWallet.id, 
+        amountBecoin: +resource.becoin_value * +dto.quantity,
+      },
+    )
+    if (!wallet) throw new NotFoundException("Error al realizar el pago")  
+    const createUserResource = this.userResourceService.create({
+        user_id,
+        resource_id: resource.id,
+        quantity: dto.quantity,
+     })
+    return wallet;
   }
 
   async purchase (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
