@@ -24,6 +24,7 @@ import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { Wallet } from 'src/wallets/entities/wallet.entity';
 import { Cart } from 'src/cart/entities/cart.entity';
 import { ValidRoleNames } from 'src/roles/enum/role-validate.enum';
+import { UserEventBeland } from './entities/users-event-beland.entity';
 
 // Constantes para los nombres de roles
 const ROLE_USER = 'USER';
@@ -254,6 +255,12 @@ export class UsersService {
     const usersDto = plainToInstance(UserDto, users);
     return { users: usersDto, total };
   }
+
+  // async getUsersEventBeland(): Promise<UserEventBeland[]> {
+  //   const userEvent = this.dataSource.getRepository(UserEventBeland);
+
+  //   return await userEvent.find();
+  // }
 
   /**
    * Busca un usuario por su ID.

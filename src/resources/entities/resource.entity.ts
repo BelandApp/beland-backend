@@ -33,17 +33,17 @@ export class Resource {
   @Column('numeric', { precision: 14, scale: 2, default: 0 })
   discount: number;
 
+  @Column('int', { default: 0 })
+  limit_user: number; // cantidad limite que un usuario puede comprar. (0 es infinito)
+
+  @Column('int', { default: 0 })
+  limit_app: number; // cantidad limite que la app puede vender (0 es infinito)
+
+  @Column('int', { default: 0 })
+  used_acount: number; 
+
   @Column({ type: 'boolean', default: false })
   is_expired: boolean;
-
-  @Column('int', { default: 1 })
-  limit_user: number;
-
-  @Column('int', { default: 0 })
-  limit_app: number;
-
-  @Column('int', { default: 0 })
-  used_acount: number;
 
   @Column({ type: 'timestamptz', nullable: true })
   expires_at: Date;

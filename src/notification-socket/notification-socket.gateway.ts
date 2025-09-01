@@ -22,6 +22,7 @@ export interface respSocket {
   amount: number;
   success: boolean;
   amount_payment_id_deleted?: string | null;
+  noHidden: boolean;
 }
 
 @WebSocketGateway({

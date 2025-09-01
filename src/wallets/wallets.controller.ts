@@ -38,6 +38,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { CreateUserResourceDto } from 'src/user-resources/dto/create-user-resource.dto';
 
 @ApiTags('wallets')
 @Controller('wallets')
@@ -303,6 +304,20 @@ export class WalletsController {
     @Body() dto: TransferDto,
   ): Promise<{ wallet: Wallet }> {
     return await this.service.transfer(req.user?.id, dto);
+  }
+
+  @Post('purchase-recource')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary:
+      'Crear una nueva compra un recurso a una entidad con becoin',
+  })
+  @ApiResponse({ status: 201, description: 'Compra Exitosamente' })
+  async purchaseResourse(
+    @Req() req: Request,
+    @Body() dto: CreateUserResourceDto,
+  ): Promise<{ wallet: Wallet }> {
+    return await this.service.purchaseResource(req.user?.id, dto);
   }
 
   //COMPRAS DIRECTO CON TARJETA O PAYPHONE.
