@@ -18,7 +18,7 @@ import { JwtService } from '@nestjs/jwt';
 import { RolesRepository } from 'src/roles/roles.repository';
 import { Role } from 'src/roles/entities/role.entity';
 import * as bcrypt from 'bcrypt';
-import * as QRCode from 'qrcode'; // Asegúrate de que qrcode esté instalado: npm install qrcode
+import * as QRCode from 'qrcode';
 import { DataSource, QueryRunner, Repository } from 'typeorm';
 import { Wallet } from 'src/wallets/entities/wallet.entity';
 import { RegisterAuthDto } from './dto/register-auth.dto';
@@ -447,15 +447,36 @@ export class AuthService {
       `createWalletAndCart(): Creando Wallet y Cart para el usuario ID: ${user.id}`,
     );
     try {
+      // 1. Crear la nueva Wallet sin el QR ni el alias
       const newWallet = queryRunner.manager.create(Wallet, {
         user: user,
         balance: 0,
       });
+
+      // 2. Guardar la Wallet para que se le asigne un ID de la base de datos
       await queryRunner.manager.save(newWallet);
       this.logger.debug(
-        `createWalletAndCart(): Wallet creada para el usuario ID: ${user.id}`,
+        `createWalletAndCart(): Wallet creada con ID: ${newWallet.id} para el usuario ID: ${user.id}`,
       );
 
+      // 3. Generar el QR y el alias usando el ID recién creado
+      // Ahora el ID de la wallet existe y es seguro usarlo.
+      const qr = await QRCode.toDataURL(newWallet.id);
+      const nombre = user.email.split('@')[0];
+      const random = Math.floor(100 + Math.random() * 900);
+      const alias = `${nombre}${random}`;
+
+      // 4. Asignar el QR y el alias a la entidad
+      newWallet.alias = alias;
+      newWallet.qr = qr;
+
+      // 5. Volver a guardar la Wallet para persistir el QR y el alias
+      await queryRunner.manager.save(newWallet);
+      this.logger.debug(
+        `createWalletAndCart(): Wallet con ID: ${newWallet.id} actualizada con QR y alias.`,
+      );
+
+      // 6. Crear y guardar el Cart
       const newCart = queryRunner.manager.create(Cart, { user: user });
       await queryRunner.manager.save(newCart);
       this.logger.debug(
