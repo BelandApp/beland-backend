@@ -15,10 +15,9 @@ export class OrdersRepository {
     page: number,
     limit: number,
   ): Promise<[Order[], number]> {
-    const where = leader_id ? { leader_id } : {};
 
     return this.repository.findAndCount({
-        where,
+        where: {leader_id},
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,

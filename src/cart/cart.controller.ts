@@ -65,20 +65,6 @@ export class CartsController {
     return await this.service.create(body);
   }
 
-  @Put(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar un carrito existente' })
-  @ApiParam({ name: 'id', description: 'UUID del carrito' })
-  @ApiResponse({ status: 200, description: 'Carrito actualizado correctamente' })
-  @ApiResponse({ status: 404, description: 'No se encontró el carrito a actualizar' })
-  @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
-  async updateGroup(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: UpdateCartDto,
-  ) {
-    return this.service.update(id, body);
-  }
-
   @Put('group/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar un carrito existente' })
@@ -107,6 +93,20 @@ export class CartsController {
     @Query('address_id', ParseUUIDPipe) address_id: string,
   ) {
     return this.service.update(id, {address_id});
+  }
+
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar un carrito existente' })
+  @ApiParam({ name: 'id', description: 'UUID del carrito' })
+  @ApiResponse({ status: 200, description: 'Carrito actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el carrito a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
+  async updateGroup(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateCartDto,
+  ) {
+    return this.service.update(id, body);
   }
   
 }

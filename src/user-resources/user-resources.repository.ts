@@ -16,12 +16,10 @@ export class UserResourcesRepository {
     page: number,
     limit: number,
   ): Promise<[UserResource[], number]> {
-    let where: any;
-    if (user_id) {
-      where.user_id = user_id;
-    }
+    let where: any = {};
+    where.user_id = user_id;
 
-    if (resource_id) {
+    if (resource_id !== '') {
       where.resource_id = resource_id;
     }
 
