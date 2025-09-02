@@ -93,13 +93,18 @@ export class WalletsService {
   async dataPayment(wallet_id: string, user_id: string): Promise<RespCobroDto> {
     const respPayment: RespCobroDto = {};
 
-    // 1) Buscar la wallet del usuario
+    // 1) Buscar la wallet del que esta por recibir el cobro
     const wallet = await this.dataSource
       .getRepository(Wallet)
-      .findOne({ where: { id: wallet_id } });
+      .findOne({ 
+        where: { id: wallet_id },
+        relations: {user: true}, 
+      });
     if (!wallet) throw new NotFoundException('No se encuentra la billetera');
 
     respPayment.wallet_id = wallet.id;
+    respPayment.img_url = wallet.user.profile_picture_url || "https://thumbs.dreamstime.com/b/icono-de-tienda-o-con-sombra-logotipo-vectorial-simple-190411124.jpg";
+    respPayment.full_name = wallet.user.full_name || wallet.alias;
 
     // 2) Montos creados a cobrar
     const amountPayment = await this.dataSource
@@ -131,11 +136,11 @@ export class WalletsService {
 
     respPayment.resource = resources.map((res) => ({
       id: res.id,
-      resource_name: res.resource.name,
-      resource_desc: res.resource.description,
-      resource_quanity: res.quantity,
-      resource_image_url: res.resource.url_image,
-      resource_discount: res.resource.discount,
+      name: res.resource.name,
+      description: res.resource.description,
+      quanity: res.quantity,
+      image_url: res.resource.url_image,
+      discount: res.resource.discount,
     }));
 
     return respPayment;
