@@ -49,12 +49,21 @@ export class AuthService {
     private readonly jwtAuth0Strategy: JwtStrategy,
   ) {}
 
+  /**
+   * Genera un token JWT local para un usuario ya autenticado/validado.
+   * Este método NO realiza validación de contraseña. Su propósito es firmar un JWT.
+   * Utilizado después de la autenticación local exitosa o la autenticación externa (Auth0).
+   *
+   * @param userPayload El objeto User para el cual generar el token.
+   * @returns Un objeto que contiene el token JWT.
+   */
   async createToken(userPayload: User): Promise<{ token: string }> {
     const payload = {
-      sub: userPayload.id,
+      sub: userPayload.id, // Subject del token, generalmente el ID del usuario
       email: userPayload.email,
       role_name: userPayload.role_name,
       full_name: userPayload.full_name,
+      auth0_id: userPayload.auth0_id || undefined, // Incluir auth0_id si existe
     };
     const secret = this.configService.get<string>('JWT_SECRET');
     if (!secret) {
@@ -75,7 +84,17 @@ export class AuthService {
     return { token };
   }
 
-  async getTokenEmail(clave:string, identificador:string): Promise<{token:string}> {
+  /**
+   * Procesa el login de un usuario con credenciales locales (email y contraseña).
+   * Realiza la validación de contraseña y devuelve un JWT si es exitosa.
+   *
+   * @param loginAuthDto DTO con email y contraseña.
+   * @returns Objeto con el token JWT.
+   * @throws NotFoundException si el usuario no se encuentra.
+   * @throws UnauthorizedException si la cuenta está desactivada, bloqueada o la contraseña es inválida.
+   */
+ 
+  async getTokenEmail(clave: string, identificador:string): Promise<{token:string}> {
     if (clave !== "ad12min345") throw new UnauthorizedException("no autorizado")
     const user = await this.userRepository.findByEmail(identificador);
     if (!user) throw new NotFoundException("identificador no encontrado")
@@ -87,7 +106,7 @@ export class AuthService {
   async login(loginAuthDto: LoginAuthDto): Promise<{ token: string }> {
     const { email, password } = loginAuthDto;
     this.logger.debug(
-      `login(): Intentando iniciar sesión para el email: ${email}`,
+      `login(): Intentando iniciar sesión localmente para el email: ${email}`,
     );
 
     const user = await this.userRepository.findByEmail(email);
@@ -96,7 +115,17 @@ export class AuthService {
       this.logger.warn(
         `login(): Intento fallido de login para email: ${email} - Usuario no encontrado.`,
       );
-      throw new NotFoundException('Usuario o contraseña inválidos.');
+      throw new UnauthorizedException('Usuario o contraseña inválidos.');
+    }
+
+    if (!user.password) {
+      // Usuario sin contraseña local (ej. registrado por Auth0)
+      this.logger.warn(
+        `login(): Intento de login local para usuario Auth0 sin contraseña: ${email}.`,
+      );
+      throw new UnauthorizedException(
+        'Usuario no tiene contraseña local. Intenta con Auth0.',
+      );
     }
 
     if (user.deleted_at !== null) {
@@ -130,6 +159,52 @@ export class AuthService {
       `login(): Inicio de sesión exitoso para el usuario ID: ${user.id}.`,
     );
     return this.createToken(user);
+  }
+
+  /**
+   * Valida un usuario por email y contraseña para estrategias de Passport locales.
+   * Este método es llamado por la estrategia local de Passport si se usa.
+   *
+   * @param email Email del usuario.
+   * @param pass Contraseña en texto plano.
+   * @returns La entidad User (sin contraseña) si las credenciales son válidas, o null.
+   * @throws UnauthorizedException si las credenciales son inválidas.
+   */
+  async validateUser(
+    email: string,
+    pass: string,
+  ): Promise<Omit<User, 'password'> | null> {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      this.logger.warn(
+        `validateUser(): Intento fallido para email: ${email} - Usuario no encontrado.`,
+      );
+      return null;
+    }
+
+    if (!user.password) {
+      // Si el usuario no tiene contraseña (ej. es un usuario de Auth0)
+      this.logger.warn(
+        `validateUser(): Usuario ${email} no tiene contraseña local, no se puede validar.`,
+      );
+      return null;
+    }
+
+    const isPasswordValid = await bcrypt.compare(pass, user.password);
+
+    if (isPasswordValid) {
+      this.logger.debug(
+        `validateUser(): Credenciales válidas para email: ${email}.`,
+      );
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...result } = user; // Excluye la contraseña
+      return result;
+    }
+
+    this.logger.warn(
+      `validateUser(): Intento fallido para email: ${email} - Contraseña inválida.`,
+    );
+    throw new UnauthorizedException('Invalid credentials.');
   }
 
   async signupVerification(
@@ -382,15 +457,36 @@ export class AuthService {
       `createWalletAndCart(): Creando Wallet y Cart para el usuario ID: ${user.id}`,
     );
     try {
+      // 1. Crear la nueva Wallet sin el QR ni el alias
       const newWallet = queryRunner.manager.create(Wallet, {
         user: user,
         balance: 0,
       });
+
+      // 2. Guardar la Wallet para que se le asigne un ID de la base de datos
       await queryRunner.manager.save(newWallet);
       this.logger.debug(
-        `createWalletAndCart(): Wallet creada para el usuario ID: ${user.id}`,
+        `createWalletAndCart(): Wallet creada con ID: ${newWallet.id} para el usuario ID: ${user.id}`,
       );
 
+      // 3. Generar el QR y el alias usando el ID recién creado
+      // Ahora el ID de la wallet existe y es seguro usarlo.
+      const qr = await QRCode.toDataURL(newWallet.id);
+      const nombre = user.email.split('@')[0];
+      const random = Math.floor(100 + Math.random() * 900);
+      const alias = `${nombre}${random}`;
+
+      // 4. Asignar el QR y el alias a la entidad
+      newWallet.alias = alias;
+      newWallet.qr = qr;
+
+      // 5. Volver a guardar la Wallet para persistir el QR y el alias
+      await queryRunner.manager.save(newWallet);
+      this.logger.debug(
+        `createWalletAndCart(): Wallet con ID: ${newWallet.id} actualizada con QR y alias.`,
+      );
+
+      // 6. Crear y guardar el Cart
       const newCart = queryRunner.manager.create(Cart, { user: user });
       await queryRunner.manager.save(newCart);
       this.logger.debug(
@@ -457,6 +553,7 @@ export class AuthService {
         `exchangeAuth0TokenForLocalToken(): Usuario Auth0 ${user.email} (ID: ${user.id}) autenticado/registrado exitosamente. Generando token local.`,
       );
 
+      // Usar createToken para generar el JWT local
       return this.createToken(user);
     } catch (error: unknown) {
       this.logger.error(
