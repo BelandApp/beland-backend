@@ -25,7 +25,7 @@ import { ResourcesType } from 'src/resources-types/entities/resources-type.entit
 import { WithdrawAccountType } from 'src/withdraw-account-type/entities/withdraw-account-type.entity';
 
 @Injectable()
-export class DatabaseInitService implements OnModuleInit {
+export class DatabaseInitService {
   private readonly logger = new Logger(DatabaseInitService.name);
 
   constructor(
@@ -96,8 +96,8 @@ export class DatabaseInitService implements OnModuleInit {
     }
   }
 
-  async onModuleInit() {
-    this.logger.log('🚀 Iniciando procesos de inicialización...');
+  async dataEntryUpdate () {
+    this.logger.log('🚀 Iniciando procesos de carga de datos...');
 
     try {
 
@@ -138,7 +138,20 @@ export class DatabaseInitService implements OnModuleInit {
         'code',
         'Tipos de Cuentas para Retiros',
       );
+      this.logger.log('✅ Inicialización completada exitosamente.');
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Error durante la inicialización: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
 
+  async loadSuperAdminAndRole () {
+     this.logger.log('🚀 Iniciando procesos de carga del superadmin...');
+
+    try {
+    
       await this.defaultRolesSeeder.seed();
       await this.superAdminUserSeeder.seed();
 
@@ -150,4 +163,5 @@ export class DatabaseInitService implements OnModuleInit {
       );
     }
   }
+
 }

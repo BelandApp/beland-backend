@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,6 +26,7 @@ import { Resource } from './entities/resource.entity';
 import { ResourcesService } from './resources.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
 import { UpdateResourceDto } from './dto/update-resource.dto';
+import { Request } from 'express';
 
 @ApiTags('resources')
 @Controller('resources')
@@ -68,8 +70,8 @@ export class ResourcesController {
   @ApiResponse({ status: 201, description: 'Recurso creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear el recurso' })
   @ApiResponse({ status: 500, description: 'No se pudo crear el recurso' })
-  async create(@Body() body: CreateResourceDto): Promise<Resource> {
-    return await this.service.create(body);
+  async create(@Body() body: CreateResourceDto, @Req() req:Request): Promise<Resource> {
+    return await this.service.create({...body, user_commerce_id: req.user.id});
   }
 
   @Put(':id')

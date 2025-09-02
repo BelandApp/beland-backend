@@ -688,32 +688,85 @@ export class WalletsService {
   }
 
   async purchaseResource (user_id: string, dto:CreateUserResourceDto): Promise<{wallet: Wallet}> {
+    // 1) recupero el recurso y veo si existe
     const resourceRepo = this.dataSource.getRepository(Resource);
     const resource = await resourceRepo.findOne({
       where: {id: dto.resource_id}
     })
     if (!resource) throw new NotFoundException("Recurso Beland no encontrado")  
+    
+    // 2) chequeo las cantidades si corresponde
+    if (resource.limit_user > 0) {
+      const userCant = await this.dataSource.manager
+        .createQueryBuilder(UserResource, "ur")
+        .select("COALESCE(SUM(ur.quantity), 0)", "total")
+        .where("ur.user_id = :user_id", { user_id })
+        .andWhere("ur.resource_id = :resource_id", { resource_id: dto.resource_id })
+        .getRawOne<{ total: string }>();
+
+      const currentUserQuantity = +userCant.total; // cantidad actual
+      const userCantTotal = currentUserQuantity + +dto.quantity;
+
+      if (userCantTotal > resource.limit_user) {
+        const resto = +resource.limit_user - currentUserQuantity;
+
+        if (resto === 0) {
+          throw new ConflictException(
+            `Ya alcanzó el límite permitido para este recurso.`,
+          );
+        } else {
+          throw new ConflictException(
+            `Puede adquirir solo hasta ${resto} más.`,
+          );
+        }
+      }
+    }
+
+    // 3) Verifico que la wallet origen tenga fondos suficientes
+    const userWallet = await this.dataSource.manager.findOne(Wallet, {
+      where: {user_id}
+    })
+    if (!userWallet) throw new NotFoundException("Billetera del usuario no encontrada")  
+    if (+userWallet.becoin_balance < (+resource.becoin_value * +dto.quantity))
+      throw new ConflictException("Fondos insuficientes. Recargue su Billetera e intente nuevamente")  
+
+    // 4) verifico que exista la wallet destino del recurso.
     const toWallet = await this.dataSource.manager.findOne(Wallet, {
       where: {user_id: resource.user_commerce_id}
     })
     if (!toWallet) throw new NotFoundException("Billetera destino no encontrada")  
-    const wallet = await this.transfer(
+    
+    // 5) Si el valor del resource es 0 (o sea gratuito) no realizo la transferencia, en caso contrario si.
+    if (resource.becoin_value > 0) {
+        const wallet = await this.transfer(
+          user_id,
+          { 
+            toWalletId: toWallet.id, 
+            amountBecoin: +resource.becoin_value * +dto.quantity,
+          },
+          TransactionCode.PURCHASE_RESOURCE,
+          TransactionCode.SALE_RESOURCE
+        )
+
+        if (!wallet) throw new ConflictException("Error al realizar el pago")  
+        
+        await this.userResourceService.create({
+            user_id,
+            resource_id: resource.id,
+            quantity: dto.quantity,
+        });
+
+        return wallet;
+    }
+    await this.userResourceService.create({
       user_id,
-      { 
-        toWalletId: toWallet.id, 
-        amountBecoin: +resource.becoin_value * +dto.quantity,
-      },
-    )
-    if (!wallet) throw new NotFoundException("Error al realizar el pago")  
-    const createUserResource = this.userResourceService.create({
-        user_id,
-        resource_id: resource.id,
-        quantity: dto.quantity,
-     })
-    return wallet;
+      resource_id: resource.id,
+      quantity: dto.quantity,
+    });
+    return {wallet: userWallet};
   }
 
-  async purchase (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
+  async purchaseRecarge (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
     
     const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
     if (priceOneBecoin !== 0.05) {

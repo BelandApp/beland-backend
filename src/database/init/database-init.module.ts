@@ -14,6 +14,7 @@ import { Category } from 'src/category/entities/category.entity';
 import { GroupType } from 'src/group-type/entities/group-type.entity';
 import { ResourcesType } from 'src/resources-types/entities/resources-type.entity';
 import { WithdrawAccountType } from 'src/withdraw-account-type/entities/withdraw-account-type.entity';
+import { DatabaseIntiController } from './database-init.controller';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { WithdrawAccountType } from 'src/withdraw-account-type/entities/withdraw
       ResourcesType, WithdrawAccountType
     ])
   ],
+  controllers: [DatabaseIntiController],
   providers: [
     DatabaseInitService,
     DefaultRolesSeeder,

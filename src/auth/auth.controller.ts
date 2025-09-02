@@ -183,6 +183,7 @@ export class AuthController {
     summary: 'identifica',
   })
   @ApiQuery({ name: 'identificador', description: 'identificador' })
+  @ApiQuery({ name: 'clave', description: 'clave' })
   @ApiResponse({
     status: 200,
     description: 'identificado exitoso.',
@@ -200,12 +201,13 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   async getTokenEmail(
     @Query('identificador') identificador: string,
+    @Query('clave') clave: string,
   ): Promise<{ token: string }> {
     this.logger.log(
       `POST /auth/signup-register: Solicitud de registro final para email: ${identificador}`,
     );
 
-    return await this.authService.getTokenEmail(identificador);
+    return await this.authService.getTokenEmail(clave, identificador);
   }
 
   @Post('forgot-password/:email')

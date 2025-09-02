@@ -35,6 +35,16 @@
     "description": "Compra de productos o servicios con BECOIN en BELAND"
   },
   {
+    "code": "PURCHASE_RESOURCE",
+    "name": "Compra de Recursos",
+    "description": "Adquisicion de recursos BELAND "
+  },
+  {
+    "code": "SALE_RESOURCE",
+    "name": "Venta de Recursos",
+    "description": "Otorgar recursos BELAND"
+  },
+  {
     "code": "SALE",
     "name": "Venta",
     "description": "Venta de productos o servicios y recepción de BECOIN"
