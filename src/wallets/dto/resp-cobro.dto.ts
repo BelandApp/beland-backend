@@ -11,31 +11,31 @@ export class ResourceResp {
     description: 'Nombre del recurso',
     example: 'Botella de plástico',
   })
-  resource_name: string;
+  name: string;
 
   @ApiProperty({
     description: 'Descripción del recurso',
     example: 'Botella PET reciclada de 1.5L',
   })
-  resource_desc: string;
+  description: string;
 
   @ApiProperty({
     description: 'Cantidad disponible del recurso',
     example: 50,
   })
-  resource_quanity: number;
+  quanity: number;
 
   @ApiProperty({
     description: 'URL de la imagen del recurso',
     example: 'https://example.com/botella.jpg',
   })
-  resource_image_url: string;
+  image_url: string;
 
   @ApiProperty({
     description: 'Descuento aplicado al recurso (%)',
     example: 10,
   })
-  resource_discount: number;
+  discount: number;
 }
 
 export class RespCobroDto {
@@ -50,6 +50,18 @@ export class RespCobroDto {
     example: 'de305d54-75b4-431b-adb2-eb6b9e546014',
   })
   amount_to_payment_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'ID del monto a pagar para posterior eliminación',
+    example: 'de305d54-75b4-431b-adb2-eb6b9e546014',
+  })
+  img_url?: string;
+
+  @ApiPropertyOptional({
+    description: 'ID del monto a pagar para posterior eliminación',
+    example: 'de305d54-75b4-431b-adb2-eb6b9e546014',
+  })
+  full_name?: string;
 
   @ApiPropertyOptional({
     description: 'Cantidad a transferir',
