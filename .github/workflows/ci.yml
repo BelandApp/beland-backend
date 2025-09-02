@@ -1,6 +1,9 @@
 name: CI / CD - Deploy to GCP
 
 on:
+  push:
+    branches:
+      - production
   workflow_dispatch:
     inputs:
       environment:
@@ -51,6 +54,25 @@ jobs:
 
           echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
           echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
+      
+      - name: Configurar variables de entorno desde JSON
+        run: |
+          ENV_FILE="${ENVIRONMENT}.json"
+          echo "Cargando variables de $ENV_FILE"
+          export $(jq -r 'to_entries|map("\(.key)=\(.value)")|.[]' $ENV_FILE)
+        shell: bash
+
+      - name: Ejecutar migraciones
+        run: |
+          npm ci
+          npm run build
+          npm run migration:run
+        env:
+          DB_HOST: $DB_HOST
+          DB_PORT: $DB_PORT
+          DB_USERNAME: $DB_USERNAME
+          DB_PASSWORD: $DB_PASSWORD
+          DB_DATABASE: $DB_DATABASE
 
       - name: Deploy en Cloud Run
         run: |
