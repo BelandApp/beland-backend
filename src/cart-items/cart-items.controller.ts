@@ -76,20 +76,6 @@ export class CartItemsController {
     return await this.service.create(body);
   }
 
-  @Put(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar un item de carrito existente' })
-  @ApiParam({ name: 'id', description: 'UUID del item de carrito' })
-  @ApiResponse({ status: 200, description: 'item de carrito actualizado correctamente' })
-  @ApiResponse({ status: 404, description: 'No se encontró el item de carrito a actualizar' })
-  @ApiResponse({ status: 500, description: 'Error al actualizar el item de carrito' })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: UpdateCartItemDto,
-  ) {
-    return this.service.update(id, body);
-  }
-
   @Put('quantity/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar la cantidad de un item de carrito existente' })
@@ -103,6 +89,20 @@ export class CartItemsController {
     @Query('quantity') quantity: number,
   ) {
     return this.service.update(id, {quantity});
+  }
+
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar un item de carrito existente' })
+  @ApiParam({ name: 'id', description: 'UUID del item de carrito' })
+  @ApiResponse({ status: 200, description: 'item de carrito actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el item de carrito a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar el item de carrito' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateCartItemDto,
+  ) {
+    return this.service.update(id, body);
   }
 
   @Delete(':id')

@@ -44,17 +44,16 @@ export class OrdersController {
   @ApiOperation({ summary: 'Listar ordenes con paginación y filtrado por usuario' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
-  @ApiQuery({ name: 'leader_id', required: false, type: String, description: 'Filtrar ordenes por ID de usuario, si no se envia retorna todas las ordenes' })
   @ApiResponse({ status: 200, description: 'Listado de ordenes retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findAll(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
-    @Query('leader_id') leader_id = '',
+    @Req() req: Request,
   ): Promise<[Order[], number]> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(leader_id, pageNumber, limitNumber);
+    return await this.service.findAll(req.user.id, pageNumber, limitNumber);
   }
 
   @Get(':id')
@@ -90,14 +89,6 @@ export class OrdersController {
     @Body() body: CreateOrderByCartDto,
     @Req() req : Request,
   ): Promise<Order> {
-    const user: User = req.user; // tipalo si ya tenés interfaz
-  
-  const hasWallet = user.wallet.id === body.wallet_id;
-
-  if (!hasWallet) {
-    throw new ForbiddenException('La billetera no pertenece al usuario autenticado');
-  }
-
   return await this.service.createOrderByCart(body);
   }
 
