@@ -3,15 +3,19 @@ import {
   Logger,
   ConflictException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../../../users/users.service'; // Ruta relativa ajustada
-import { CreateUserDto } from '../../../users/dto/create-user.dto'; // Ruta relativa ajustada
+import { UsersService } from '../../../users/users.service';
+import { CreateUserDto } from '../../../users/dto/create-user.dto';
 import { AuthService } from 'src/auth/auth.service';
 import { DataSource } from 'typeorm';
 import { User } from 'src/users/entities/users.entity';
 import { Role } from 'src/roles/entities/role.entity';
 import { ROLES_KEY } from 'src/auth/decorators/roles.decorator';
+import { Wallet } from 'src/wallets/entities/wallet.entity';
+import { v4 as uuidv4 } from 'uuid';
+import * as QRCode from 'qrcode';
 
 @Injectable()
 export class SuperAdminUserSeeder {
@@ -20,10 +24,15 @@ export class SuperAdminUserSeeder {
   constructor(
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
+    private readonly usersService: UsersService,
     public dataSource: DataSource,
   ) {}
 
-  async seed(): Promise<void> {
+  /**
+   * Siembra el usuario SUPERADMIN.
+   * @param forceReset Si es true, fuerza la wallet del usuario existente a tener un alias y QR nulos.
+   */
+  async seed(forceReset: boolean = false): Promise<void> {
     this.logger.log('👑 Verificando y creando usuario SUPERADMIN...');
 
     const superAdminEmail = this.configService.get<string>('SUPERADMIN_EMAIL');
@@ -34,79 +43,158 @@ export class SuperAdminUserSeeder {
       this.configService.get<string>('SUPERADMIN_FULL_NAME') ||
       'Super Administrador';
     const superAdminUsername =
-      this.configService.get<string>('SUPERADMIN_USERNAME') ||
-      'superadmin_user';
+      this.configService.get<string>('SUPERADMIN_USERNAME') || 'superadmin';
     const superAdminAddress =
       this.configService.get<string>('SUPERADMIN_ADDRESS') ||
-      'Dirección Secreta';
+      'Av. Principal, Edif. Central, Piso 1';
     const superAdminPhoneStr =
-      this.configService.get<string>('SUPERADMIN_PHONE');
-    const superAdminPhone = superAdminPhoneStr
-      ? parseInt(superAdminPhoneStr, 10)
-      : 0;
+      this.configService.get<string>('SUPERADMIN_PHONE') || '+584140000000';
+    const superAdminPhone = parseInt(superAdminPhoneStr.replace(/\D/g, ''), 10);
     const superAdminCountry =
-      this.configService.get<string>('SUPERADMIN_COUNTRY') || 'País';
+      this.configService.get<string>('SUPERADMIN_COUNTRY') || 'Venezuela';
     const superAdminCity =
-      this.configService.get<string>('SUPERADMIN_CITY') || 'Ciudad';
+      this.configService.get<string>('SUPERADMIN_CITY') || 'Caracas';
 
-    if (!superAdminEmail || !superAdminPassword) {
-      this.logger.error(
-        '❌ Variables de entorno SUPERADMIN_EMAIL o SUPERADMIN_PASSWORD no definidas. No se puede crear el superadmin.',
-      );
-      return;
-    }
-
-    const roleRepo = this.dataSource.getRepository(Role);
-    const role:Role = await roleRepo.findOne({where: {name: 'SUPERADMIN'}})
-    const userRepo = this.dataSource.getRepository(User);
-    const user:User = await userRepo.findOne({where: {role_name: 'SUPERADMIN'}})
-    if (user) {
-      return;
-    }
-    const superAdminData: CreateUserDto = {
-      email: superAdminEmail,
-      full_name: superAdminFullName,
-      username: superAdminUsername,
-      oauth_provider: null,
-      role_name: role.name,
-      password: superAdminPassword,
-      confirmPassword: superAdminPassword,
-      address: superAdminAddress,
-      phone: superAdminPhone,
-      country: superAdminCountry,
-      city: superAdminCity,
-      isBlocked: false,
-      deleted_at: null,
-      profile_picture_url: '',
-    };
-   
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction(); 
+    await queryRunner.startTransaction();
 
     try {
-      
-      const newUser = await queryRunner.manager.save(User, {...superAdminData, role_id: role.role_id});
-      await this.authService.createWalletAndCart(queryRunner, newUser);
-      await queryRunner.commitTransaction();
-      this.logger.log(
-        `✅ Usuario SUPERADMIN creado exitosamente: ${superAdminEmail}`,
-      );
-    } catch (error: any) {
-      await queryRunner.rollbackTransaction();
-      // Asumiendo que UsersService.create lanza ConflictException si el usuario ya existe
-      if (error instanceof ConflictException) {
-        this.logger.log(`ℹ️ Usuario SUPERADMIN ya existe: ${superAdminEmail}`); // Log informativo
-      } else {
+      const role = await queryRunner.manager.findOne(Role, {
+        where: { name: 'SUPERADMIN' },
+      });
+
+      if (!role) {
         this.logger.error(
-          `❌ Error creando usuario SUPERADMIN:`,
-          error.message,
-          error.stack,
+          `❌ El rol 'SUPERADMIN' no se encontró. No se puede crear el usuario.`,
         );
         throw new InternalServerErrorException(
-          `Error al crear el usuario SUPERADMIN: ${error.message}`,
+          'El rol SUPERADMIN no existe en la base de datos.',
         );
       }
+
+      const existingUser = await this.usersService
+        .findUserEntityByEmail(superAdminEmail)
+        .catch(() => null);
+
+      if (existingUser) {
+        this.logger.log(
+          `ℹ️ Usuario SUPERADMIN ya existe: ${superAdminEmail}. Verificando su wallet.`,
+        );
+
+        const superadminWallet = await queryRunner.manager.findOne(Wallet, {
+          where: { user: { id: existingUser.id } },
+        });
+
+        if (!superadminWallet) {
+          this.logger.error(
+            '❌ La wallet del usuario SUPERADMIN no se encontró, intentando crearla.',
+          );
+          await this.authService.createWalletAndCart(queryRunner, existingUser);
+          this.logger.log(
+            '✅ Wallet y cart del SUPERADMIN creados exitosamente.',
+          );
+        } else {
+          // ✅ NUEVA LÓGICA: Si forceReset es true, forzamos alias y QR a null
+          if (forceReset) {
+            superadminWallet.alias = null;
+            superadminWallet.qr = null;
+            await queryRunner.manager.save(Wallet, superadminWallet);
+            this.logger.log(
+              `✅ Se ha forzado el reinicio de la wallet del SUPERADMIN (alias y QR a NULL).`,
+            );
+          } else {
+            // Lógica existente para verificar y actualizar si es necesario
+            this.logger.debug(
+              `🔍 Estado de la wallet: QR es nulo? ${!superadminWallet.qr}. Alias es 'BELAND'? ${
+                superadminWallet.alias === 'BELAND'
+              }.`,
+            );
+
+            if (!superadminWallet.qr || superadminWallet.alias !== 'BELAND') {
+              const qrData = JSON.stringify({
+                address: superadminWallet.address,
+                alias: 'BELAND',
+              });
+              const newQr = await QRCode.toDataURL(qrData);
+
+              // Siempre forzamos el alias a ser 'BELAND'
+              superadminWallet.alias = 'BELAND';
+              superadminWallet.qr = newQr;
+
+              await queryRunner.manager.save(Wallet, superadminWallet);
+              this.logger.log(
+                '✅ QR y alias "BELAND" de la wallet del SUPERADMIN actualizados.',
+              );
+            } else {
+              this.logger.log(
+                '✅ QR y alias de la wallet del SUPERADMIN ya existen y son correctos. No se requiere acción.',
+              );
+            }
+          }
+        }
+      } else {
+        // Si el usuario no existe, proceder con la creación
+        const superAdminData = {
+          email: superAdminEmail,
+          full_name: superAdminFullName,
+          username: superAdminUsername,
+          role_name: role.name,
+          password: superAdminPassword,
+          confirmPassword: superAdminPassword,
+          address: superAdminAddress,
+          phone: superAdminPhone,
+          country: superAdminCountry,
+          city: superAdminCity,
+          isBlocked: false,
+          deleted_at: null,
+          profile_picture_url: '',
+        };
+
+        const newUser = await queryRunner.manager.save(User, {
+          ...superAdminData,
+          role_id: role.role_id,
+        });
+
+        // Llamar a la lógica de creación de wallet y cart
+        await this.authService.createWalletAndCart(queryRunner, newUser);
+
+        // ✅ Lógica agregada para setear el alias y QR inmediatamente después de la creación del usuario.
+        const createdWallet = await queryRunner.manager.findOne(Wallet, {
+          where: { user: { id: newUser.id } },
+        });
+
+        if (createdWallet) {
+          createdWallet.alias = 'BELAND';
+          const qrData = JSON.stringify({
+            address: createdWallet.address,
+            alias: 'BELAND',
+          });
+          createdWallet.qr = await QRCode.toDataURL(qrData);
+          await queryRunner.manager.save(Wallet, createdWallet);
+          this.logger.log(
+            '✅ Wallet del SUPERADMIN inicializada con alias "BELAND" y QR.',
+          );
+        } else {
+          this.logger.error('❌ La wallet recién creada no se encontró.');
+        }
+
+        this.logger.log(
+          `✅ Usuario SUPERADMIN creado exitosamente: ${superAdminEmail}`,
+        );
+      }
+
+      await queryRunner.commitTransaction();
+    } catch (error: any) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(
+        `❌ Error durante la siembra del usuario SUPERADMIN:`,
+        error.message,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        `Error al crear o verificar el usuario SUPERADMIN: ${error.message}`,
+      );
     } finally {
       await queryRunner.release();
     }
