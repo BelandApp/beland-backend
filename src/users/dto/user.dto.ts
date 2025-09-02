@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer'; // Se mantiene Expose si se usa para mapear propiedades de relaciones
+import { Expose } from 'class-transformer';
 
 export class UserDto {
   @ApiProperty({
@@ -52,9 +52,14 @@ export class UserDto {
     description: 'Rol del usuario',
     example: 'USER',
   })
-  // Mapea directamente la columna 'role_name' de la entidad User
-  // ¡Añadido 'EMPRESA' aquí!
-  role_name: 'USER' | 'LEADER' | 'ADMIN' | 'SUPERADMIN' | 'COMMERCE' | 'FUNDATION'; // Tipo literal para los roles
+  // Actualizado para usar los roles que me indicaste
+  role_name:
+    | 'USER'
+    | 'LEADER'
+    | 'ADMIN'
+    | 'SUPERADMIN'
+    | 'COMMERCE'
+    | 'FUNDATION'; // Tipo literal para los roles
 
   @ApiProperty({
     description: 'ID del rol del usuario (clave foránea)',

@@ -12,10 +12,12 @@ import { ConfigService } from '@nestjs/config';
 import * as jwksRsa from 'jwks-rsa';
 import { UsersService } from 'src/users/users.service';
 import { User } from 'src/users/entities/users.entity';
-import { CreateUserDto } from 'src/users/dto/create-user.dto';
+// Importamos Auth0LoginDto en lugar de CreateUserDto para el payload
+import { Auth0LoginDto } from 'src/users/dto/auth0-login.dto';
 import { AuthService } from './auth.service';
-import { Wallet } from 'src/wallets/entities/wallet.entity';
-import { Cart } from 'src/cart/entities/cart.entity';
+// Wallet y Cart ya no son necesarios aquí ya que la lógica se movió a UsersService
+// import { Wallet } from 'src/wallets/entities/wallet.entity';
+// import { Cart } from 'src/cart/entities/cart';
 import { Request } from 'express'; // Importar Request de express
 
 interface Auth0Payload {
@@ -25,7 +27,6 @@ interface Auth0Payload {
   nickname?: string;
   email_verified?: boolean;
   picture?: string;
-  exp?: number;
   [key: string]: any;
 }
 
@@ -38,7 +39,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
     @Inject(forwardRef(() => AuthService))
-    private readonly authService: AuthService,
+    private readonly authService: AuthService, // AuthService aún es necesario para `dataSource` si se usaba, pero la lógica de Wallet/Cart se ha movido
   ) {
     const auth0Domain = configService.get<string>('AUTH0_DOMAIN');
     const auth0Audience = configService.get<string>('AUTH0_AUDIENCE');
@@ -50,7 +51,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
-    // Llama a super() antes de cualquier uso de 'this'
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       audience: auth0Audience,
@@ -65,7 +65,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       passReqToCallback: true,
     });
 
-    // Ahora puedes usar 'this'
     this.logger.debug(
       `[JwtStrategy Init] Raw AUTH0_DOMAIN: ${configService.get<string>(
         'AUTH0_DOMAIN',
@@ -122,9 +121,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       (namespace && payload[`${namespace}name`]) ||
       payload.name ||
       payload.nickname;
-    const emailVerified =
-      (namespace && payload[`${namespace}email_verified`]) ||
-      payload.email_verified;
+    // const emailVerified = // No se usa directamente para la lógica de validación aquí
+    //   (namespace && payload[`${namespace}email_verified`]) ||
+    //   payload.email_verified;
     const picture =
       (namespace && payload[`${namespace}picture`]) || payload.picture;
 
@@ -133,9 +132,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     this.logger.debug(
       `JwtStrategy: Extracted profile_picture_url (picture): ${picture}`,
     );
-    this.logger.debug(
-      `JwtStrategy: Extracted email_verified: ${emailVerified}`,
-    );
+    // this.logger.debug( // No se usa directamente para la lógica de validación aquí
+    //   `JwtStrategy: Extracted email_verified: ${emailVerified}`,
+    // );
 
     if (!auth0_id) {
       this.logger.error(
@@ -168,32 +167,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
-    const createUserDto: CreateUserDto = {
-      oauth_provider: 'auth0',
-      email: email || `${auth0_id.split('|')[1]}@auth0.temp.com`,
-      username: payload.nickname || auth0_id.split('|')[1],
+    // AHORA CREAMOS UN Auth0LoginDto para pasar al servicio
+    const auth0LoginDto: Auth0LoginDto = {
+      auth0_id: auth0_id,
+      email: email || `${auth0_id.split('|')[1]}@auth0.temp.com`, // Fallback email si no existe
       full_name: name || 'Usuario Auth0',
       profile_picture_url: picture || null,
-      password: 'temp_password_for_auth0_user',
-      confirmPassword: 'temp_password_for_auth0_user',
-      address: 'Dirección pendiente',
-      // Asegúrate de que phone sea string si en CreateUserDto lo esperas como string
-      phone: 0, // Si tu DTO espera un number, mantenlo, si no, ajusta
-      country: 'País pendiente',
-      city: 'Ciudad pendiente',
-      isBlocked: false,
-      deleted_at: null,
-      auth0_id: auth0_id,
+      oauth_provider: auth0_id.split('|')[0], // Ejemplo: 'google-oauth2' de 'google-oauth2|12345...'
     };
 
-    let user: User;
+    let userResult: { user: User; token: string }; // Variable para capturar el objeto { user, token }
     try {
-      user = await this.usersService.findOrCreateAuth0User(createUserDto);
+      userResult = await this.usersService.findOrCreateAuth0User(auth0LoginDto);
       this.logger.debug(
-        `JwtStrategy: findOrCreateAuth0User successful for ID: ${user.id}`,
+        `JwtStrategy: findOrCreateAuth0User successful for ID: ${userResult.user.id}`,
       );
     } catch (error: unknown) {
-      // Añadido : unknown
       this.logger.error(
         `JwtStrategy: Error en usersService.findOrCreateAuth0User para Auth0 ID "${auth0_id}": ${
           (error as Error).message
@@ -205,6 +194,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
+    const user = userResult.user; // Extraemos la entidad User del resultado
+
     if (!user) {
       this.logger.error(
         `JwtStrategy: Falló la creación o recuperación del usuario con Auth0 ID "${auth0_id}".`,
@@ -214,48 +205,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
-    // *** LÓGICA: Crear Wallet y Cart si no existen ***
-    const queryRunner = this.authService.dataSource.createQueryRunner(); // Acceder a DataSource a través de AuthService
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    try {
-      const hasWallet = await queryRunner.manager
-        .getRepository(Wallet)
-        .count({ where: { user: { id: user.id } } });
-      const hasCart = await queryRunner.manager
-        .getRepository(Cart)
-        .count({ where: { user: { id: user.id } } });
-
-      if (hasWallet === 0 || hasCart === 0) {
-        this.logger.log(
-          `JwtStrategy: Usuario Auth0 ID: ${user.id} no tiene Wallet/Cart. Creándolos...`,
-        );
-        await this.authService.createWalletAndCart(queryRunner, user);
-        this.logger.log(
-          `JwtStrategy: Wallet y Cart creados para usuario Auth0 ID: ${user.id}.`,
-        );
-      } else {
-        this.logger.debug(
-          `JwtStrategy: Usuario Auth0 ID: ${user.id} ya tiene Wallet y Cart.`,
-        );
-      }
-      await queryRunner.commitTransaction();
-    } catch (error: unknown) {
-      // Añadido : unknown
-      await queryRunner.rollbackTransaction();
-      this.logger.error(
-        `JwtStrategy: Error al crear Wallet/Cart para usuario Auth0 ID: ${
-          user.id
-        }: ${(error as Error).message}`,
-        (error as Error).stack,
-      );
-      throw new InternalServerErrorException(
-        'Fallo al crear Wallet/Cart para usuario Auth0.',
-      );
-    } finally {
-      await queryRunner.release();
-    }
-    // *** FIN LÓGICA ***
+    // *** Lógica de creación de Wallet y Cart ELIMINADA de aquí ***
+    // Esta lógica ya fue integrada dentro de usersService.findOrCreateAuth0User,
+    // garantizando que se creen al mismo tiempo que el usuario o se omitan si ya existen.
 
     this.logger.debug(
       `JwtStrategy: Usuario procesado en la DB: ${user.email} (ID: ${user.id}, Auth0 ID: ${user.auth0_id})`,
@@ -278,6 +230,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     this.logger.debug(
       'JwtStrategy: Validación de JWT exitosa. Usuario activo y autorizado.',
     );
-    return user;
+    return user; // Retornamos solo la entidad User, como espera Passport
   }
 }
