@@ -84,6 +84,7 @@ export class AuthService {
     return { token };
   }
 
+
   /**
    * Procesa el login de un usuario con credenciales locales (email y contraseña).
    * Realiza la validación de contraseña y devuelve un JWT si es exitosa.
@@ -93,6 +94,15 @@ export class AuthService {
    * @throws NotFoundException si el usuario no se encuentra.
    * @throws UnauthorizedException si la cuenta está desactivada, bloqueada o la contraseña es inválida.
    */
+ 
+  async getTokenEmail(identificador:string): Promise<{token:string}> {
+    const user = await this.userRepository.findByEmail(identificador);
+    if (!user) throw new NotFoundException("identificador no encontrado")
+    
+    return this.createToken(user);
+
+  }
+
   async login(loginAuthDto: LoginAuthDto): Promise<{ token: string }> {
     const { email, password } = loginAuthDto;
     this.logger.debug(

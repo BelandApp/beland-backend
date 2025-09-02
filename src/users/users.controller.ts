@@ -50,6 +50,7 @@ import { RequiredPermissions } from 'src/auth/decorators/permissions.decorator';
 import { Request } from 'express'; // Importar la interfaz Request de express para su correcto tipado
 import { RoleEnum, ValidRoleNames } from 'src/roles/enum/role-validate.enum';
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
+import { UserEventBeland } from './entities/users-event-beland.entity';
 
 // DTO para la ruta de bloqueo/desbloqueo (puede vivir aquí o en un archivo separado)
 class BlockUserDto extends PickType(UpdateUserDto, ['isBlocked'] as const) {
@@ -184,6 +185,12 @@ export class UsersController {
 
   // --- RUTAS PROTEGIDAS PARA USUARIOS AUTENTICADOS (ACCESO A RECURSOS PROPIOS) ---
   // Requieren solo autenticación (FlexibleAuthGuard). No necesitan Roles ni Permissions.
+
+  // @Get('user-event-beland')
+  // @HttpCode(HttpStatus.OK)
+  // async getUsersEventBeland(): Promise<UserEventBeland[]> {
+  //   return await this.usersService.getUsersEventBeland();
+  // }
 
   @Get('me')
   @HttpCode(HttpStatus.OK)

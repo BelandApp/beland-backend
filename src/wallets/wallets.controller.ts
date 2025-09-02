@@ -38,6 +38,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { CreateUserResourceDto } from 'src/user-resources/dto/create-user-resource.dto';
 
 @ApiTags('wallets')
 @Controller('wallets')
@@ -170,6 +171,13 @@ export class WalletsController {
     return await this.service.create(body);
   }
 
+  @Put('alias-qr')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Genera alias y qr si no lo tiene' })
+  async generateAliasAndQr (@Req() req: Request) {
+    return await this.service.generateAliasAndQr(req.user.id);
+  }
+
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una billetera existente' })
@@ -298,6 +306,20 @@ export class WalletsController {
     return await this.service.transfer(req.user?.id, dto);
   }
 
+  @Post('purchase-recource')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary:
+      'Crear una nueva compra un recurso a una entidad con becoin',
+  })
+  @ApiResponse({ status: 201, description: 'Compra Exitosamente' })
+  async purchaseResourse(
+    @Req() req: Request,
+    @Body() dto: CreateUserResourceDto,
+  ): Promise<{ wallet: Wallet }> {
+    return await this.service.purchaseResource(req.user?.id, dto);
+  }
+
   //COMPRAS DIRECTO CON TARJETA O PAYPHONE.
   @Post('purchase-recharge/:to_wallet_id')
   @HttpCode(HttpStatus.CREATED)
@@ -316,25 +338,7 @@ export class WalletsController {
     @Req() req: Request,
   ): Promise<{ wallet: Wallet }> {
 
-    let amountBecoin = 0;
-    const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
-    if (priceOneBecoin !== 0.05) {
-      throw new InternalServerErrorException(
-        'El precio de BeCoin no es válido',
-      );
-    }
-
-    const amount_payment_id = dto.amount_payment_id;
-    const user_resource_id = dto.user_resource_id;
-
-    return await this.service.transfer(
-        req.user?.id,
-        {
-          toWalletId: to_wallet_id,
-          amountBecoin,
-          amount_payment_id,
-          user_resource_id,
-        },
-      );
+    return this.service.purchase(req.user.id, to_wallet_id,  dto);
   }
+
 }

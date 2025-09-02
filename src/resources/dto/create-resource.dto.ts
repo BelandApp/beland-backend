@@ -88,7 +88,7 @@ export class CreateResourceDto {
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @Type(() => Number)
   @Min(0)
-  limit_user_active: number;
+  used_acount: number;
 
   @ApiProperty({
     description: 'Cantidad limite que Beland puede ofrecer a sus usuarios (por defecto es 0, significa sin limites)',

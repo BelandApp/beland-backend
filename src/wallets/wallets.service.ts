@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import * as QRCode from 'qrcode';
 import { WalletsRepository } from './wallets.repository';
 import { Wallet } from './entities/wallet.entity';
 import { DataSource } from 'typeorm';
@@ -24,6 +25,10 @@ import { UserResource } from 'src/user-resources/entities/user-resource.entity';
 import { NotificationsGateway } from 'src/notification-socket/notification-socket.gateway';
 import { RespTransferResult } from './dto/resp-tranfer-result.dto';
 import { UserEventBeland } from 'src/users/entities/users-event-beland.entity';
+import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
+import { CreateUserResourceDto } from 'src/user-resources/dto/create-user-resource.dto';
+import { UserResourcesService } from 'src/user-resources/user-resources.service';
+import { Resource } from 'src/resources/entities/resource.entity';
 
 @Injectable()
 export class WalletsService {
@@ -33,7 +38,8 @@ export class WalletsService {
     private readonly repository: WalletsRepository,
     private readonly superadminConfig: SuperadminConfigService,
     private readonly dataSource: DataSource, // 👈 acá lo inyectás
-   private readonly notificationsGateway: NotificationsGateway,)
+   private readonly notificationsGateway: NotificationsGateway,
+  private readonly userResourceService: UserResourcesService,)
   {}
 
   async findAll(
@@ -87,13 +93,18 @@ export class WalletsService {
   async dataPayment(wallet_id: string, user_id: string): Promise<RespCobroDto> {
     const respPayment: RespCobroDto = {};
 
-    // 1) Buscar la wallet del usuario
+    // 1) Buscar la wallet del que esta por recibir el cobro
     const wallet = await this.dataSource
       .getRepository(Wallet)
-      .findOne({ where: { id: wallet_id } });
+      .findOne({ 
+        where: { id: wallet_id },
+        relations: {user: true}, 
+      });
     if (!wallet) throw new NotFoundException('No se encuentra la billetera');
 
     respPayment.wallet_id = wallet.id;
+    respPayment.img_url = wallet.user.profile_picture_url || "https://thumbs.dreamstime.com/b/icono-de-tienda-o-con-sombra-logotipo-vectorial-simple-190411124.jpg";
+    respPayment.full_name = wallet.user.full_name || wallet.alias;
 
     // 2) Montos creados a cobrar
     const amountPayment = await this.dataSource
@@ -125,11 +136,11 @@ export class WalletsService {
 
     respPayment.resource = resources.map((res) => ({
       id: res.id,
-      resource_name: res.resource.name,
-      resource_desc: res.resource.description,
-      resource_quanity: res.quantity,
-      resource_image_url: res.resource.url_image,
-      resource_discount: res.resource.discount,
+      name: res.resource.name,
+      description: res.resource.description,
+      quanity: res.quantity,
+      image_url: res.resource.url_image,
+      discount: res.resource.discount,
     }));
 
     return respPayment;
@@ -233,7 +244,7 @@ export class WalletsService {
       const becoinAmount = amountUsd / priceOneBecoin;
 
       // 5) Actualizar saldo de la wallet
-      wallet.becoin_balance = Number(wallet.becoin_balance) + becoinAmount;
+      wallet.becoin_balance = Number(wallet.becoin_balance) + +becoinAmount;
       if (isNaN(wallet.becoin_balance)) {
         wallet.becoin_balance = 0;
       }
@@ -525,7 +536,7 @@ export class WalletsService {
         where: { user_id },
       });
       if (!from) throw new NotFoundException('No se encuentra la Billetera');
-      if (Number(from.becoin_balance) < dto.amountBecoin)
+      if (Number(from.becoin_balance) < +dto.amountBecoin)
         throw new BadRequestException('Saldo insuficiente');
 
       // 2) certifico que exista la wallet de destino
@@ -541,7 +552,7 @@ export class WalletsService {
           where: { wallet: {id: to.id} },
         });
         if (!user) throw new NotFoundException('Usuario destino no existe');
-        switch (user.role.name) {
+        switch (user.role_name) {
           case 'COMMERCE':
             code_transaction_send = TransactionCode.PURCHASE;
             code_transaction_received = TransactionCode.SALE;
@@ -558,7 +569,7 @@ export class WalletsService {
             await queryRunner.manager.save(UserEventBeland, {
               user_payment_id: user_id,
               user_sale_id: user.id,
-              amount: dto.amountBecoin,
+              amount: +dto.amountBecoin,
               isRecycled: dto.amountBecoin === 0,
             });
             break;
@@ -634,12 +645,18 @@ export class WalletsService {
       }
 
       // 10) Si vino user_resource_id entonces doy de baja el recurso.
+      let message = "";
       if (dto.user_resource_id) {
         await queryRunner.manager.update(
           UserResource,
           { id: dto.user_resource_id },
           { is_redeemed: true, redeemed_at: new Date() },
-        );
+        )
+        const userResource = await queryRunner.manager.findOne(UserResource, {
+          where: { id: dto.user_resource_id },
+          relations: {resource: true},
+        });
+        message = `Cobro Exitoso. Recurso: ${userResource.resource.name}. Cant: ${userResource.quantity}`
       }
 
       // COMMIT
@@ -648,12 +665,14 @@ export class WalletsService {
       // === EMITIR EVENTO AL COMERCIO (post-commit) ===
       // Identificá al comercio: según tu código, 'to' es la wallet del comercio:
       // const to = ... (ya lo tenías arriba)
+      message = message !== "" ? message : "Cobro Realizado con Éxito";
       this.notificationsGateway.notifyUser(to.user_id, {
         wallet_id: to.id,
-        message: "Cobro Realizado con Éxito",
+        message,
         amount: +dto.amountBecoin* +this.superadminConfig.getPriceOneBecoin(),
         success: true,
         amount_payment_id_deleted: dto.amount_payment_id || null,
+        noHidden: message !== "Cobro Realizado con Éxito",
       });   
 
       // se debe eliminar del front el amount to payment eliminado
@@ -666,6 +685,68 @@ export class WalletsService {
       // Cierro el queryRunner
       await queryRunner.release();
     }
+  }
+
+  async purchaseResource (user_id: string, dto:CreateUserResourceDto): Promise<{wallet: Wallet}> {
+    const resourceRepo = this.dataSource.getRepository(Resource);
+    const resource = await resourceRepo.findOne({
+      where: {id: dto.resource_id}
+    })
+    if (!resource) throw new NotFoundException("Recurso Beland no encontrado")  
+    const toWallet = await this.dataSource.manager.findOne(Wallet, {
+      where: {user_id: resource.user_commerce_id}
+    })
+    if (!toWallet) throw new NotFoundException("Billetera destino no encontrada")  
+    const wallet = await this.transfer(
+      user_id,
+      { 
+        toWalletId: toWallet.id, 
+        amountBecoin: +resource.becoin_value * +dto.quantity,
+      },
+    )
+    if (!wallet) throw new NotFoundException("Error al realizar el pago")  
+    const createUserResource = this.userResourceService.create({
+        user_id,
+        resource_id: resource.id,
+        quantity: dto.quantity,
+     })
+    return wallet;
+  }
+
+  async purchase (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
+    
+    const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
+    if (priceOneBecoin !== 0.05) {
+      throw new InternalServerErrorException(
+        'El precio de BeCoin no es válido',
+      );
+    }
+    const walletRecharge = await this.recharge(
+      user_id,
+      {
+        amountUsd: +dto.amountUsd,
+        referenceCode: dto.referenceCode,
+        payphone_transactionId: dto.payphone_transactionId,
+        clientTransactionId: dto.clientTransactionId,
+      }
+    ) 
+
+    if (!walletRecharge) throw new ConflictException("Fallo la recarga");
+
+    const amount_payment_id = dto.amount_payment_id;
+    const user_resource_id = dto.user_resource_id;
+
+    const amountBecoin = +dto.amountUsd / +priceOneBecoin;
+
+    return await this.transfer(
+        user_id,
+        {
+          toWalletId: to_wallet_id,
+          amountBecoin,
+          amount_payment_id,
+          user_resource_id,
+        },
+      );
   }
 
   async purchaseBeland(
@@ -729,6 +810,44 @@ export class WalletsService {
       // 6) Confirmar transacción
       await queryRunner.commitTransaction();
       return txSaved;
+    } catch (error) {
+      // Si algo falla, revertimos todo
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Liberar el queryRunner
+      await queryRunner.release();
+    }
+  }
+
+  async generateAliasAndQr (user_id: string): Promise<Wallet> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1) Chequear que exista la billetera 
+      const wallet: Wallet = await queryRunner.manager.findOne(Wallet, {
+        where: { user_id },
+        relations: {user:true},
+      });
+      if (!wallet) throw new NotFoundException('No se encuentra la billetera');
+
+      // genero qr
+      const qr = await QRCode.toDataURL(wallet.id);
+      // genero alias
+      const nombre = wallet.user.email.split('@')[0];
+      const random = Math.floor(100 + Math.random() * 900); 
+      const alias = `${nombre}${random}`;
+
+      if (!wallet.qr) wallet.qr = qr;
+      if (!wallet.alias) wallet.alias = alias;
+
+      const walletUpdate = await queryRunner.manager.save(wallet);
+
+      await queryRunner.commitTransaction();
+
+      return walletUpdate;
     } catch (error) {
       // Si algo falla, revertimos todo
       await queryRunner.rollbackTransaction();

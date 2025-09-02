@@ -1,8 +1,4 @@
-import * as crypto from 'crypto';
-// Polyfill para crypto.subtle si no está disponible (ej. en algunos entornos Node)
-if (!(globalThis as any).crypto?.subtle) {
-  (globalThis as any).crypto = crypto.webcrypto;
-}
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger, LogLevel } from '@nestjs/common';
@@ -79,6 +75,7 @@ async function bootstrap() {
         'https://beland-production.up.railway.app/api',
         'https://belandlanding.vercel.app',
         'https//beland.app',
+        'https://beland-backend-266662044893.us-east1.run.app',
         configService.get<string>('CORS_ADDITIONAL_ORIGINS_PROD'),
         configService.get<string>('AUTH0_AUDIENCE'),
       ].filter(Boolean)
@@ -94,6 +91,7 @@ async function bootstrap() {
         'https://beland-project.netlify.app',
         'https://beland-production.up.railway.app/api',
         'https://belandlanding.vercel.app',
+        'https://beland-backend-266662044893.us-east1.run.app',
         /https:\/\/\w+\-beland\-\d+\.exp\.direct$/,
         /https:\/\/\w+\-anonymous\-\d+\.exp\.direct$/,
       ].filter(Boolean);
@@ -163,7 +161,7 @@ async function bootstrap() {
   app.use('/webhook/payphone', raw({ type: 'application/json' }));
 
   // Inicio de la aplicación en el puerto configurado
-  const port = configService.get<number>('PORT') || 3001;
+  const port = configService.get<number>('PORT') || 3000;
   await app.listen(port);
 
   appLogger.log(`✅ Beland API corriendo en: http://localhost:${port}`);

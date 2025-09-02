@@ -29,13 +29,25 @@ import { ValidRoleNames } from 'src/roles/enum/role-validate.enum';
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { AuthService } from '../auth/auth.service'; // Importar AuthService
 const QRCode = require('qrcode'); // Importar qrcode aquí para que esté disponible en el contexto
+import { UserEventBeland } from './entities/users-event-beland.entity';
 
 // Constantes para los nombres de roles
 const ROLE_USER = 'USER';
 const ROLE_LEADER = 'LEADER';
 const ROLE_ADMIN = 'ADMIN';
 const ROLE_SUPERADMIN = 'SUPERADMIN';
-// Eliminada la constante ROLE_EMPRESA
+const ROLE_COMMERCE = 'COMMERCE';
+const ROLE_FUNDATION = 'FUNDATION';
+
+// // Definición de tipo para todos los roles válidos
+// type ValidRoleNames =
+//   | 'USER'
+//   | 'LEADER'
+//   | 'ADMIN'
+//   | 'SUPERADMIN'
+//   | 'COMMERCE'
+//   | 'FUNDATION';
+
 
 @Injectable()
 export class UsersService {
@@ -257,6 +269,12 @@ export class UsersService {
     const usersDto = plainToInstance(UserDto, users);
     return { users: usersDto, total };
   }
+
+  // async getUsersEventBeland(): Promise<UserEventBeland[]> {
+  //   const userEvent = this.dataSource.getRepository(UserEventBeland);
+
+  //   return await userEvent.find();
+  // }
 
   /**
    * Busca un usuario por su ID.
