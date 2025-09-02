@@ -42,7 +42,7 @@ export class Resource {
   @Column('int', { default: 0 })
   used_acount: number; 
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ type: 'boolean', default: false }) 
   is_expired: boolean;
 
   @Column({ type: 'timestamptz', nullable: true })
