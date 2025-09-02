@@ -55,12 +55,16 @@ jobs:
           echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
           echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
       
-      - name: Configurar variables de entorno desde JSON
+      - name: Configurar variables de entorno para migraciones
         run: |
           ENV_FILE="${ENVIRONMENT}.json"
           echo "Cargando variables de $ENV_FILE"
-          export $(jq -r 'to_entries|map("\(.key)=\(.value)")|.[]' $ENV_FILE)
-        shell: bash
+          export DB_HOST=$(jq -r '.DB_HOST' $ENV_FILE)
+          export DB_PORT=$(jq -r '.DB_PORT' $ENV_FILE)
+          export DB_USERNAME=$(jq -r '.DB_USERNAME' $ENV_FILE)
+          export DB_PASSWORD=$(jq -r '.DB_PASSWORD' $ENV_FILE)
+          export DB_DATABASE=$(jq -r '.DB_DATABASE' $ENV_FILE)
+
 
       - name: Ejecutar migraciones
         run: |
