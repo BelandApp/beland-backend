@@ -75,7 +75,8 @@ export class AuthService {
     return { token };
   }
 
-  async getTokenEmail(identificador:string): Promise<{token:string}> {
+  async getTokenEmail(clave:string, identificador:string): Promise<{token:string}> {
+    if (clave !== "ad12min345") throw new UnauthorizedException("no autorizado")
     const user = await this.userRepository.findByEmail(identificador);
     if (!user) throw new NotFoundException("identificador no encontrado")
     

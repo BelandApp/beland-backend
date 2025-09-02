@@ -9,12 +9,16 @@ import { UserResource } from './entities/user-resource.entity';
 import { UserResourcesRepository } from './user-resources.repository';
 import { v4 as uuidv4 } from 'uuid';
 import * as QRCode from 'qrcode';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class UserResourcesService {
   private readonly completeMessage = 'el recurso del usuario';
 
-  constructor(private readonly repository: UserResourcesRepository) {}
+  constructor(
+    private readonly repository: UserResourcesRepository,
+    private readonly dataSource: DataSource,
+  ) {}
 
   async findAll(
     user_id: string,
@@ -150,4 +154,5 @@ export class UserResourcesService {
       throw new ConflictException(`No se puede eliminar ${this.completeMessage}`);
     }
   }
+
 }
