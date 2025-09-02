@@ -65,7 +65,6 @@ export class UserResourcesRepository {
     return { remaining };
   }
 
-
   async findOne(id: string): Promise<UserResource> {
     return this.repository.findOne({
       where: { id },

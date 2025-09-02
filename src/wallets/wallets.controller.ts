@@ -306,7 +306,7 @@ export class WalletsController {
     return await this.service.transfer(req.user?.id, dto);
   }
 
-  @Post('purchase-recource')
+  @Post('purchase-resource')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary:
@@ -332,13 +332,13 @@ export class WalletsController {
     description: 'UUID de la billetera que compra',
   })
   @ApiResponse({ status: 201, description: 'Compra Exitosamente' })
-  async purchase(
+  async purchaseRecarge(
     @Param('to_wallet_id', ParseUUIDPipe) to_wallet_id: string,
     @Body() dto: PaymentWithRechargeDto,
     @Req() req: Request,
   ): Promise<{ wallet: Wallet }> {
 
-    return this.service.purchase(req.user.id, to_wallet_id,  dto);
+    return this.service.purchaseRecarge(req.user.id, to_wallet_id,  dto);
   }
 
 }

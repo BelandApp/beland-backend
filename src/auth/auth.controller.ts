@@ -67,7 +67,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Inicio de sesión exitoso.',
-    type: String,
+    type: String, // Debería ser { token: string }
   })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas.' })
   @ApiBody({ type: LoginAuthDto })
@@ -75,6 +75,7 @@ export class AuthController {
     this.logger.log(
       `POST /auth/login: Solicitud de login para email: ${loginAuthDto.email}`,
     );
+    // Este `login` es para la autenticación local con email/password
     return await this.authService.login(loginAuthDto);
   }
 
@@ -182,6 +183,7 @@ export class AuthController {
     summary: 'identifica',
   })
   @ApiQuery({ name: 'identificador', description: 'identificador' })
+  @ApiQuery({ name: 'clave', description: 'clave' })
   @ApiResponse({
     status: 200,
     description: 'identificado exitoso.',
@@ -199,12 +201,13 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   async getTokenEmail(
     @Query('identificador') identificador: string,
+    @Query('clave') clave: string,
   ): Promise<{ token: string }> {
     this.logger.log(
       `POST /auth/signup-register: Solicitud de registro final para email: ${identificador}`,
     );
 
-    return await this.authService.getTokenEmail(identificador);
+    return await this.authService.getTokenEmail(clave, identificador);
   }
 
   @Post('forgot-password/:email')
@@ -270,6 +273,8 @@ export class AuthController {
     this.logger.log(
       'POST /auth/exchange-auth0-token: Solicitud de intercambio de token de Auth0 por token local.',
     );
+    // Llama al método del servicio que usará JwtStrategy para validar el token de Auth0,
+    // creará/actualizará el usuario y luego generará el token local.
     return this.authService.exchangeAuth0TokenForLocalToken(
       auth0ExchangeTokenDto.auth0Token,
     );
