@@ -1,6 +1,7 @@
 // src/orders/dto/create-order.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { IsUUID, IsEnum, IsOptional, IsNumber } from 'class-validator';
+import { StatusCode } from 'src/transaction-state/enum/status.enum';
 
 export class CreateOrderDto {
   @ApiProperty({ description: 'ID del grupo asociado a la orden' })
@@ -12,14 +13,12 @@ export class CreateOrderDto {
   leader_id: string;
 
   @ApiProperty({
-    description: 'Estado de la orden',
-    enum: ['PENDING', 'PAID'],
-    default: 'PENDING',
+    description: 'UUID Estado de la orden',
     required: false,
   })
   @IsOptional()
-  @IsEnum(['PENDING', 'PAID'])
-  status?: 'PENDING' | 'PAID';
+  @IsUUID()
+  status_id?: string;
 
   @ApiProperty({
     description: 'Total de la orden en monedas internas',

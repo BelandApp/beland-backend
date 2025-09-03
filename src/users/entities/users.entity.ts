@@ -132,7 +132,7 @@ export class User {
   @OneToMany(() => Testimony, (testimony) => testimony.user)
   testimonies: Testimony[];
 
-  @OneToMany(() => Order, (order) => order.leader)
+  @OneToMany(() => Order, (order) => order.user)
   orders: Order[];
 
   // @OneToMany(() => OrderItem, (item) => item.consumed_by_user)

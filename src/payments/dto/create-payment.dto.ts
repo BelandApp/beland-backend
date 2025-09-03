@@ -3,9 +3,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsUUID,
   IsNumber,
-  IsEnum,
-  IsOptional,
-  IsString,
 } from 'class-validator';
 
 export class CreatePaymentDto {
@@ -22,17 +19,15 @@ export class CreatePaymentDto {
   amount_paid: number;
 
   @ApiProperty({
-    description: 'Tipo de pago',
-    enum: ['FULL', 'SPLIT', 'EQUAL_SPLIT'],
+    description: 'UUID Tipo de pago',
   })
-  @IsEnum(['FULL', 'SPLIT', 'EQUAL_SPLIT'])
+  @IsUUID()
   payment_type_id: string;
 
   @ApiProperty({
-    description: 'Hash de la transacción (en caso de blockchain)',
-    required: false,
+    description: 'UUID estado de pago',
   })
-  @IsOptional()
-  @IsString()
-  transaction_hash?: string;
+  @IsUUID()
+  status_id?: string;
+
 }

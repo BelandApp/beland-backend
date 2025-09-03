@@ -15,10 +15,9 @@ export class UserAddressRepository {
     page: number,
     limit: number,
   ): Promise<[UserAddress[], number]> {
-    const where = user_id ? { user_id } : {};
 
     return this.repository.findAndCount({
-        where,
+        where: {user_id},
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
