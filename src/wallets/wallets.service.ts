@@ -29,6 +29,7 @@ import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
 import { CreateUserResourceDto } from 'src/user-resources/dto/create-user-resource.dto';
 import { UserResourcesService } from 'src/user-resources/user-resources.service';
 import { Resource } from 'src/resources/entities/resource.entity';
+import { randomUUID } from 'crypto'
 
 @Injectable()
 export class WalletsService {
@@ -524,6 +525,7 @@ export class WalletsService {
     dto: TransferDto,
     code_transaction_send?: string,
     code_transaction_received?: string,
+    
   ): Promise<{ wallet: Wallet }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -688,6 +690,7 @@ export class WalletsService {
   }
 
   async purchaseResource (user_id: string, dto:CreateUserResourceDto): Promise<{wallet: Wallet}> {
+    try {
     // 1) recupero el recurso y veo si existe
     const resourceRepo = this.dataSource.getRepository(Resource);
     const resource = await resourceRepo.findOne({
@@ -696,31 +699,24 @@ export class WalletsService {
     if (!resource) throw new NotFoundException("Recurso Beland no encontrado")  
     
     // 2) chequeo las cantidades si corresponde
-    if (resource.limit_user > 0) {
-      const userCant = await this.dataSource.manager
-        .createQueryBuilder(UserResource, "ur")
-        .select("COALESCE(SUM(ur.quantity), 0)", "total")
-        .where("ur.user_id = :user_id", { user_id })
-        .andWhere("ur.resource_id = :resource_id", { resource_id: dto.resource_id })
-        .getRawOne<{ total: string }>();
+      const existing = await this.dataSource.manager.findOne(UserResource, {
+        where: { user_id, resource_id: dto.resource_id },
+      });
 
-      const currentUserQuantity = +userCant.total; // cantidad actual
-      const userCantTotal = currentUserQuantity + +dto.quantity;
+      const current = existing?.quantity ?? 0;
+      const total = current + +dto.quantity;
 
-      if (userCantTotal > resource.limit_user) {
-        const resto = +resource.limit_user - currentUserQuantity;
+      // validar límite solo si corresponde
+      if (resource.limit_user > 0 && total > resource.limit_user) {
+        const resto = resource.limit_user - current;
 
-        if (resto === 0) {
-          throw new ConflictException(
-            `Ya alcanzó el límite permitido para este recurso.`,
-          );
-        } else {
-          throw new ConflictException(
-            `Puede adquirir solo hasta ${resto} más.`,
-          );
-        }
+        throw new ConflictException(
+          resto === 0
+            ? "Ya alcanzó el límite permitido para este recurso."
+            : `Puede adquirir solo hasta ${resto} más.`,
+        );
       }
-    }
+
 
     // 3) Verifico que la wallet origen tenga fondos suficientes
     const userWallet = await this.dataSource.manager.findOne(Wallet, {
@@ -736,6 +732,22 @@ export class WalletsService {
     })
     if (!toWallet) throw new NotFoundException("Billetera destino no encontrada")  
     
+    if (existing) {
+        // actualizar cantidad
+        existing.quantity = total;
+        await this.dataSource.manager.save(existing);
+      } else {
+        // crear nuevo registro
+        const newUserResource = this.dataSource.manager.create(UserResource, {
+          user_id,
+          resource_id: resource.id,
+          quantity: dto.quantity,
+          hash_id: randomUUID(),
+        });
+
+        await this.dataSource.manager.save(newUserResource);
+      }
+    
     // 5) Si el valor del resource es 0 (o sea gratuito) no realizo la transferencia, en caso contrario si.
     if (resource.becoin_value > 0) {
         const wallet = await this.transfer(
@@ -749,21 +761,14 @@ export class WalletsService {
         )
 
         if (!wallet) throw new ConflictException("Error al realizar el pago")  
-        
-        await this.userResourceService.create({
-            user_id,
-            resource_id: resource.id,
-            quantity: dto.quantity,
-        });
 
         return wallet;
     }
-    await this.userResourceService.create({
-      user_id,
-      resource_id: resource.id,
-      quantity: dto.quantity,
-    });
+    
     return {wallet: userWallet};
+  } catch (err) {
+
+  }
   }
 
   async purchaseRecarge (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
@@ -814,8 +819,7 @@ export class WalletsService {
     try {
       // 1) Chequear que exista la billetera con FOR UPDATE (para evitar race conditions)
       const wallet: Wallet = await queryRunner.manager.findOne(Wallet, {
-        where: { id: wallet_id },
-        lock: { mode: 'pessimistic_write' },
+        where: { id: wallet_id }
       });
       if (!wallet) throw new NotFoundException('No se encuentra la billetera');
 
