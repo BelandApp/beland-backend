@@ -33,6 +33,9 @@ export class Resource {
   @Column('numeric', { precision: 14, scale: 2, default: 0 })
   discount: number;
 
+  @Column('numeric', { precision: 14, scale: 2, default: 0 })
+  aplicationDiscount: number;
+
   @Column('int', { default: 0 })
   limit_user: number; // cantidad limite que un usuario puede comprar. (0 es infinito)
 
