@@ -11,7 +11,7 @@ import { Order } from '../../orders/entities/order.entity';
 import { User } from '../../users/entities/users.entity';
 import { PaymentType } from '../../payment-types/entities/payment-type.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
-import { TransactionState } from 'src/transaction-state/entities/transaction-state.entity';
+import { TransactionState } from '../../transaction-state/entities/transaction-state.entity';
 
 @Entity('payments')
 export class Payment {
