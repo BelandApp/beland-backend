@@ -1,0 +1,62 @@
+name: CI / CD - Deploy to GCP
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'develop'
+        type: choice
+        options:
+          - develop
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Esto hace que use los secrets del environment elegido
+    environment: ${{ github.event.inputs.environment }}
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+      GCLOUD_PROJECT: ${{ secrets.GCLOUD_PROJECT }}
+      GCLOUD_API_KEYFILE: ${{ secrets.GCLOUD_API_KEYFILE }}
+      REPO_NAME: ${{ secrets.REPO_NAME }}
+      REGION: ${{ secrets.REGION }} #us-east1
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Autenticación con GCP
+        run: |
+          echo "${GCLOUD_API_KEYFILE}" | base64 -d > gcloud-api-key.json
+          gcloud auth activate-service-account --key-file gcloud-api-key.json
+          gcloud config set project $GCLOUD_PROJECT
+
+      - name: Build & Push Docker
+        run: |
+          export DOCKER_BUILDKIT=0
+          PROJECT_NAME="beland-backend"
+          SERVICE_NAME="beland-backend"
+
+          docker build --no-cache --platform linux/amd64 -t $PROJECT_NAME -f Dockerfile .
+          gcloud auth configure-docker $REGION-docker.pkg.dev
+
+          IMAGE_NAME=$REGION-docker.pkg.dev/$GCLOUD_PROJECT/$REPO_NAME/$PROJECT_NAME
+          docker tag $PROJECT_NAME $IMAGE_NAME
+          docker push $IMAGE_NAME
+
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
+          echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
+
+      - name: Deploy en Cloud Run
+        run: |
+          gcloud run deploy $SERVICE_NAME \
+            --image $IMAGE_NAME \
+            --region=$REGION \
+            --platform managed \
+            --allow-unauthenticated \
+            --env-vars-file=${ENVIRONMENT}.json
