@@ -59,7 +59,7 @@ export class CreateResourceDto {
   becoin_value: number;
 
   @ApiProperty({
-    description: 'Discount percentage applied (1–100, must be >0 if becoin_value is 0)',
+    description: 'Descuento al adquirir el Recurso (1–100, must be >0 if becoin_value is 0)',
     example: 20,
     minimum: 0,
     maximum: 100,
@@ -70,6 +70,18 @@ export class CreateResourceDto {
   @Max(100)
   discount: number;
 
+@ApiProperty({
+    description: 'Descuento al usar el Recurso (1–100, must be >0 if becoin_value is 0)',
+    example: 20,
+    minimum: 0,
+    maximum: 100,
+  })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Type(() => Number)
+  @Min(0)
+  @Max(100)
+  aplicationDiscount: number;
+  
   @ApiProperty({
     description: 'Cantidad limite que un usuario puede adquirir el cupon entre activos y no activos (por defecto 1. Valor 0 es sin limite)',
     example: 3,
