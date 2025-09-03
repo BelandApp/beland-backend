@@ -11,6 +11,7 @@ import { Order } from '../../orders/entities/order.entity';
 import { User } from '../../users/entities/users.entity';
 import { PaymentType } from '../../payment-types/entities/payment-type.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
+import { TransactionState } from 'src/transaction-state/entities/transaction-state.entity';
 
 @Entity('payments')
 export class Payment {
@@ -19,9 +20,6 @@ export class Payment {
 
   @Column({ type: 'numeric' })
   amount_paid: number;
-
-  @Column({ type: 'text', nullable: true })
-  transaction_hash: string;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
@@ -49,4 +47,10 @@ export class Payment {
   user: User;
   @Column('uuid')
   user_id: string;
+
+  @ManyToOne(() => TransactionState)
+  @JoinColumn({name: 'status_id'})
+  status: TransactionState;
+  @Column('uuid')
+  status_id: string;
 }

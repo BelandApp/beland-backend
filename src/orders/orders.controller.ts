@@ -41,7 +41,7 @@ export class OrdersController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Listar ordenes con paginación y filtrado por usuario' })
+  @ApiOperation({ summary: 'Listar ordenes con paginación y filtrado '})
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
   @ApiResponse({ status: 200, description: 'Listado de ordenes retornado correctamente' })
@@ -49,11 +49,43 @@ export class OrdersController {
   async findAll(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
+  ): Promise<[Order[], number]> {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.service.findAll(pageNumber, limitNumber);
+  }
+
+  @Get('pending')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar ordenes con paginación y filtrado por estado "PENDING" del mas antiguo al mas nuevo' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+  @ApiResponse({ status: 200, description: 'Listado de ordenes retornado correctamente' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findAllPending(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ): Promise<[Order[], number]> {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.service.findAllPending(pageNumber, limitNumber);
+  }
+  
+  @Get('user')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar ordenes con paginación y filtrado por usuario registrado' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+  @ApiResponse({ status: 200, description: 'Listado de ordenes retornado correctamente' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findAllUser(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
     @Req() req: Request,
   ): Promise<[Order[], number]> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(req.user.id, pageNumber, limitNumber);
+    return await this.service.findAllUser(req.user.id, pageNumber, limitNumber);
   }
 
   @Get(':id')
@@ -65,6 +97,28 @@ export class OrdersController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Order> {
     return await this.service.findOne(id);
+  }
+
+  @Put('delivered')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirma Entrega de la orden por admin' })
+  @ApiQuery({ name: 'order_id', required: true, description: 'UUID de la orden' })
+  @ApiResponse({ status: 201, description: 'Confirmacion de entrega exitosa' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para la confirmacion' })
+  @ApiResponse({ status: 500, description: 'No se pudo realizar la confirmacion' })
+  async confrimedDelivered(@Query('order_id', ParseUUIDPipe) order_id:string): Promise<Order> {
+    return await this.service.confrimed(order_id, true);
+  }
+
+  @Put('received')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirma Recibo de la orden por usuario' })
+  @ApiQuery({ name: 'order_id', required: true, description: 'UUID de la orden' })
+  @ApiResponse({ status: 201, description: 'Confirmacion de recibo exitosa' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para la confirmacion' })
+  @ApiResponse({ status: 500, description: 'No se pudo realizar la confirmacion' })
+  async confrimedReceived(@Query('order_id', ParseUUIDPipe) order_id:string): Promise<Order> {
+    return await this.service.confrimed(order_id, false);
   }
 
   @Post()
@@ -81,15 +135,15 @@ export class OrdersController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear una nueva orden desde un carrito' })
   @ApiQuery({ name: 'cart_id', required: true, type: String, description: 'UUID del carrito sobre el cual se genera la orden de compra' })
-  @ApiQuery({ name: 'wallet_id', required: true, type: String, description: 'UUID de la wallet que pagará la orden' })
   @ApiResponse({ status: 201, description: 'Orden creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear la orden' })
   @ApiResponse({ status: 500, description: 'No se pudo crear la orden' })
   async createOrderByCart(
-    @Body() body: CreateOrderByCartDto,
+    @Query('cart_id', ParseUUIDPipe) cart_id: string,
     @Req() req : Request,
   ): Promise<Order> {
-  return await this.service.createOrderByCart(body);
+  const user_id = req.user.id;
+  return await this.service.createOrderByCart(cart_id, user_id);
   }
 
 }

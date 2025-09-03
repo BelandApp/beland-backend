@@ -10,18 +10,46 @@ export class OrdersRepository {
     private repository: Repository<Order>,
   ) {}
 
-  async findAll(
-    leader_id: string,
+    async findAll(
     page: number,
     limit: number,
   ): Promise<[Order[], number]> {
 
     return this.repository.findAndCount({
-        where: {leader_id},
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: ['group', 'leader'],
+        relations: {status: true, payment_type:true},
+    });
+  }
+
+  async findAllUser(
+    user_id: string,
+    page: number,
+    limit: number,
+  ): Promise<[Order[], number]> {
+
+    return this.repository.findAndCount({
+        where: {user_id},
+        order: { created_at: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+        relations: {status: true, payment_type:true},
+    });
+  }
+
+  async findAllPending(
+    status_id:string,
+    page: number,
+    limit: number,
+  ): Promise<[Order[], number]> {
+
+    return this.repository.findAndCount({
+        where: {status_id},
+        order: { created_at: 'ASC' },
+        skip: (page - 1) * limit,
+        take: limit,
+        relations: {address:true},
     });
   }
 

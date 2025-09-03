@@ -21,7 +21,6 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { AuthenticationGuard } from 'src/auth/guards/auth.guard';
 import { CartItem } from './entities/cart-item.entity';
 import { CartItemsService } from './cart-items.service';
 import { CreateCartItemDto } from './dto/create-cart-item.dto';
@@ -73,7 +72,8 @@ export class CartItemsController {
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear el item de carrito' })
   @ApiResponse({ status: 500, description: 'No se pudo crear el item de carrito' })
   async create(@Body() body: CreateCartItemDto): Promise<CartItem> {
-    return await this.service.create(body);
+    const total_price = +body.unit_price * +body.quantity;
+    return await this.service.create({...body, total_price});
   }
 
   @Put('quantity/:id')
