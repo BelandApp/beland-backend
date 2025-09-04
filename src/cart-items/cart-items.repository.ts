@@ -22,12 +22,14 @@ export class CartItemsRepository {
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
+        relations: {product:true},
     });
   }
 
   async findOne(id: string): Promise<CartItem> {
     return this.repository.findOne({
       where: { id },
+      relations: {product:true},
     });
   }
 
