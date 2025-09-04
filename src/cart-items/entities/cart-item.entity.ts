@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column, CreateDateColumn, OneToOne } from 'typeorm';
 import { Cart } from '../../cart/entities/cart.entity'; 
 import { Product } from '../../products/entities/product.entity';
 
@@ -7,7 +7,7 @@ export class CartItem {
   @PrimaryGeneratedColumn('uuid') 
   id: string;
 
-  @ManyToOne(() => Cart, (cart) => cart.items, { onDelete: 'CASCADE' })
+  @OneToOne(() => Cart, (cart) => cart.items, { cascade: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'cart_id' })
   cart: Cart;
   @Column('uuid')
@@ -26,7 +26,7 @@ export class CartItem {
   unit_price: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  total_price: number;
+  total_price: number; 
 
   @CreateDateColumn({ name: 'created_at' })
   created_at: Date;
