@@ -57,6 +57,7 @@ import { AmountToPaymentModule } from './amount-to-payment/amount-to-payment.mod
 import { PresetAmountModule } from './preset-amount/preset-amount.module';
 import { NotificationsSocketModule } from './notification-socket/notification-socket.module'; 
 import { TestimoniesModule } from './testimonies/testimonies.module';
+import { UserFeedbackModule } from './user-feedback/user-feedback.module';
 
 @Module({
   imports: [
@@ -157,6 +158,7 @@ import { TestimoniesModule } from './testimonies/testimonies.module';
     NotificationsSocketModule,
     TestimoniesModule,
     SuperadminModule,
+    UserFeedbackModule,
   ],
   controllers: [],
   providers: [
