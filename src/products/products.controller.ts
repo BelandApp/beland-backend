@@ -257,6 +257,76 @@ export class ProductsController {
     }
   }
 
+  // NUEVA RUTA: Eliminación total de productos
+  @Delete('/hard-delete/all')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  // Esta es una ruta de alta peligrosidad, solo permitida para SUPERADMIN
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN')
+  @ApiOperation({
+    summary: 'Eliminar todos los productos de forma permanente.',
+    description:
+      'Esta acción es irreversible y elimina todos los productos de la base de datos sin excepción. Solo disponible para el rol SUPERADMIN.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Todos los productos han sido eliminados de forma permanente.',
+  })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'No autorizado (solo SUPERADMIN).' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  async hardDeleteAll(@Req() req: Request) {
+    const userId = this.getUserId(req);
+    this.logger.warn(
+      `SOLICITUD CRÍTICA: DELETE /products/hard-delete/all por el usuario ID: ${userId}.`,
+    );
+    try {
+      await this.productsService.hardDeleteAllProducts();
+      this.logger.log(
+        `Todos los productos eliminados permanentemente por usuario ${userId}.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error crítico al eliminar todos los productos: ${
+          (error as Error).message
+        }`,
+        (error as Error).stack,
+      );
+      throw error;
+    }
+  }
+
+  // NUEVA RUTA: Ver productos con soft-delete
+  @Get('/soft-deleted')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
+  @ApiOperation({
+    summary:
+      'Obtener la lista de productos eliminados lógicamente (soft-delete).',
+    description:
+      'Permite a los administradores ver los productos que aún existen en la base de datos pero que están marcados como eliminados. Esta acción es útil para fines de auditoría y para una posible restauración posterior.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de productos soft-deleted.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'No autorizado.' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  async findSoftDeleted(@Req() req: Request) {
+    const userId = this.getUserId(req);
+    this.logger.log(
+      `GET /products/soft-deleted: Solicitud por el usuario ID: ${userId}.`,
+    );
+    try {
+      return this.productsService.findSoftDeletedProducts();
+    } catch (error) {
+      this.logger.error(
+        `Error al obtener productos soft-deleted: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      throw error;
+    }
+  }
+
   // --- RUTAS DE LECTURA DE PRODUCTOS (PÚBLICAS - NO REQUIEREN AUTENTICACIÓN) ---
 
   @Get()

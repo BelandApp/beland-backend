@@ -1,149 +1,82 @@
 [
   {
-    "name": "Agua Mineral EcoBottle",
-    "description": "Agua mineral embotellada en envase 100% reciclable.",
-    "price": 30,
-    "image_url": "https://cdn.example.com/products/agua-eco.jpg",
-    "category": "Bebidas"
+    "name": "Red label 750",
+    "description": "Whisky escocés de mezcla, conocido por su sabor ahumado y picante.",
+    "cost": 25.0,
+    "price": 26.5,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823611/RedLabel_750ml_jtyozy.png",
+    "category": "Licores"
   },
   {
-    "name": "Té Verde Orgánico",
-    "description": "Té verde frío sin azúcar, con antioxidantes naturales.",
-    "price": 50,
-    "image_url": "https://cdn.example.com/products/te-verde.jpg",
-    "category": "Bebidas"
-  },
-  { 
-    "name": "Jugo Natural de Naranja",
-    "description": "Exprimido 100%, sin conservantes ni azúcar añadida.",
-    "price": 60,
-    "image_url": "https://cdn.example.com/products/jugo-naranja.jpg",
-    "category": "Bebidas"
+    "name": "Gin W 750",
+    "description": "Ginebra premium de sabor botánico, ideal para cócteles.",
+    "cost": 16.0,
+    "price": 17.0,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823611/GinW_750ml_yjduao.png",
+    "category": "Licores"
   },
   {
-    "name": "Kombucha Artesanal",
-    "description": "Fermentado natural, sabor a frutos rojos.",
-    "price": 90,
-    "image_url": "https://cdn.example.com/products/kombucha.jpg",
-    "category": "Bebidas"
+    "name": "Antioqueño 750",
+    "description": "Aguardiente colombiano clásico, con notas anisadas y dulces.",
+    "cost": 17.0,
+    "price": 18.5,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823612/Antioque%C3%B1o_750ml_k1jhti.png",
+    "category": "Licores"
   },
   {
-    "name": "Café Frío Orgánico",
-    "description": "Cold brew sin azúcar, 100% café colombiano.",
-    "price": 70,
-    "image_url": "https://cdn.example.com/products/cafe-frio.jpg",
-    "category": "Bebidas"
+    "name": "Antioqueño 350",
+    "description": "Aguardiente colombiano en formato de 350ml, con notas anisadas.",
+    "cost": 10.5,
+    "price": 12.0,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823612/Antioque%C3%B1o_350ml_dhcoa9.png",
+    "category": "Licores"
   },
   {
-    "name": "Smoothie de Mango",
-    "description": "Batido natural de mango y avena, sin lactosa.",
-    "price": 85,
-    "image_url": "https://cdn.example.com/products/smoothie-mango.jpg",
-    "category": "Bebidas"
+    "name": "Abuelo 750",
+    "description": "Ron añejo panameño, con cuerpo y sabor suave a caramelo y vainilla.",
+    "cost": 14.5,
+    "price": 15.0,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823612/Abuelo_750ml_uzer3b.png",
+    "category": "Licores"
   },
   {
-    "name": "Limonada con Menta",
-    "description": "Refrescante y natural, sin gas.",
-    "price": 45,
-    "image_url": "https://cdn.example.com/products/limonada-menta.jpg",
-    "category": "Bebidas"
+    "name": "Jagger 750",
+    "description": "Licor de hierbas alemán, conocido por su sabor complejo y amargo.",
+    "cost": 28.0,
+    "price": 30.0,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823612/Jagger_750ml_y3738w.png",
+    "category": "Licores"
   },
   {
-    "name": "Bebida de Coco",
-    "description": "Agua de coco natural, sin azúcares añadidos.",
-    "price": 60,
-    "image_url": "https://cdn.example.com/products/agua-coco.jpg",
-    "category": "Bebidas"
+    "name": "Club Platinum 330",
+    "description": "Cerveza pilsner ligera y refrescante.",
+    "cost": 1.4,
+    "price": 1.6,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823611/ClubPlatinum_330ml_mebqig.png",
+    "category": "Cervezas"
   },
   {
-    "name": "Bebida Energética Natural",
-    "description": "Con guaraná y yerba mate. Sin químicos.",
-    "price": 95,
-    "image_url": "https://cdn.example.com/products/bebida-energetica.jpg",
-    "category": "Bebidas"
+    "name": "Corona 270",
+    "description": "Cerveza mexicana estilo lager, conocida por su suavidad y frescura.",
+    "cost": 1.4,
+    "price": 1.5,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823611/Corona_270ml_yqavzm.png",
+    "category": "Cervezas"
   },
   {
-    "name": "Leche de Almendras",
-    "description": "Bebida vegetal sin lactosa, con calcio añadido.",
-    "price": 55,
-    "image_url": "https://cdn.example.com/products/leche-almendra.jpg",
-    "category": "Bebidas"
+    "name": "Pilsener 270",
+    "description": "Cerveza clásica de sabor suave y refrescante.",
+    "cost": 1.1,
+    "price": 1.25,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823611/Pilsener_270ml_ifsdbu.png",
+    "category": "Cervezas"
   },
   {
-    "name": "Chips de Plátano",
-    "description": "Crujientes y horneados, sin aditivos.",
-    "price": 40,
-    "image_url": "https://cdn.example.com/products/chips-platano.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Mix de Frutos Secos",
-    "description": "Almendras, nueces y arándanos. Energía natural.",
-    "price": 70,
-    "image_url": "https://cdn.example.com/products/frutos-secos.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Barras de Avena y Miel",
-    "description": "Empaque compostable. Sin azúcar refinada.",
-    "price": 55,
-    "image_url": "https://cdn.example.com/products/barra-avena.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Galletas de Quinoa",
-    "description": "Ricas en fibra, sin gluten.",
-    "price": 50,
-    "image_url": "https://cdn.example.com/products/galletas-quinoa.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Palomitas Naturales",
-    "description": "Con sal marina, sin aceites procesados.",
-    "price": 35,
-    "image_url": "https://cdn.example.com/products/palomitas.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Trozos de Coco Deshidratado",
-    "description": "Snack dulce natural, sin azúcar añadida.",
-    "price": 45,
-    "image_url": "https://cdn.example.com/products/coco-deshidratado.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Brownie Vegano",
-    "description": "Hecho con cacao puro y dátiles.",
-    "price": 60,
-    "image_url": "https://cdn.example.com/products/brownie.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Granola Crunch",
-    "description": "Avena, semillas y miel orgánica.",
-    "price": 65,
-    "image_url": "https://cdn.example.com/products/granola.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Chocobites sin Azúcar",
-    "description": "Pequeños bocados de chocolate 70%.",
-    "price": 75,
-    "image_url": "https://cdn.example.com/products/chocobites.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Tiras de Manzana Deshidratada",
-    "description": "Crujientes y dulces. 100% naturales.",
-    "price": 50,
-    "image_url": "https://cdn.example.com/products/manzana-deshidratada.jpg",
-    "category": "Snacks"
-  },
-  {
-    "name": "Chips de Kale",
-    "description": "Vegetales crujientes horneados, sin fritura.",
-    "price": 60,
-    "image_url": "https://cdn.example.com/products/chips-kale.jpg",
-    "category": "Snacks"
+    "name": "Red Bull 270",
+    "description": "Bebida energética con sabor afrutado y alta cafeína.",
+    "cost": 2.7,
+    "price": 3.0,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823611/RedBull_270ml_cjcdre.png",
+    "category": "Bebidas Energéticas"
   }
 ]
