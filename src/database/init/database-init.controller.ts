@@ -45,6 +45,6 @@ export class DatabaseIntiController {
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiResponse({ status: 500, description: 'No se pudo crear' })
   async loadSuperAdminAndRole(): Promise<void> {
-    return await this.service.dataEntryUpdate();
+    return await this.service.loadSuperAdminAndRole();
   }
 }
