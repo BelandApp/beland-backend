@@ -1,4 +1,3 @@
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger, LogLevel } from '@nestjs/common';
@@ -76,6 +75,9 @@ async function bootstrap() {
         'https://belandlanding.vercel.app',
         'https//beland.app',
         'https://beland-backend-266662044893.us-east1.run.app',
+        'https://beland-backend-266662044893.us-east1.run.app/api',
+        'https://beland-backend-45tnbek6ya-uk.a.run.app',
+        'https://beland-backend-45tnbek6ya-uk.a.run.app/api',
         configService.get<string>('CORS_ADDITIONAL_ORIGINS_PROD'),
         configService.get<string>('AUTH0_AUDIENCE'),
       ].filter(Boolean)
