@@ -127,7 +127,7 @@ export class OrdersService {
       // 2) Traer el carrito con sus ítems
       const cart = await queryRunner.manager.findOne(Cart, {
         where: { id: cart_id },
-        relations: ['items']
+        relations: {items:true}
       });
       if (!cart) throw new NotFoundException('Carrito no encontrado');
       if (!cart.items || cart.items.length === 0) {
