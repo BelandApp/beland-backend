@@ -27,7 +27,12 @@ export class ProductsService {
     return await this.repo.save(newProduct);
   }
 
-  async findAll(pagination: PaginationDto, order: OrderDto, category?: string, name?:string) {
+  async findAll(
+    pagination: PaginationDto,
+    order: OrderDto,
+    category?: string,
+    name?: string,
+  ) {
     return this.repo.findAllPaginated(pagination, order, category, name);
   }
 
@@ -49,7 +54,23 @@ export class ProductsService {
     await this.repo.softRemove(product);
   }
 
-  async addGroupTypesToProduct(productId: string, groupTypeIds: string[]): Promise<Product> {
+  async addGroupTypesToProduct(
+    productId: string,
+    groupTypeIds: string[],
+  ): Promise<Product> {
     return this.repo.addGroupTypesToProduct(productId, groupTypeIds);
+  }
+
+  // Nuevo método para eliminar todos los productos de forma permanente
+  async hardDeleteAllProducts(): Promise<void> {
+    this.logger.warn(
+      'Ejecutando la eliminación permanente de todos los productos.',
+    );
+    await this.repo.deleteAllProducts();
+  }
+
+  // Nuevo método de servicio para buscar soft-deleted
+  async findSoftDeletedProducts(): Promise<Product[]> {
+    return this.repo.findSoftDeleted();
   }
 }
