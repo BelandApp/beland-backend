@@ -32,7 +32,12 @@ export class CartItemsRepository {
   }
 
   async create(body: Partial<CartItem>): Promise<CartItem> {
-    return await this.repository.save(body);
+    const item = await this.repository.findOne({where: {cart_id: body.cart_id, product_id:body.product_id}})
+    if (!item) return await this.repository.save(body);
+    const quantity = +item.quantity + +body.quantity;
+    item.quantity = +quantity;
+    item.total_price = +item.unit_price * +quantity
+    return await this.repository.save(item);
   }
 
   async update(id: string, body: Partial<CartItem>): Promise<UpdateResult> {
