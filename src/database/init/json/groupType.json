@@ -13,5 +13,6 @@
   { "name": "Despedida" },
   { "name": "Fiesta Infantil" },
   { "name": "Evento Deportivo" },
-  { "name": "Reunión de Trabajo" }
+  { "name": "Reunión de Trabajo" },
+  { "name": "Otros" }
 ]

@@ -107,7 +107,7 @@ export class User {
   @OneToOne(() => Admin, (admin) => admin.user)
   admin: Admin;
 
-  @OneToOne(() => Cart, (cart) => cart.user, {eager: true})
+  @OneToOne(() => Cart, (cart) => cart.user)
   cart: Cart;
 
   // Relaciones existentes (asegúrate de que las entidades referenciadas existan)
