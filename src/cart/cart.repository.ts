@@ -13,13 +13,14 @@ export class CartsRepository {
   async findByUser(user_id: string): Promise<Cart> {
     return this.repository.findOne({
       where: { user_id },
+      relations: {payment_type:true, items: {product: true}}
     });
   }
 
   async findOne(id: string): Promise<Cart> {
     return this.repository.findOne({
       where: { id },
-      relations: {payment_type:true, items: true, }
+      relations: {payment_type:true, items: {product: true}}
     });
   }
 
