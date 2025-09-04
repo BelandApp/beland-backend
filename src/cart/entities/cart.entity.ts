@@ -10,11 +10,11 @@ export class Cart {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @OneToOne(() => User, user => user.cart, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @OneToOne(() => User, user => user.cart, { cascade: true, onDelete: 'CASCADE' })
+  @JoinColumn({name:'user_id'})
   user: User;
   @Column('uuid')
-  user_id: string; 
+  user_id:string
 
   @ManyToOne(() => UserAddress, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'address_id' })
@@ -44,11 +44,11 @@ export class Cart {
   @Column({ type: 'int', default: 0 })
   total_items: number;
 
-  @OneToMany(() => CartItem, (cartItem) => cartItem.cart, { cascade: true })
+  @OneToMany(() => CartItem, (cartItem) => cartItem.cart)
   items: CartItem[];
 
   @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
+  created_at: Date; 
 
   @UpdateDateColumn({ name: 'updated_at' })
   updated_at: Date;

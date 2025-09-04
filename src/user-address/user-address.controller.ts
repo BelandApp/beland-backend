@@ -70,8 +70,8 @@ export class UserAddressController {
   @ApiResponse({ status: 201, description: 'Dirección creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear la dirección' })
   @ApiResponse({ status: 500, description: 'No se pudo crear la dirección' })
-  async create(@Body() body: CreateUserAddressDto): Promise<UserAddress> {
-    return await this.service.create(body);
+  async create(@Body() body: CreateUserAddressDto, @Req() req: Request): Promise<UserAddress> {
+    return await this.service.create({...body, user_id: req.user.id});
   }
 
   @Put(':id')

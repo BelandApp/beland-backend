@@ -1,1 +1,14 @@
+las migraciones trabajan sobre la BD a la cual esta conectada el proyecto en local.
+
+comando para Crear migracionesa.
+npm run migration:generate -- src/database/migrations/NombreUnicoDeLaMigracion
+
+Comando para correr la migracion y actualizar la bd que esta conectada a local. (si lo ejecuto desde local)
 npm run typeorm migration:run
+
+IMPORTANTE...
+Dentro de las entidades las rutas deben ser relativas. sino no va a encontrar las entidades relacionadas.
+en lugar de importar asi
+   src/user/entity/user.entity.ts // este fallaria
+la ruta debe ser
+   ../../user/entity/user.entity.ts // este lo encuentra bien.

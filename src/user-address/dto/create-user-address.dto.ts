@@ -11,10 +11,6 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateUserAddressDto {
-  @IsString()
-  @IsNotEmpty()
-  @Length(36, 36) // UUID
-  user_id: string;
 
   @IsString()
   @IsNotEmpty()

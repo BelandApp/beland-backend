@@ -56,7 +56,13 @@ export class CartItemsService {
 
   async update(id: string, body: Partial<CartItem>) {
     try {
-      const res = await this.repository.update(id, body);
+      let updateItem = body;
+      if (body.quantity || body.unit_price) {
+        const itemCart = await this.findOne(id);
+        const total_price = +itemCart.unit_price * +itemCart.quantity
+        updateItem = {...updateItem, total_price};
+      }
+      const res = await this.repository.update(id, updateItem);
       if (res.affected === 0)
         throw new NotFoundException(
           `No se encontró ${this.completeMessage}`,

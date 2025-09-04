@@ -52,7 +52,7 @@ export class UserResourcesController {
   ): Promise<[UserResource[], number]> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(req.user?.id, resource_id, pageNumber, limitNumber);
+    return await this.service.findAll(req.user.id, resource_id, pageNumber, limitNumber);
   }
 
   @Get('total-available/:resource_id')

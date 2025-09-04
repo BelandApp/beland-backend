@@ -321,9 +321,9 @@ export class UsersController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard) // Requiere autenticación, rol y permiso
+  @UseGuards(FlexibleAuthGuard, RolesGuard/*, PermissionsGuard*/) // Requiere autenticación, rol y permiso
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Permiso para gestionar usuarios
+  //@RequiredPermissions('user_permission') // Permiso para gestionar usuarios
   @ApiOperation({
     summary:
       'Obtener lista de usuarios con paginación, filtrado y ordenación (Solo Admin/Superadmin con permiso de usuario).',

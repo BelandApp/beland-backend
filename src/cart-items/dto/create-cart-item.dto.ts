@@ -40,15 +40,4 @@ export class CreateCartItemDto {
   @IsPositive()
   @Type(() => Number)
   unit_price: number;
-
-  @ApiProperty({
-    description: 'Subtotal del ítem (quantity * unit_price)',
-    example: 39.98,
-    type: Number,
-    format: 'float',
-  })
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @IsPositive()
-  @Type(() => Number)
-  subtotal: number;
 }

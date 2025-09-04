@@ -21,7 +21,6 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { AuthenticationGuard } from 'src/auth/guards/auth.guard';
 import { CartItem } from './entities/cart-item.entity';
 import { CartItemsService } from './cart-items.service';
 import { CreateCartItemDto } from './dto/create-cart-item.dto';
@@ -73,21 +72,8 @@ export class CartItemsController {
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear el item de carrito' })
   @ApiResponse({ status: 500, description: 'No se pudo crear el item de carrito' })
   async create(@Body() body: CreateCartItemDto): Promise<CartItem> {
-    return await this.service.create(body);
-  }
-
-  @Put(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar un item de carrito existente' })
-  @ApiParam({ name: 'id', description: 'UUID del item de carrito' })
-  @ApiResponse({ status: 200, description: 'item de carrito actualizado correctamente' })
-  @ApiResponse({ status: 404, description: 'No se encontró el item de carrito a actualizar' })
-  @ApiResponse({ status: 500, description: 'Error al actualizar el item de carrito' })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: UpdateCartItemDto,
-  ) {
-    return this.service.update(id, body);
+    const total_price = +body.unit_price * +body.quantity;
+    return await this.service.create({...body, total_price});
   }
 
   @Put('quantity/:id')
@@ -103,6 +89,20 @@ export class CartItemsController {
     @Query('quantity') quantity: number,
   ) {
     return this.service.update(id, {quantity});
+  }
+
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar un item de carrito existente' })
+  @ApiParam({ name: 'id', description: 'UUID del item de carrito' })
+  @ApiResponse({ status: 200, description: 'item de carrito actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el item de carrito a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar el item de carrito' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateCartItemDto,
+  ) {
+    return this.service.update(id, body);
   }
 
   @Delete(':id')

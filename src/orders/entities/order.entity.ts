@@ -14,20 +14,30 @@ import { OrderItem } from '../../order-items/entities/order-item.entity';
 import { Payment } from '../../payments/entities/payment.entity';
 import { UserAddress } from '../../user-address/entities/user-address.entity';
 import { PaymentType } from '../../payment-types/entities/payment-type.entity';
+import { TransactionState } from '../../transaction-state/entities/transaction-state.entity';
 
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'text', default: 'PENDING' })
-  status: 'PENDING' | 'PAID';
+  @ManyToOne(() => TransactionState)
+  @JoinColumn({name: 'status_id'})
+  status: TransactionState;
+  @Column('uuid')
+  status_id: string;
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
   total_amount: number;
 
   @Column({ type: 'int', default: 0 })
   total_items: number;
+
+  @Column({ type: 'boolean', default: false })
+  confirmSend: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  confirmReceived: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
@@ -50,11 +60,11 @@ export class Order {
   @Column('uuid', { nullable:true })
   address_id: string;
 
-  @ManyToOne(() => User, (user) => user.orders)
-  @JoinColumn({name:'leader_ip'})
-  leader: User;
+  @ManyToOne(() => User)
+  @JoinColumn({name:'user_id'})
+  user: User;
   @Column('uuid')
-  leader_id: string;
+  user_id: string;
 
   // payments_type: 'FULL' | 'EQUAL_SPLIT';
   @ManyToOne(() => PaymentType, (type) => type.orders, { eager: true })
