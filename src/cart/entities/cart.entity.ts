@@ -44,7 +44,11 @@ export class Cart {
   @Column({ type: 'int', default: 0 })
   total_items: number;
 
-  @OneToMany(() => CartItem, (cartItem) => cartItem.cart)
+  @OneToMany(() => CartItem, (cartItem) => cartItem.cart, {
+    cascade: true,
+    eager: true,
+    orphanedRowAction: 'delete', // 👈 clave
+  })
   items: CartItem[];
 
   @CreateDateColumn({ name: 'created_at' })
