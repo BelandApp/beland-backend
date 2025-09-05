@@ -67,13 +67,13 @@ export class CartsController {
 
   @Put('group/:id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar un carrito existente' })
+  @ApiOperation({ summary: 'Actualizar el grupo de un carrito existente' })
   @ApiParam({ name: 'id', description: 'UUID del carrito' })
   @ApiQuery({ name: 'group_id', required: true, type: String, description: 'UUID del grupo a asignar' })
   @ApiResponse({ status: 200, description: 'Carrito actualizado correctamente' })
   @ApiResponse({ status: 404, description: 'No se encontró el carrito a actualizar' })
   @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
-  async update(
+  async updateGroup(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('group_id', ParseUUIDPipe) group_id: string,
   ) {
@@ -82,7 +82,7 @@ export class CartsController {
 
   @Put('address/:id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar un carrito existente' })
+  @ApiOperation({ summary: 'Actualizar la direccion de un carrito existente' })
   @ApiParam({ name: 'id', description: 'UUID del carrito' })
   @ApiQuery({ name: 'address_id', required: true, type: String, description: 'UUID de la dirección a asignar' })
   @ApiResponse({ status: 200, description: 'Carrito actualizado correctamente' })
@@ -95,6 +95,35 @@ export class CartsController {
     return this.service.update(id, {address_id});
   }
 
+  @Put('payment-type/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar el tipo de pago de un carrito existente' })
+  @ApiParam({ name: 'id', description: 'UUID del carrito' })
+  @ApiQuery({ name: 'payment_type_id', required: true, type: String, description: 'UUID del tipo de pago a asignar' })
+  @ApiResponse({ status: 200, description: 'Carrito actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el carrito a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
+  async updatePayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('payment_type_id', ParseUUIDPipe) payment_type_id: string,
+  ) {
+    return this.service.update(id, {payment_type_id});
+  }
+
+  @Put('clean/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Vacia un carrito existente' })
+  @ApiParam({ name: 'id', description: 'UUID del carrito' })
+  @ApiResponse({ status: 200, description: 'Carrito actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el carrito a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
+  async updateCleanCart(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('payment_type_id', ParseUUIDPipe) payment_type_id: string,
+  ) {
+    return this.service.updateCleanCart(id);
+  }
+
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar un carrito existente' })
@@ -102,7 +131,7 @@ export class CartsController {
   @ApiResponse({ status: 200, description: 'Carrito actualizado correctamente' })
   @ApiResponse({ status: 404, description: 'No se encontró el carrito a actualizar' })
   @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
-  async updateGroup(
+  async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateCartDto,
   ) {

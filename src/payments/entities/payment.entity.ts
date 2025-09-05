@@ -39,7 +39,7 @@ export class Payment {
   @ManyToOne(() => Transaction)
   @JoinColumn({name:'transaction_id'})
   transaction: Transaction;
-  @Column('uuid')
+  @Column('uuid', {nullable: true})
   transaction_id: string;
 
   @ManyToOne(() => User, (user) => user.payments)

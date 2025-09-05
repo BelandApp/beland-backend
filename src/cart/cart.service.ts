@@ -48,6 +48,19 @@ export class CartsService {
     }
   }
 
+  async updateCleanCart(id: string): Promise<Cart> {
+    try {
+      const res = await this.repository.updateCleanCart(id);
+      if (!res)
+        throw new InternalServerErrorException(
+          `No se pudo Limpiar ${this.completeMessage}`,
+        );
+      return res;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
   async update(id: string, body: Partial<Cart>) {
     try {
       const res = await this.repository.update(id, body);
