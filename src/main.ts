@@ -136,6 +136,7 @@ async function bootstrap() {
     origin: [
       'https://beland.app', // producción
       'https://beland.land',
+      'https://beland.work',
       'https://beland-project.netlify.app',
       'https://belandlanding.vercel.app',
       'https://beland-backend-266662044893.us-east1.run.app',
@@ -145,6 +146,8 @@ async function bootstrap() {
       'http://localhost:9080',
       'http://localhost:8081',
       'http://localhost:9002',
+      /https:\/\/\w+\-beland\-\d+\.exp\.direct$/,
+      /https:\/\/\w+\-anonymous\-\d+\.exp\.direct$/,
 
     ],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
