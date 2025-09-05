@@ -131,79 +131,27 @@ async function bootstrap() {
   );
   */
  // --- Configuración de CORS ---
-const isProduction = process.env.NODE_ENV === 'production';
-
-const appMainUrlProd = configService.get<string>('APP_MAIN_URL_PROD');
-const appMainUrlLocal = configService.get<string>('APP_MAIN_URL_LOCAL');
-const appLandingUrlProd = configService.get<string>('APP_LANDING_URL_PROD');
-const appLandingUrlLocal = configService.get<string>('APP_LANDING_URL_LOCAL');
-
-const allowedOrigins: (string | RegExp)[] = isProduction
-  ? [
-      appMainUrlProd,
-      appLandingUrlProd,
-      'https://beland.app',
+    // 🚀 Configuración CORS simple y segura
+  app.enableCors({
+    origin: [
+      'https://beland.app', // producción
       'https://beland.land',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:9080',
-      'http://localhost:8081',
-      'http://localhost:9002',
       'https://beland-project.netlify.app',
-      'https://beland-production.up.railway.app',
       'https://belandlanding.vercel.app',
       'https://beland-backend-266662044893.us-east1.run.app',
       'https://beland-backend-45tnbek6ya-uk.a.run.app',
-      configService.get<string>('CORS_ADDITIONAL_ORIGINS_PROD'),
-    ].filter(Boolean)
-  : [
-      appMainUrlLocal,
-      appLandingUrlLocal,
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:9080',
       'http://localhost:8081',
       'http://localhost:9002',
-      'https://beland-project.netlify.app',
-      'https://beland-production.up.railway.app',
-      'https://belandlanding.vercel.app',
-      'https://beland-backend-266662044893.us-east1.run.app',
-      // Regex opcionales para Expo / entornos dinámicos
-      /https:\/\/\w+\-beland\-\d+\.exp\.direct$/,
-      /https:\/\/\w+\-anonymous\-\d+\.exp\.direct$/,
-      configService.get<string>('CORS_ADDITIONAL_ORIGINS_LOCAL'),
-    ].filter(Boolean);
 
-app.enableCors({
-  origin: (origin, callback) => {
-    if (!origin) {
-      // Permite requests sin origen (ej: curl, Postman)
-      appLogger.debug(`CORS: Origen no proporcionado, permitiendo acceso.`);
-      return callback(null, true);
-    }
+    ],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    credentials: true, // necesario para Auth0 y cookies
+  });
 
-    const isAllowed = allowedOrigins.some((allowedOrigin) =>
-      typeof allowedOrigin === 'string'
-        ? allowedOrigin === origin
-        : allowedOrigin.test(origin),
-    );
-
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      appLogger.warn(`CORS: Origen "${origin}" NO permitido.`);
-      callback(null, false); // devuelve 403 en vez de 500
-    }
-  },
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
-  credentials: true,
-});
-
-appLogger.log(
-  `✅ CORS permitidos: ${allowedOrigins
-    .map((o) => (typeof o === 'string' ? o : o.source))
-    .join(', ')}`,
-);
+  appLogger.log(`✅ CORS habilitado para https://beland.app y localhost`);
 // --- Fin de la configuración de CORS ---
 
   // --- Fin de la configuración de CORS simplificada ---
