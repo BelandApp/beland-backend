@@ -14,7 +14,7 @@ export class TransactionsService {
   constructor(private readonly repository: TransactionsRepository) {}
 
   async findAll(
-    wallet_id: string,
+    user_id: string,
     status_id: string,
     type_id: string,
     pageNumber: number,
@@ -22,7 +22,7 @@ export class TransactionsService {
   ): Promise<[Transaction[], number]> {
     try {
       const response = await this.repository.findAll(
-        wallet_id,
+        user_id,
         status_id,
         type_id,
         pageNumber,

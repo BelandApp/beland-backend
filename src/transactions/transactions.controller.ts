@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,6 +26,7 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionsService } from './transactions.service';
 import { FlexibleAuthGuard } from 'src/auth/guards/flexible-auth.guard';
+import { Request } from 'express';
 
 @ApiTags('transactions')
 @Controller('transactions')
@@ -46,13 +48,14 @@ export class TransactionsController {
   async findAll(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
-    @Query('wallet_id') wallet_id = '',
+    @Query('wallet_id') wallet_id = '10',
+    @Req() req: Request,
     @Query('state_id') state_id = '',
     @Query('type_id') type_id = '',
   ): Promise<[Transaction[], number]> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(wallet_id, state_id, type_id, pageNumber, limitNumber);
+    return await this.service.findAll(req.user.id, state_id, type_id, pageNumber, limitNumber);
   }
 
   @Get(':id')

@@ -607,7 +607,7 @@ export class WalletsService {
         wallet_id: from.id,
         type,
         status,
-        amount: -dto.amountBecoin,
+        amount: -dto.amountBecoin * +this.superadminConfig.getPriceOneBecoin(),
         amount_beicon: -dto.amountBecoin,
         post_balance: from.becoin_balance,
         related_wallet_id: to.id,
@@ -632,7 +632,7 @@ export class WalletsService {
         wallet_id: to.id,
         type,
         status,
-        amount: dto.amountBecoin,
+        amount: +dto.amountBecoin * +this.superadminConfig.getPriceOneBecoin(),
         amount_beicon: dto.amountBecoin,
         post_balance: to.becoin_balance,
         related_wallet_id: from.id,
@@ -704,11 +704,11 @@ export class WalletsService {
       });
 
       const current = existing?.quantity ?? 0;
-      const total = current + +dto.quantity;
-
+      const total = +current + +dto.quantity;
+      console.log("")
       // validar límite solo si corresponde
-      if (resource.limit_user > 0 && total > resource.limit_user) {
-        const resto = resource.limit_user - current;
+      if ((+resource.limit_user > 0) && (total > +resource.limit_user)) {
+        const resto = +resource.limit_user - current;
 
         throw new ConflictException(
           resto === 0
@@ -741,7 +741,7 @@ export class WalletsService {
         const newUserResource = this.dataSource.manager.create(UserResource, {
           user_id,
           resource_id: resource.id,
-          quantity: dto.quantity,
+          quantity: +dto.quantity,
           hash_id: randomUUID(),
         });
 
