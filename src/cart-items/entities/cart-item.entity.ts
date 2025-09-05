@@ -6,12 +6,13 @@ import { Product } from '../../products/entities/product.entity';
 export class CartItem {
   @PrimaryGeneratedColumn('uuid') 
   id: string;
-
-  @ManyToOne(() => Cart, (cart) => cart.items, { cascade: true, onDelete: 'CASCADE' })
+  
+  @ManyToOne(() => Cart, (cart) => cart.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'cart_id' })
   cart: Cart;
   @Column('uuid')
   cart_id: string;
+
 
   @ManyToOne(() => Product)
   @JoinColumn({ name: 'product_id' })

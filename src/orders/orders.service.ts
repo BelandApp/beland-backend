@@ -207,16 +207,14 @@ export class OrdersService {
        await queryRunner.manager.save(Payment, payment);
 
        // 11) Resetear el carrito
-       // Eliminamos todos los CartItem
-       if (cart.items && cart.items.length > 0) {
-         const itemIds = cart.items.map(item => item.id);
-         await queryRunner.manager.delete(CartItem, itemIds);
-       }
+      cart.address_id = null;
+      cart.group_id = null;
+      cart.payment_type_id = null;
+      cart.total_amount = 0;
+      cart.total_items = 0;
 
-       // Reiniciamos totales
-       cart.total_amount = 0;
-       cart.total_items = 0;
-       await queryRunner.manager.save(Cart, cart);
+      await queryRunner.manager.save(Cart, cart);
+      await queryRunner.manager.delete(CartItem, {cart_id : cart.id})
 
       // 12) Confirmar transacción
       await queryRunner.commitTransaction();
@@ -241,8 +239,8 @@ export class OrdersService {
 
     try {
       // 1) Actualizo la confirmacion del estado a entregado
-      if (delivered) {await queryRunner.manager.update(Order, {order_id}, {confirmSend:true})}
-      else {await queryRunner.manager.update(Order, {order_id}, {confirmReceived:true})}
+      if (delivered) {await queryRunner.manager.update(Order, {id: order_id}, {confirmSend:true})}
+      else {await queryRunner.manager.update(Order, {id: order_id}, {confirmReceived:true})}
 
       // 2) Busco la orden.
       const order = await queryRunner.manager.findOne(Order, {where: {id:order_id}})
@@ -254,7 +252,7 @@ export class OrdersService {
       
       // 4) Si esta todo OK hago la transferencia
       if (order.confirmSend && order.confirmReceived) {
-        await this.transferOrder (
+        const txOrder = await this.transferOrder (
           queryRunner, 
           wallet,
           order,
@@ -279,6 +277,7 @@ export class OrdersService {
 
         // 4 QUINTIS) actualizo la PAYMENT
         payment.status = status;
+        payment.transaction_id = txOrder.id;
         await queryRunner.manager.save(Payment, payment);
       }
 
@@ -297,7 +296,7 @@ export class OrdersService {
     queryRunner: QueryRunner, 
     wallet: Wallet,
     order:Order,
-  ) {
+  ): Promise<Transaction> {
     // 8) Traer tipo y estado de transacción (correcto: TransactionType y TransactionState)
       const txType = await queryRunner.manager.findOne(TransactionType, {
         where: { code: TransactionCode.PURCHASE_BELAND },
@@ -314,7 +313,7 @@ export class OrdersService {
       await queryRunner.manager.save(Wallet, wallet);
 
       // 9) Registrar transacción (post_balance debe reflejar el saldo luego del descuento)
-      const tx = queryRunner.manager.create(Transaction, {
+      const txPurchase = queryRunner.manager.create(Transaction, {
         wallet_id: wallet.id,
         type_id: txType.id,
         status_id: txState.id,
@@ -322,7 +321,7 @@ export class OrdersService {
         post_balance: wallet.becoin_balance,
         reference: `PURCHASEBELAND-${order.id}`,
       });
-      const txSaved = await queryRunner.manager.save(Transaction, tx);
+      const txPurchaseSaved = await queryRunner.manager.save(Transaction, txPurchase);
 
       // 9 Bis) aca deberia incrementar el saldo del wallet SuperAdmin, registrar tambien la transaccion, y generar una nueva tabla para enviar los pedidos para generar el envio.
       const walletSuperadmin = await queryRunner.manager.findOne(Wallet, {
@@ -345,6 +344,8 @@ export class OrdersService {
         post_balance: walletSuperadmin.becoin_balance,
         reference: `SALEBELAND-${order.id}`,
       });
-      const txSavedSale = await queryRunner.manager.save(Transaction, txSale);
+      await queryRunner.manager.save(Transaction, txSale);
+
+      return txPurchaseSaved;
   }
 }
