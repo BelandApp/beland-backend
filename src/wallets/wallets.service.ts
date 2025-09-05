@@ -750,11 +750,13 @@ export class WalletsService {
     
     // 5) Si el valor del resource es 0 (o sea gratuito) no realizo la transferencia, en caso contrario si.
     if (resource.becoin_value > 0) {
-        const wallet = await this.transfer(
+      // Convertimos el porcentaje a decimal y aplicamos el descuento
+      const value_discounted = +resource.becoin_value * (1 - +resource.discount / 100);
+      const wallet = await this.transfer(
           user_id,
           { 
             toWalletId: toWallet.id, 
-            amountBecoin: +resource.becoin_value * +dto.quantity,
+            amountBecoin: +value_discounted * +dto.quantity,
           },
           TransactionCode.PURCHASE_RESOURCE,
           TransactionCode.SALE_RESOURCE
