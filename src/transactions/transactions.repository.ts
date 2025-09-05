@@ -14,7 +14,7 @@ export class TransactionsRepository {
   ) {}
 
   async findAll(
-    wallet_id: string,
+    user_id: string,
     status_id: string,
     type_id: string,
     page: number,
@@ -22,8 +22,8 @@ export class TransactionsRepository {
   ): Promise<[Transaction[], number]> {
     const where: any = {};
 
-    if (wallet_id) {
-        where.wallet_id = wallet_id;
+    if (user_id) {
+      where.wallet = { user_id }; // 👈 filtro a través de wallet → user
     }
 
     if (status_id) {
