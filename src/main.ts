@@ -135,6 +135,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'https://beland.app', // producción
+      'https://admin.beland.app',
       'https://beland.land',
       'https://beland.work',
       'https://beland-project.netlify.app',
