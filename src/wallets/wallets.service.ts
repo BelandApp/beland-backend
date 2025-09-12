@@ -705,7 +705,7 @@ export class WalletsService {
 
       const current = existing?.quantity ?? 0;
       const total = +current + +dto.quantity;
-      console.log("")
+      
       // validar límite solo si corresponde
       if ((+resource.limit_user > 0) && (total > +resource.limit_user)) {
         const resto = +resource.limit_user - current;

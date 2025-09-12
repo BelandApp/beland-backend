@@ -11,14 +11,14 @@ export class PaymentsRepository {
   ) {}
 
   async findAll(
-    group_id: string, 
+    order_id: string, 
     user_id: string,
     page: number,
     limit: number,
   ): Promise<[Payment[], number]> {
     let where: Object; 
-    if (group_id) {
-        where = {group_id} 
+    if (order_id) {
+        where = {order_id} 
     } else {
         where = user_id ? {user_id} : {};
     }
@@ -28,7 +28,7 @@ export class PaymentsRepository {
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: ['group', 'user'],
+        relations: {order:true, user:true},
     });
   }
 

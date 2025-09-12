@@ -13,6 +13,7 @@ import preloadPaymentType from './json/paymentType.json';
 import preloadGroupType from './json/groupType.json';
 import preloadResourceType from './json/resourceType.json';
 import preloadWithdrawAccountType from './json/withdrawAccountType.json';
+import preloadResource from './json/resource.json'
 
 // Entidades
 import { TransactionType } from 'src/transaction-type/entities/transaction-type.entity';
@@ -23,6 +24,8 @@ import { Category } from 'src/category/entities/category.entity';
 import { GroupType } from 'src/group-type/entities/group-type.entity';
 import { ResourcesType } from 'src/resources-types/entities/resources-type.entity';
 import { WithdrawAccountType } from 'src/withdraw-account-type/entities/withdraw-account-type.entity';
+import { Resource } from 'src/resources/entities/resource.entity';
+import { User } from 'src/users/entities/users.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -96,7 +99,32 @@ export class DatabaseInitService {
     }
   }
 
-  async dataEntryUpdate () {
+  async loadResourceByUser (email: string): Promise <void> {
+    const user = await this.dataSource.manager.findOne(User, {
+      where: {email},
+    })
+
+    if ((user.role_name === 'USER') || !user) return;
+
+    let count = 0;
+    const resourceRepo = this.dataSource.getRepository(Resource);
+    const typeRepo = this.dataSource.getRepository(ResourcesType);
+    const primerasTres = email.substring(0, 3).toUpperCase();
+    for (const resource of preloadResource) {
+      const codeResource = resource.code+primerasTres
+      const res = await resourceRepo.findOneBy({ code: codeResource });
+      if (!res) {
+        const resType = await typeRepo.findOneBy({ code: resource.type });
+        if (resType)
+          {const { type, code, ...save } = resource;
+          await resourceRepo.save({ ...save, code: codeResource, resource_type_id: resType.id, user_commerce_id: user.id });
+          count++;}
+      }
+    }
+    console.log(`Se agregaron ${count} Recursos para el usuario ${email}`);
+  }
+
+  async dataInitEntryUpdate () {
     this.logger.log('🚀 Iniciando procesos de carga de datos...');
 
     try {
