@@ -10,7 +10,7 @@ export class OrdersRepository {
     private repository: Repository<Order>,
   ) {}
 
-    async findAll(
+  async findAll(
     page: number,
     limit: number,
   ): Promise<[Order[], number]> {
@@ -34,7 +34,7 @@ export class OrdersRepository {
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: {status: true, payment_type:true},
+        relations: {status: true, payment_type:true, items:true},
     });
   }
 

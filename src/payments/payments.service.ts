@@ -14,14 +14,14 @@ export class PaymentsService {
   constructor(private readonly repository: PaymentsRepository) {}
 
   async findAll(
-    group_id: string, 
+    order_id: string, 
     user_id: string,
     pageNumber: number,
     limitNumber: number,
   ): Promise<[Payment[], number]> {
     try {
       const response = await this.repository.findAll(
-        group_id,
+        order_id,
         user_id,
         pageNumber,
         limitNumber,

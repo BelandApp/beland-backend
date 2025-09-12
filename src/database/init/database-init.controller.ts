@@ -4,12 +4,14 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { FlexibleAuthGuard } from 'src/auth/guards/flexible-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -33,7 +35,20 @@ export class DatabaseIntiController {
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiResponse({ status: 500, description: 'No se pudo crear' })
   async dataEntryUpdate(): Promise<void> {
-    return await this.service.dataEntryUpdate();
+    return await this.service.dataInitEntryUpdate();
+  }
+
+  @Post('load-resource-user')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ 
+    summary: 'Crear carga de datos iniciar y parcial', 
+    description: 'Genera la carga de todos los datos necesarios para el funcionamiento de la app. Si los datos ya estan creados no lo vuelve a crear. Solo agrega los que faltan' })
+  @ApiResponse({ status: 201, description: 'Creacion exitosa' })
+  @ApiQuery({ name: 'email', required: true, description: 'Email del usuario a Cargar los recursos' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 500, description: 'No se pudo crear' })
+  async loadResourceByUser(@Query("email") email:string): Promise<void> {
+    return await this.service.loadResourceByUser(email);
   }
 
   @Post('load-superadmin-and-roles')
