@@ -38,6 +38,18 @@ export class DatabaseIntiController {
     return await this.service.dataInitEntryUpdate();
   }
 
+  @Post('add-becoin-prod')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ 
+    summary: 'Agregar el precio en becoin a los productos', 
+    description: 'Actualiza todos los productos de la bd cargandole su precio en becoin segun el price' })
+  @ApiResponse({ status: 201, description: 'Actualizacion exitosa' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 500, description: 'No se pudo crear' })
+  async addBecoinProd(): Promise<void> {
+    return await this.service.addBecoinProd();
+  }
+
   @Post('load-resource-user')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ 

@@ -1,6 +1,6 @@
-import { IsUUID, IsInt, Min, IsNumber, IsPositive } from 'class-validator';
+import { IsUUID, IsInt, Min, IsNumber, IsPositive, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCartItemDto {
   @ApiProperty({
@@ -40,4 +40,16 @@ export class CreateCartItemDto {
   @IsPositive()
   @Type(() => Number)
   unit_price: number;
+
+  @ApiPropertyOptional({
+    description: 'Precio unitario del producto en Becoin',
+    example: 399,
+    type: Number,
+    format: 'float',
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsPositive()
+  @IsOptional()
+  @Type(() => Number)
+  unit_becoin?: number;
 }

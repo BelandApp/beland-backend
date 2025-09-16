@@ -10,7 +10,6 @@ import {
   Put,
   HttpCode,
   HttpStatus,
-  BadRequestException,
   UseGuards,
   Req,
 } from '@nestjs/common';

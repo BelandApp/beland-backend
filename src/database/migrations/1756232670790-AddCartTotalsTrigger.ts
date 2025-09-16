@@ -1,7 +1,7 @@
 // src/database/migrations
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddCartTotalsTrigger1756232670789 implements MigrationInterface {
+export class AddCartTotalsTrigger1756232670790 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE OR REPLACE FUNCTION update_cart_totals()
@@ -11,6 +11,11 @@ export class AddCartTotalsTrigger1756232670789 implements MigrationInterface {
         SET
           total_amount = COALESCE((
             SELECT SUM(total_price)
+            FROM cart_items
+            WHERE cart_id = COALESCE(NEW.cart_id, OLD.cart_id)
+          ), 0),
+          total_becoin = COALESCE((
+            SELECT SUM(total_becoin)
             FROM cart_items
             WHERE cart_id = COALESCE(NEW.cart_id, OLD.cart_id)
           ), 0),

@@ -26,6 +26,7 @@ import { ResourcesType } from 'src/resources-types/entities/resources-type.entit
 import { WithdrawAccountType } from 'src/withdraw-account-type/entities/withdraw-account-type.entity';
 import { Resource } from 'src/resources/entities/resource.entity';
 import { User } from 'src/users/entities/users.entity';
+import { SuperadminConfigService } from 'src/superadmin-config/superadmin-config.service';
 
 @Injectable()
 export class DatabaseInitService {
@@ -33,6 +34,7 @@ export class DatabaseInitService {
 
   constructor(
     private readonly dataSource: DataSource,
+    private readonly superadminConfig: SuperadminConfigService,
     private readonly defaultRolesSeeder: DefaultRolesSeeder,
     private readonly superAdminUserSeeder: SuperAdminUserSeeder,
   ) {}
@@ -92,6 +94,25 @@ export class DatabaseInitService {
 
       console.log(`Se agregaron ${countCat} Categorias`);
       console.log(`Se agregaron ${count} Productos`);
+    } catch (error) {
+      console.error(
+        `Error al cargar Productos: ${JSON.stringify(error)}`,
+      );
+    }
+  }
+
+  async addBecoinProd(): Promise<void> {
+    try {
+      const productRepo = this.getRepo<Product>(Product);
+      const products = await productRepo.find();
+      let count = 0;
+
+      for (const product of products) {
+          product.price_becoin = +product.price / +this.superadminConfig.getPriceOneBecoin();
+          await productRepo.save(product);
+          count++;
+        }
+      console.log(`Se actualizaron ${count} Productos`);
     } catch (error) {
       console.error(
         `Error al cargar Productos: ${JSON.stringify(error)}`,
