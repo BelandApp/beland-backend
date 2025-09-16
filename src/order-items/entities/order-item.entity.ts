@@ -18,11 +18,17 @@ export class OrderItem {
   @Column({ type: 'integer' })
   quantity: number;
 
-  @Column({ type: 'numeric' })
+  @Column({ type: 'numeric', precision: 14, scale: 2 })
   unit_price: number;
 
-  @Column({ type: 'numeric' })
+  @Column({ type: 'numeric', precision: 14, scale: 2 })
   total_price: number;
+
+  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
+  unit_becoin: number;
+
+  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
+  total_becoin: number;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

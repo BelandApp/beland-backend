@@ -23,11 +23,8 @@ import { AmountToPayment } from 'src/amount-to-payment/entities/amount-to-paymen
 import { RespCobroDto } from './dto/resp-cobro.dto';
 import { UserResource } from 'src/user-resources/entities/user-resource.entity';
 import { NotificationsGateway } from 'src/notification-socket/notification-socket.gateway';
-import { RespTransferResult } from './dto/resp-tranfer-result.dto';
-import { UserEventBeland } from 'src/users/entities/users-event-beland.entity';
 import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
 import { CreateUserResourceDto } from 'src/user-resources/dto/create-user-resource.dto';
-import { UserResourcesService } from 'src/user-resources/user-resources.service';
 import { Resource } from 'src/resources/entities/resource.entity';
 import { randomUUID } from 'crypto'
 
@@ -39,8 +36,7 @@ export class WalletsService {
     private readonly repository: WalletsRepository,
     private readonly superadminConfig: SuperadminConfigService,
     private readonly dataSource: DataSource, // 👈 acá lo inyectás
-   private readonly notificationsGateway: NotificationsGateway,
-  private readonly userResourceService: UserResourcesService,)
+   private readonly notificationsGateway: NotificationsGateway,)
   {}
 
   async findAll(
@@ -256,8 +252,7 @@ export class WalletsService {
         wallet_id: wallet.id,
         type,
         status,
-        amount: dto.amountUsd,
-        amount_beicon: becoinAmount,
+        amount_becoin: +becoinAmount,
         post_balance: wallet.becoin_balance,
         reference: dto.referenceCode,
         payphone_transactionId: dto.payphone_transactionId?.toString(),
@@ -325,7 +320,7 @@ export class WalletsService {
         wallet_id: wallet.id,
         type,
         status,
-        amount: -dto.amountBecoin,
+        amount_becoin: -dto.amountBecoin,
         post_balance: wallet.becoin_balance,
       });
 
@@ -334,9 +329,8 @@ export class WalletsService {
         user_id,
         wallet_id: wallet.id,
         withdraw_account_id: dto.withdraw_account_id,
-        amount_becoin: dto.amountBecoin,
-        amount_usd:
-          dto.amountBecoin * this.superadminConfig.getPriceOneBecoin(),
+        amount_becoin: +dto.amountBecoin,
+        amount_usd: +dto.amountBecoin * +this.superadminConfig.getPriceOneBecoin(),
         status_id: status.id,
         transaction_id: tx.id,
       });
@@ -568,12 +562,6 @@ export class WalletsService {
           case 'SUPERADMIN':
             code_transaction_send = TransactionCode.PURCHASE_BELAND;
             code_transaction_received = TransactionCode.SALE_BELAND;
-            await queryRunner.manager.save(UserEventBeland, {
-              user_payment_id: user_id,
-              user_sale_id: user.id,
-              amount: +dto.amountBecoin,
-              isRecycled: dto.amountBecoin === 0,
-            });
             break;
 
           default:
@@ -607,7 +595,6 @@ export class WalletsService {
         wallet_id: from.id,
         type,
         status,
-        amount: -dto.amountBecoin * +this.superadminConfig.getPriceOneBecoin(),
         amount_beicon: -dto.amountBecoin,
         post_balance: from.becoin_balance,
         related_wallet_id: to.id,
@@ -632,7 +619,6 @@ export class WalletsService {
         wallet_id: to.id,
         type,
         status,
-        amount: +dto.amountBecoin * +this.superadminConfig.getPriceOneBecoin(),
         amount_beicon: dto.amountBecoin,
         post_balance: to.becoin_balance,
         related_wallet_id: from.id,
@@ -705,7 +691,7 @@ export class WalletsService {
 
       const current = existing?.quantity ?? 0;
       const total = +current + +dto.quantity;
-      console.log("")
+      
       // validar límite solo si corresponde
       if ((+resource.limit_user > 0) && (total > +resource.limit_user)) {
         const resto = +resource.limit_user - current;
@@ -860,7 +846,7 @@ export class WalletsService {
         wallet_id: wallet.id,
         type_id: type.id,
         status_id: status.id,
-        amount: becoinAmount,
+        amount_becoin: becoinAmount,
         post_balance: wallet.becoin_balance,
         reference: referenceCode,
       });

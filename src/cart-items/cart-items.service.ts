@@ -57,10 +57,11 @@ export class CartItemsService {
   async update(id: string, body: Partial<CartItem>) {
     try {
       let updateItem = body;
-      if (body.quantity || body.unit_price) {
+      if (body.quantity) {
         const itemCart = await this.findOne(id);
-        const total_price = +itemCart.unit_price * +itemCart.quantity
-        updateItem = {...updateItem, total_price};
+        const total_price = +itemCart.unit_price * +body.quantity;
+        const total_becoin = +itemCart.unit_becoin * +body.quantity;
+        updateItem = {...updateItem, total_price, total_becoin};
       }
       const res = await this.repository.update(id, updateItem);
       if (res.affected === 0)

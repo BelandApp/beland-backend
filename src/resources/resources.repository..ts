@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository, UpdateResult } from 'typeorm';
+import { DeleteResult, IsNull, MoreThanOrEqual, Repository, UpdateResult } from 'typeorm';
 import { Resource } from './entities/resource.entity';
 
 @Injectable()
@@ -16,7 +16,7 @@ export class ResourcesRepository {
     limit: number,
   ): Promise<[Resource[], number]> {
     const where: any = {
-      is_expired: false, // siempre filtra por no expirado
+      expires_at: MoreThanOrEqual(new Date()), // solo los que no vencieron
     };
 
     if (resource_type_id) {
