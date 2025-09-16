@@ -23,6 +23,14 @@ export class CreateOrderItemDto {
   @IsNumber()
   total_price: number;
 
+  @ApiProperty({ description: 'Precio unitario del producto en becoin' })
+  @IsNumber()
+  unit_becoin: number;
+
+  @ApiProperty({ description: 'Precio total de la línea del pedido en becoin' })
+  @IsNumber()
+  total_becoin: number;
+
   @ApiProperty({
     description: 'ID del usuario que consumió el producto',
     required: false,

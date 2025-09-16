@@ -22,6 +22,7 @@ import { TransactionType } from 'src/transaction-type/entities/transaction-type.
 import { TransactionCode } from 'src/transactions/enum/transaction-code';
 import { SuperadminConfigService } from 'src/superadmin-config/superadmin-config.service';
 import { StatusCode } from 'src/transaction-state/enum/status.enum';
+import { User } from 'src/users/entities/users.entity';
 
 @Injectable()
 export class OrdersService {
@@ -145,17 +146,6 @@ export class OrdersService {
         throw new ConflictException('Forma de pago no disponible. Pruebe otra o intente luego.');
       }
 
-      // QUITAR ESTO CUANDO ESTEN TODAS LAS FORMAS DE PAGO DISPONIBLES COMPROBANDO SI ES A UN GRUPO
-      if (paymentType.code !== 'FULL') {
-        throw new BadRequestException('Por el momento solo está disponible la forma de pago -FULL-');
-      }
-
-      // 4) Validar saldo suficiente (y normalizar a número)
-      const cartTotal = Number(cart.total_amount);
-      const currentBalance = Number(wallet.becoin_balance);
-      if (currentBalance < cartTotal) {
-        throw new NotAcceptableException('Saldo insuficiente. Recarga primero tu Billetera');
-      }
       // HASTA ACA TODO EN CONDICIONES PARA HACER LA TRANSACCION
 
       // 5) Crear la orden desde el carrito (copiando campos necesarios)
@@ -171,7 +161,6 @@ export class OrdersService {
       const order = queryRunner.manager.create(Order, {
         ...createOrder,
         user_id,
-        total_amount: cartTotal, // aseguramos consistencia con el total del carrito
         status_id: status.id,
       });
       const savedOrder = await queryRunner.manager.save(Order, order);
@@ -191,20 +180,75 @@ export class OrdersService {
         throw new ConflictException('No se pudieron crear los ítems asociados a la orden');
       }
 
-      // 7) Descontar saldo, bloquearlo y guardar wallet
-      wallet.becoin_balance = +currentBalance - +cartTotal;
-      wallet.locked_balance = +wallet.locked_balance + +cartTotal;
-      await queryRunner.manager.save(Wallet, wallet);
+      // QUITAR ESTO CUANDO ESTEN TODAS LAS FORMAS DE PAGO DISPONIBLES COMPROBANDO SI ES A UN GRUPO
+      const cartTotal = Number(cart.total_becoin);
+      switch (paymentType.code) {
+        case 'FULL':
+          // 4) Validar saldo suficiente (y normalizar a número)
+            const currentBalance = Number(wallet.becoin_balance);
+            if (currentBalance < cartTotal) {
+              throw new NotAcceptableException('Saldo insuficiente. Recarga primero tu Billetera');
+            }
+          // 7) Descontar saldo, bloquearlo y guardar wallet
+            wallet.becoin_balance = +currentBalance - +cartTotal;
+            wallet.locked_balance = +wallet.locked_balance + +cartTotal;
+            await queryRunner.manager.save(Wallet, wallet);
 
-       // 10) Registrar pago de la orden
-       const payment = queryRunner.manager.create(Payment, {
-         amount_paid: savedOrder.total_amount,
-         order_id: savedOrder.id,
-         payment_type_id: savedOrder.payment_type_id,
-         user_id: savedOrder.user_id,
-         status_id:status.id,
-       });
-       await queryRunner.manager.save(Payment, payment);
+          // 10) Registrar pago de la orden
+            const payment = queryRunner.manager.create(Payment, {
+              amount_paid: savedOrder.total_becoin,
+              order_id: savedOrder.id,
+              payment_type_id: savedOrder.payment_type_id,
+              user_id: savedOrder.user_id,
+              status_id:status.id,
+            });
+            await queryRunner.manager.save(Payment, payment);
+            
+          break;
+
+        case 'EQUAL_SPLIT':
+          const arrayWallets = await queryRunner.manager.findAndCount(Wallet, {
+            where: {user: {group_memberships: {group_id : cart.group_id}}},
+            relations: {user:true}
+          });
+
+          if (!arrayWallets || arrayWallets[1] === 0) 
+            throw new NotFoundException('Grupo inexistente o Sin miembros. Use Forma de pago FULL o Asegurese de que el grupo exista o tenga miembros.')
+          
+          const amountSplit = cartTotal / wallet[1];
+          const wallets: Wallet[] = arrayWallets[0]
+          
+          wallets.forEach ( async (wallet) => {
+
+            // 4) Validar saldo suficiente (y normalizar a número)
+              const currentBalance = Number(wallet.becoin_balance);
+              if (currentBalance < amountSplit) {
+                throw new NotAcceptableException(`Saldo insuficiente en Wallet de usuario ${wallet.user.full_name ?? wallet.user.email}. Avisa que recargue su Billetera`);
+              }
+
+            // 7) Descontar saldo, bloquearlo y guardar wallet
+              wallet.becoin_balance = +currentBalance - +amountSplit;
+              wallet.locked_balance = +wallet.locked_balance + +amountSplit;
+              await queryRunner.manager.save(Wallet, wallet);
+
+            // 10) Registrar pago de la orden
+              const payment = queryRunner.manager.create(Payment, {
+                amount_paid: amountSplit,
+                order_id: savedOrder.id,
+                payment_type_id: savedOrder.payment_type_id,
+                user_id: wallet.user_id,
+                status_id:status.id,
+              });
+              await queryRunner.manager.save(Payment, payment);
+          });
+          break;
+
+        case 'SPLIT':
+          throw new BadRequestException('La forma de pago SPLIT no está disponible por el momento');
+
+        default:
+          throw new BadRequestException('La forma de pago no existe');
+      }
 
        // 11) Resetear el carrito
       cart.address_id = null;
@@ -212,6 +256,7 @@ export class OrdersService {
       cart.payment_type_id = null;
       cart.total_amount = 0;
       cart.total_items = 0;
+      cart.total_becoin = 0;
 
       await queryRunner.manager.save(Cart, cart);
       await queryRunner.manager.delete(CartItem, {cart_id : cart.id})
@@ -243,42 +288,35 @@ export class OrdersService {
       else {await queryRunner.manager.update(Order, {id: order_id}, {confirmReceived:true})}
 
       // 2) Busco la orden.
-      const order = await queryRunner.manager.findOne(Order, {where: {id:order_id}})
+      const order = await queryRunner.manager.findOne(Order, {
+        where: {id:order_id}, 
+        relations: {payment_type:true}
+      })
       if (!order) throw new NotFoundException('La orden de compra no existe')
 
       // 3) Busco la wallet del usuario que genero la orden
       const wallet = await queryRunner.manager.findOne(Wallet, {where: {user_id: order.user_id}})
       if (!wallet) throw new NotFoundException('La wallet del usuario no existe')
       
-      // 4) Si esta todo OK hago la transferencia
-      if (order.confirmSend && order.confirmReceived) {
-        const txOrder = await this.transferOrder (
-          queryRunner, 
-          wallet,
+      // 4) busco el estado correspondiente para actualiar la orden y el payment
+      const status = await queryRunner.manager.findOne(TransactionState, {
+        where: { code: StatusCode.COMPLETED },
+      });
+      if (!status)
+        throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
+
+      // 5) Si esta todo OK hago la transferencia
+      if (order.confirmSend && order.confirmReceived && order.payment_type.code === "FULL") {
+        await this.transferOrder (
+          queryRunner,
           order,
+          status
         )
 
-        // 4 BIS) busco el estado correspondiente para actualiar la orden y el payment
-        const status = await queryRunner.manager.findOne(TransactionState, {
-          where: { code: StatusCode.COMPLETED },
-        });
-        if (!status)
-          throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
-
-        // 4 TRIS) actualizo la orden
+        // 6) actualizo la orden
         order.status = status;
         await queryRunner.manager.save(Order, order);
 
-        // 4 CUATRIS) Busco el Payment relacionado y lo actualizo tambien ESTE ES PAGO FULL. 
-        // SE DEBE ACTUALIZAR PARA PAGO SPLIT o EQUAL_SPLIT
-        const payment = await queryRunner.manager.findOne(Payment, {
-          where: { order_id: order.id },
-        });
-
-        // 4 QUINTIS) actualizo la PAYMENT
-        payment.status = status;
-        payment.transaction_id = txOrder.id;
-        await queryRunner.manager.save(Payment, payment);
       }
 
       return order
@@ -292,60 +330,63 @@ export class OrdersService {
     }
   }
 
-  async transferOrder (
-    queryRunner: QueryRunner, 
-    wallet: Wallet,
-    order:Order,
-  ): Promise<Transaction> {
+  async transferOrder (queryRunner: QueryRunner, order:Order,status: TransactionState ): Promise<void> {
     // 8) Traer tipo y estado de transacción (correcto: TransactionType y TransactionState)
       const txType = await queryRunner.manager.findOne(TransactionType, {
         where: { code: TransactionCode.PURCHASE_BELAND },
       });
       if (!txType) throw new ConflictException(`No se encuentra el tipo ${TransactionCode.PURCHASE_BELAND}`);
 
-      const txState = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: StatusCode.COMPLETED},
+      const txTypeSale = await queryRunner.manager.findOne(TransactionType, {
+        where: { code: TransactionCode.SALE_BELAND },
       });
-      if (!txState) throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
+      if (!txTypeSale) throw new ConflictException(`No se encuentra el tipo ${TransactionCode.SALE_BELAND}`);
 
-      // 8 BIS) Libero los fondos de la billetera del usuario
-      wallet.locked_balance = +wallet.locked_balance - +order.total_amount
-      await queryRunner.manager.save(Wallet, wallet);
+      const payments: Payment[] = await queryRunner.manager.find(Payment, {
+        where: {order_id: order.id},
+        relations: {user: {wallet:true}}
+      })
 
-      // 9) Registrar transacción (post_balance debe reflejar el saldo luego del descuento)
-      const txPurchase = queryRunner.manager.create(Transaction, {
-        wallet_id: wallet.id,
-        type_id: txType.id,
-        status_id: txState.id,
-        amount: order.total_amount,
-        post_balance: wallet.becoin_balance,
-        reference: `PURCHASEBELAND-${order.id}`,
-      });
-      const txPurchaseSaved = await queryRunner.manager.save(Transaction, txPurchase);
+      payments.forEach ( async (payment) => {
+        // 8 BIS) Libero los fondos de la billetera del usuario
+        const wallet = payment.user.wallet;
+        wallet.locked_balance = +wallet.locked_balance - +payment.amount_paid
+        await queryRunner.manager.save(Wallet, wallet);
+
+        // 9) Registrar transacción (post_balance debe reflejar el saldo luego del descuento)
+        const txPurchase = queryRunner.manager.create(Transaction, {
+          wallet_id: wallet.id,
+          type_id: txType.id,
+          status_id: status.id,
+          amount_becoin: +payment.amount_paid,
+          post_balance: wallet.becoin_balance,
+          reference: `PURCHASEBELAND-${order.id}`,
+        });
+        const txPurchaseSaved = await queryRunner.manager.save(Transaction, txPurchase);
+
+        payment.status = status;
+        payment.transaction_id = txPurchase.id
+        await queryRunner.manager.save(Payment, payment)
+
+      })
 
       // 9 Bis) aca deberia incrementar el saldo del wallet SuperAdmin, registrar tambien la transaccion, y generar una nueva tabla para enviar los pedidos para generar el envio.
       const walletSuperadmin = await queryRunner.manager.findOne(Wallet, {
         where: { id: this.superadminService.getWalletId() },
       });
       if (!walletSuperadmin) throw new NotFoundException('Wallet del Super Admin no encontrada');
-      const txTypeSale = await queryRunner.manager.findOne(TransactionType, {
-        where: { code: TransactionCode.SALE_BELAND },
-      });
-      if (!txTypeSale) throw new ConflictException(`No se encuentra el tipo ${TransactionCode.SALE_BELAND}`);
-
-      walletSuperadmin.becoin_balance = +walletSuperadmin.becoin_balance + +order.total_amount;
+      
+      walletSuperadmin.becoin_balance = +walletSuperadmin.becoin_balance + +order.total_becoin;
       await queryRunner.manager.save(Wallet, walletSuperadmin);
 
       const txSale = queryRunner.manager.create(Transaction, {
         wallet_id: walletSuperadmin.id,
         type_id: txTypeSale.id,
-        status_id: txState.id,
-        amount: +order.total_amount,
-        post_balance: walletSuperadmin.becoin_balance,
+        status_id: status.id,
+        amount_becoin: +order.total_becoin,
+        post_balance: +walletSuperadmin.becoin_balance,
         reference: `SALEBELAND-${order.id}`,
       });
       await queryRunner.manager.save(Transaction, txSale);
-
-      return txPurchaseSaved;
   }
 }

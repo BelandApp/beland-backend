@@ -30,6 +30,9 @@ export class Order {
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
   total_amount: number;
 
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
+  total_becoin: number;
+
   @Column({ type: 'int', default: 0 })
   total_items: number;
 
@@ -66,7 +69,7 @@ export class Order {
   @Column('uuid')
   user_id: string;
 
-  // payments_type: 'FULL' | 'EQUAL_SPLIT';
+  // payments_type: 'FULL' | 'EQUAL_SPLIT' | 'SPLIT';
   @ManyToOne(() => PaymentType, (type) => type.orders, { eager: true })
   @JoinColumn({ name: 'payment_type_id' })
   payment_type: PaymentType;

@@ -39,6 +39,7 @@ export class CartItemsRepository {
     const quantity = +item.quantity + +body.quantity;
     item.quantity = +quantity;
     item.total_price = +item.unit_price * +quantity
+    item.total_becoin = +item.unit_becoin * +quantity
     return await this.repository.save(item);
   }
 

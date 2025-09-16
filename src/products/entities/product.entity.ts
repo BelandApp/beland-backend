@@ -34,6 +34,9 @@ export class Product {
   @Column({ type: 'numeric', precision: 14, scale: 2, default: 0 })
   price: number;
 
+  @Column({ type: 'numeric', precision: 14, scale: 2, default: 0, nullable:true })
+  price_becoin: number;
+
   @Column({ type: 'text', nullable: true })
   image_url: string;
 

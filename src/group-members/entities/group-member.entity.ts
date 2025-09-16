@@ -30,6 +30,8 @@ export class GroupMember {
   @ManyToOne(() => Group, (group) => group.members, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'group_id', referencedColumnName: 'id' })
   group: Group;
+  @Column('uuid')
+  group_id:string;
 
   // ManyToOne relationship with User
   @ManyToOne(() => User, (user) => user.group_memberships, {
