@@ -5,6 +5,7 @@ import {
   HttpStatus,
   UseGuards,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -61,6 +62,18 @@ export class DatabaseIntiController {
   @ApiResponse({ status: 500, description: 'No se pudo crear' })
   async loadResourceByUser(@Query("email") email:string): Promise<void> {
     return await this.service.loadResourceByUser(email);
+  }
+
+  @Post('load-resource-superadmin')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear recurso adicional a superadmin'})
+  @ApiResponse({ status: 201, description: 'Creacion exitosa' })
+  @ApiQuery({ name: 'email', required: true, description: 'Solo para el SuperAdmin' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 500, description: 'No se pudo crear' })
+  async loadResourceSuperadmin(@Query("email") email:string): Promise<void> {
+    if (email !== "belandproject@gmail.com") throw new BadRequestException("Solo se permite para el SuperAdmin");
+    return await this.service.loadResourceSuperadmin();
   }
 
   @Post('load-superadmin-and-roles')
