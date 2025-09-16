@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 
 // Seeders
@@ -14,6 +14,7 @@ import preloadGroupType from './json/groupType.json';
 import preloadResourceType from './json/resourceType.json';
 import preloadWithdrawAccountType from './json/withdrawAccountType.json';
 import preloadResource from './json/resource.json'
+import preloadResourceSuperAdmin from './json/resourceSuperadmin.json'
 
 // Entidades
 import { TransactionType } from 'src/transaction-type/entities/transaction-type.entity';
@@ -27,6 +28,7 @@ import { WithdrawAccountType } from 'src/withdraw-account-type/entities/withdraw
 import { Resource } from 'src/resources/entities/resource.entity';
 import { User } from 'src/users/entities/users.entity';
 import { SuperadminConfigService } from 'src/superadmin-config/superadmin-config.service';
+import { RoleEnum } from 'src/roles/enum/role-validate.enum';
 
 @Injectable()
 export class DatabaseInitService {
@@ -143,6 +145,27 @@ export class DatabaseInitService {
       }
     }
     console.log(`Se agregaron ${count} Recursos para el usuario ${email}`);
+  }
+
+  async loadResourceSuperadmin (): Promise <void> {
+    const user = await this.dataSource.manager.findOne(User, {
+      where: {role_name: RoleEnum.SUPERADMIN},
+    })
+
+    let count = 0;
+    const resourceRepo = this.dataSource.getRepository(Resource);
+    const typeRepo = this.dataSource.getRepository(ResourcesType);
+    for (const resource of preloadResourceSuperAdmin) {
+      const res = await resourceRepo.findOneBy({ code: resource.code });
+      if (!res) {
+        const resType = await typeRepo.findOneBy({ code: resource.type });
+        if (resType)
+          {const { type, ...save } = resource;
+          await resourceRepo.save({ ...save, resource_type_id: resType.id, user_commerce_id: user.id });
+          count++;}
+      }
+    }
+    console.log(`Se agregaron ${count} Recursos para el usuario ${user.email}`);
   }
 
   async dataInitEntryUpdate () {
