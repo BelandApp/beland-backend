@@ -211,6 +211,8 @@ export class OrdersService {
               status_id:status.id,
             });
             await queryRunner.manager.save(Payment, payment);
+
+            await this.transferOrder (queryRunner, order, status )
             
           break;
 
@@ -249,7 +251,6 @@ export class OrdersService {
               });
               await queryRunner.manager.save(Payment, payment);
 
-              await this.transferOrder (queryRunner, order, status )
           });
           break;
 
