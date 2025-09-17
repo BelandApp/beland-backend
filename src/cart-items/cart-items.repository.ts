@@ -1,13 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository, UpdateResult } from 'typeorm';
+import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { CartItem } from './entities/cart-item.entity';
+import { Product } from 'src/products/entities/product.entity';
+import { NotFoundException } from '@zxing/library';
 
 @Injectable()
 export class CartItemsRepository {
   constructor(
     @InjectRepository(CartItem)
     private repository: Repository<CartItem>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(
@@ -35,7 +38,15 @@ export class CartItemsRepository {
 
   async create(body: Partial<CartItem>): Promise<CartItem> {
     const item = await this.repository.findOne({where: {cart_id: body.cart_id, product_id:body.product_id}})
-    if (!item) return await this.repository.save(body);
+    if (!item) {
+      const product = await this.dataSource.manager.findOneBy(Product, {id: body.product_id})
+      if (!product) throw new NotFoundException('Producto no encontrado')
+      body.unit_price = +product.price;
+      body.unit_becoin = +product.price_becoin;
+      body.total_price = +product.price * +body.quantity;
+      body.total_becoin = +product.price_becoin * +body.quantity;
+      return await this.repository.save(body);
+    }
     const quantity = +item.quantity + +body.quantity;
     item.quantity = +quantity;
     item.total_price = +item.unit_price * +quantity

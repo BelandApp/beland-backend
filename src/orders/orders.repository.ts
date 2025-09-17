@@ -34,7 +34,7 @@ export class OrdersRepository {
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: {status: true, payment_type:true, items:true},
+        relations: {status: true, payment_type:true},
     });
   }
 
@@ -56,7 +56,7 @@ export class OrdersRepository {
   async findOne(id: string): Promise<Order> {
     return this.repository.findOne({
       where: { id },
-      relations: ['group', 'leader', 'payments', 'items'],
+      relations: {status: true, payment_type:true, address:true, items:true, user:true},
     });
   }
 

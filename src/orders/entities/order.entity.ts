@@ -58,7 +58,7 @@ export class Order {
     nullable: true,
     onDelete: 'SET NULL',
   })
-  @JoinColumn({name:'address_ip'})
+  @JoinColumn({name:'address_id'})
   address: UserAddress;
   @Column('uuid', { nullable:true })
   address_id: string;

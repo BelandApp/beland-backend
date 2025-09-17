@@ -131,6 +131,7 @@ export class OrdersService {
         relations: {items:true}
       });
       if (!cart) throw new NotFoundException('Carrito no encontrado');
+
       if (!cart.items || cart.items.length === 0) {
         throw new BadRequestException('El carrito no tiene ítems');
       }
@@ -159,17 +160,17 @@ export class OrdersService {
       // 5) Crear la orden desde el carrito (copiando campos necesarios)
       // busco el status id
       const status = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: StatusCode.PENDING },
+        where: { code: StatusCode.COMPLETED },
       });
       if (!status)
-        throw new ConflictException("No se encuentra el estado ", StatusCode.PENDING);
+        throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
 
       //    - Tomamos algunos campos del carrito y seteamos leader_id = user_id
-      const { id: _cartId, user_id, created_at: _c1, updated_at: _c2, items: _items, payment_type_id, payment_type, ...createOrder } = cart as any;
+
+      const { id: _cartId, created_at: _c1, updated_at: _c2, items: _items, payment_type_id, payment_type, address, ...createOrder } = cart as Cart;
       const order = queryRunner.manager.create(Order, {
         ...createOrder,
         payment_type_id: paymentType.id,
-        user_id,
         status_id: status.id,
       });
       const savedOrder = await queryRunner.manager.save(Order, order);
@@ -200,7 +201,6 @@ export class OrdersService {
             }
           // 7) Descontar saldo, bloquearlo y guardar wallet
             wallet.becoin_balance = +currentBalance - +cartTotal;
-            wallet.locked_balance = +wallet.locked_balance + +cartTotal;
             await queryRunner.manager.save(Wallet, wallet);
 
           // 10) Registrar pago de la orden
@@ -212,6 +212,8 @@ export class OrdersService {
               status_id:status.id,
             });
             await queryRunner.manager.save(Payment, payment);
+
+            await this.transferOrder (queryRunner, order, status )
             
           break;
 
@@ -249,6 +251,7 @@ export class OrdersService {
                 status_id:status.id,
               });
               await queryRunner.manager.save(Payment, payment);
+
           });
           break;
 
@@ -296,39 +299,41 @@ export class OrdersService {
       if (delivered) {await queryRunner.manager.update(Order, {id: order_id}, {confirmSend:true})}
       else {await queryRunner.manager.update(Order, {id: order_id}, {confirmReceived:true})}
 
-      // 2) Busco la orden.
-      const order = await queryRunner.manager.findOne(Order, {
-        where: {id:order_id}, 
-        relations: {payment_type:true}
-      })
-      if (!order) throw new NotFoundException('La orden de compra no existe')
+      // // 2) Busco la orden.
+      // const order = await queryRunner.manager.findOne(Order, {
+      //   where: {id:order_id}, 
+      //   relations: {payment_type:true}
+      // })
+      // if (!order) throw new NotFoundException('La orden de compra no existe')
 
-      // 3) Busco la wallet del usuario que genero la orden
-      const wallet = await queryRunner.manager.findOne(Wallet, {where: {user_id: order.user_id}})
-      if (!wallet) throw new NotFoundException('La wallet del usuario no existe')
+      // // 3) Busco la wallet del usuario que genero la orden
+      // const wallet = await queryRunner.manager.findOne(Wallet, {where: {user_id: order.user_id}})
+      // if (!wallet) throw new NotFoundException('La wallet del usuario no existe')
       
-      // 4) busco el estado correspondiente para actualiar la orden y el payment
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: StatusCode.COMPLETED },
-      });
-      if (!status)
-        throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
+      // // 4) busco el estado correspondiente para actualiar la orden y el payment
+      // const status = await queryRunner.manager.findOne(TransactionState, {
+      //   where: { code: StatusCode.COMPLETED },
+      // });
+      // if (!status)
+      //   throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
 
-      // 5) Si esta todo OK hago la transferencia
-      if (order.confirmSend && order.confirmReceived && order.payment_type.code === "FULL") {
-        await this.transferOrder (
-          queryRunner,
-          order,
-          status
-        )
+      // // 5) Si esta todo OK hago la transferencia
+      // if (order.confirmSend && order.confirmReceived && order.payment_type.code === "FULL") {
+      //   await this.transferOrder (
+      //     queryRunner,
+      //     order,
+      //     status
+      //   )
 
-        // 6) actualizo la orden
-        order.status = status;
-        await queryRunner.manager.save(Order, order);
+      //   // 6) actualizo la orden
+      //   order.status = status;
+      //   await queryRunner.manager.save(Order, order);
 
-      }
+      // }
+      // 12) Confirmar transacción
+      await queryRunner.commitTransaction();
 
-      return order
+      return 
     } catch (err) {
       // Revertir todo si falla algo
       await queryRunner.rollbackTransaction();
@@ -358,9 +363,9 @@ export class OrdersService {
 
       payments.forEach ( async (payment) => {
         // 8 BIS) Libero los fondos de la billetera del usuario
-        const wallet = payment.user.wallet;
-        wallet.locked_balance = +wallet.locked_balance - +payment.amount_paid
-        await queryRunner.manager.save(Wallet, wallet);
+         const wallet = payment.user.wallet;
+        // wallet.locked_balance = +wallet.locked_balance - +payment.amount_paid
+        // await queryRunner.manager.save(Wallet, wallet);
 
         // 9) Registrar transacción (post_balance debe reflejar el saldo luego del descuento)
         const txPurchase = queryRunner.manager.create(Transaction, {
