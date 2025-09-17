@@ -23,6 +23,7 @@ import { TransactionCode } from 'src/transactions/enum/transaction-code';
 import { SuperadminConfigService } from 'src/superadmin-config/superadmin-config.service';
 import { StatusCode } from 'src/transaction-state/enum/status.enum';
 import { User } from 'src/users/entities/users.entity';
+import { PaymentTypeCode } from 'src/payment-types/enum/payment-type.enum';
 
 @Injectable()
 export class OrdersService {
@@ -139,9 +140,17 @@ export class OrdersService {
        if (cart.user_id !== wallet.user_id) throw new BadRequestException('Carrito no pertenece al usuario de la wallet');
 
       // 3) Validar forma de pago
-      const paymentType = await queryRunner.manager.findOne(PaymentType, {
-        where: { id: cart.payment_type_id },
-      });
+      let paymentType: PaymentType;
+      if (!cart.group_id) {
+        paymentType = await queryRunner.manager.findOne(PaymentType, {
+          where: { code: PaymentTypeCode.FULL },
+        });
+      } else {
+        paymentType = await queryRunner.manager.findOne(PaymentType, {
+          where: { id: cart.payment_type_id },
+        });
+      }
+      
       if (!paymentType) {
         throw new ConflictException('Forma de pago no disponible. Pruebe otra o intente luego.');
       }
