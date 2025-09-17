@@ -88,5 +88,14 @@
     "price_becoin": 60,
     "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1756823611/RedBull_270ml_cjcdre.png",
     "category": "Bebidas Energéticas"
+  },
+  {
+    "name": "Manufactura de Producto - Beland",
+    "description": "Manufactura de producto circular Beland.",
+    "cost": 4.0,
+    "price": 9.0,
+    "price_becoin": 180,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1758061367/Productos_Circulares_w55rd6.jpg",
+    "category": "Productos Circulares"
   }
 ]
