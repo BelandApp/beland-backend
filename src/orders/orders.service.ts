@@ -22,7 +22,6 @@ import { TransactionType } from 'src/transaction-type/entities/transaction-type.
 import { TransactionCode } from 'src/transactions/enum/transaction-code';
 import { SuperadminConfigService } from 'src/superadmin-config/superadmin-config.service';
 import { StatusCode } from 'src/transaction-state/enum/status.enum';
-import { User } from 'src/users/entities/users.entity';
 import { PaymentTypeCode } from 'src/payment-types/enum/payment-type.enum';
 
 @Injectable()
@@ -166,9 +165,10 @@ export class OrdersService {
         throw new ConflictException("No se encuentra el estado ", StatusCode.PENDING);
 
       //    - Tomamos algunos campos del carrito y seteamos leader_id = user_id
-      const { id: _cartId, user_id, created_at: _c1, updated_at: _c2, items: _items, ...createOrder } = cart as any;
+      const { id: _cartId, user_id, created_at: _c1, updated_at: _c2, items: _items, payment_type_id, payment_type, ...createOrder } = cart as any;
       const order = queryRunner.manager.create(Order, {
         ...createOrder,
+        payment_type_id: paymentType.id,
         user_id,
         status_id: status.id,
       });
