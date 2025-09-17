@@ -298,39 +298,41 @@ export class OrdersService {
       if (delivered) {await queryRunner.manager.update(Order, {id: order_id}, {confirmSend:true})}
       else {await queryRunner.manager.update(Order, {id: order_id}, {confirmReceived:true})}
 
-      // 2) Busco la orden.
-      const order = await queryRunner.manager.findOne(Order, {
-        where: {id:order_id}, 
-        relations: {payment_type:true}
-      })
-      if (!order) throw new NotFoundException('La orden de compra no existe')
+      // // 2) Busco la orden.
+      // const order = await queryRunner.manager.findOne(Order, {
+      //   where: {id:order_id}, 
+      //   relations: {payment_type:true}
+      // })
+      // if (!order) throw new NotFoundException('La orden de compra no existe')
 
-      // 3) Busco la wallet del usuario que genero la orden
-      const wallet = await queryRunner.manager.findOne(Wallet, {where: {user_id: order.user_id}})
-      if (!wallet) throw new NotFoundException('La wallet del usuario no existe')
+      // // 3) Busco la wallet del usuario que genero la orden
+      // const wallet = await queryRunner.manager.findOne(Wallet, {where: {user_id: order.user_id}})
+      // if (!wallet) throw new NotFoundException('La wallet del usuario no existe')
       
-      // 4) busco el estado correspondiente para actualiar la orden y el payment
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: StatusCode.COMPLETED },
-      });
-      if (!status)
-        throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
+      // // 4) busco el estado correspondiente para actualiar la orden y el payment
+      // const status = await queryRunner.manager.findOne(TransactionState, {
+      //   where: { code: StatusCode.COMPLETED },
+      // });
+      // if (!status)
+      //   throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
 
-      // 5) Si esta todo OK hago la transferencia
-      if (order.confirmSend && order.confirmReceived && order.payment_type.code === "FULL") {
-        await this.transferOrder (
-          queryRunner,
-          order,
-          status
-        )
+      // // 5) Si esta todo OK hago la transferencia
+      // if (order.confirmSend && order.confirmReceived && order.payment_type.code === "FULL") {
+      //   await this.transferOrder (
+      //     queryRunner,
+      //     order,
+      //     status
+      //   )
 
-        // 6) actualizo la orden
-        order.status = status;
-        await queryRunner.manager.save(Order, order);
+      //   // 6) actualizo la orden
+      //   order.status = status;
+      //   await queryRunner.manager.save(Order, order);
 
-      }
+      // }
+      // 12) Confirmar transacción
+      await queryRunner.commitTransaction();
 
-      return order
+      return 
     } catch (err) {
       // Revertir todo si falla algo
       await queryRunner.rollbackTransaction();
