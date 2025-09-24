@@ -1,11 +1,13 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import {
-  ThrottlerModule,
-  ThrottlerModuleOptions,
-  ThrottlerGuard,
-} from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+// Comentado para inhabilitar el módulo de Throttler
+// import {
+//   ThrottlerModule,
+//   ThrottlerModuleOptions,
+//   ThrottlerGuard,
+// } from '@nestjs/throttler';
+// Comentado para inhabilitar el guard de Throttler
+// import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
@@ -55,7 +57,7 @@ import { WithdrawAccountTypeModule } from './withdraw-account-type/withdraw-acco
 import { UserWithdrawModule } from './user-withdraw/user-withdraw.module';
 import { AmountToPaymentModule } from './amount-to-payment/amount-to-payment.module';
 import { PresetAmountModule } from './preset-amount/preset-amount.module';
-import { NotificationsSocketModule } from './notification-socket/notification-socket.module'; 
+import { NotificationsSocketModule } from './notification-socket/notification-socket.module';
 import { TestimoniesModule } from './testimonies/testimonies.module';
 import { UserFeedbackModule } from './user-feedback/user-feedback.module';
 
@@ -64,7 +66,7 @@ import { UserFeedbackModule } from './user-feedback/user-feedback.module';
     ConfigModule.forRoot({
       isGlobal: true,
       //load: [typeormConfig],
-    }), 
+    }),
     // modulo para generar los token
     JwtModule.registerAsync({
       global: true,
@@ -78,18 +80,18 @@ import { UserFeedbackModule } from './user-feedback/user-feedback.module';
         };
       },
     }),
-    ThrottlerModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService): ThrottlerModuleOptions => ({
-        throttlers: [
-          {
-            ttl: config.get<number>('THROTTLE_TTL', 60),
-            limit: config.get<number>('THROTTLE_LIMIT', 10),
-          },
-        ],
-      }),
-    }),
+    // ThrottlerModule.forRootAsync({
+    //   imports: [ConfigModule],
+    //   inject: [ConfigService],
+    //   useFactory: (config: ConfigService): ThrottlerModuleOptions => ({
+    //     throttlers: [
+    //       {
+    //         ttl: config.get<number>('THROTTLE_TTL', 60),
+    //         limit: config.get<number>('THROTTLE_LIMIT', 10),
+    //       },
+    //     ],
+    //   }),
+    // }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -101,9 +103,7 @@ import { UserFeedbackModule } from './user-feedback/user-feedback.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        migrations: [
-          __dirname + '/database/migrations/*{.ts,.js}'
-        ],
+        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         logging: false,
         ssl: {
           rejectUnauthorized: false,
@@ -162,10 +162,11 @@ import { UserFeedbackModule } from './user-feedback/user-feedback.module';
   ],
   controllers: [],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    // Comentado para inhabilitar el guard de Throttler
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: ThrottlerGuard,
+    // },
   ],
 })
 export class AppModule implements NestModule {
