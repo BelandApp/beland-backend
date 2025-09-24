@@ -137,7 +137,7 @@ export class WalletsService {
       description: res.resource.description,
       quanity: res.quantity,
       image_url: res.resource.url_image,
-      discount: res.resource.discount,
+      discount: res.resource.aplicationDiscount,
     }));
 
     return respPayment;
