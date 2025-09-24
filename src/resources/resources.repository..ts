@@ -15,10 +15,10 @@ export class ResourcesRepository {
     page: number,
     limit: number,
   ): Promise<[Resource[], number]> {
-    const where: any = {
-      expires_at: MoreThanOrEqual(new Date()), // solo los que no vencieron
-    };
-
+    // const where: any = {
+    //   expires_at: MoreThanOrEqual(new Date()), // solo los que no vencieron
+    // };
+    const where: any = {}
     if (resource_type_id) {
       where.resource_type_id = resource_type_id;
     }

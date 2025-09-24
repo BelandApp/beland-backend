@@ -5,6 +5,8 @@ import { WalletsRepository } from 'src/wallets/wallets.repository';
 export class SuperadminConfigService implements OnModuleInit {
   private superadminWalletId: string;
   private readonly priceOneBecoin = 0.05;
+  private readonly priceDelivery = 2;
+
 
   constructor(private readonly walletRepository: WalletsRepository) {}
 
@@ -22,6 +24,10 @@ export class SuperadminConfigService implements OnModuleInit {
 
   getPriceOneBecoin(): number {
     return this.priceOneBecoin;
+  }
+
+  getPriceDelivery(): number {
+    return this.priceDelivery;
   }
 }
 
