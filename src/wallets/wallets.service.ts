@@ -8,7 +8,7 @@ import {
 import * as QRCode from 'qrcode';
 import { WalletsRepository } from './wallets.repository';
 import { Wallet } from './entities/wallet.entity';
-import { DataSource } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { RechargeDto } from './dto/recharge.dto';
 import { Transaction } from 'src/transactions/entities/transaction.entity';
 import { TransferDto } from './dto/transfer.dto';
@@ -519,11 +519,12 @@ export class WalletsService {
     dto: TransferDto,
     code_transaction_send?: string,
     code_transaction_received?: string,
-    
+    queryRun?: QueryRunner,
   ): Promise<{ wallet: Wallet }> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    const queryRun2 = this.dataSource.createQueryRunner();
+    await queryRun2.connect();
+    await queryRun2.startTransaction();
+    const queryRunner = queryRun ?? queryRun2;
 
     try {
 
@@ -648,7 +649,7 @@ export class WalletsService {
       }
 
       // COMMIT
-      await queryRunner.commitTransaction();
+      if (!queryRun) await queryRunner.commitTransaction();
 
       // === EMITIR EVENTO AL COMERCIO (post-commit) ===
       // Identificá al comercio: según tu código, 'to' es la wallet del comercio:
@@ -667,15 +668,20 @@ export class WalletsService {
       return { wallet: walletUpdate };
     } catch (error) {
       // ❌ Deshago todo si algo falla
-      await queryRunner.rollbackTransaction();
+      if (!queryRun) await queryRunner.rollbackTransaction();
       throw error;
     } finally {
       // Cierro el queryRunner
-      await queryRunner.release();
+      if (!queryRun) await queryRunner.release();
     }
   }
 
   async purchaseResource (user_id: string, dto:CreateUserResourceDto): Promise<{wallet: Wallet}> {
+    
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
     // 1) recupero el recurso y veo si existe
     const resourceRepo = this.dataSource.getRepository(Resource);
@@ -703,13 +709,15 @@ export class WalletsService {
         );
       }
 
+    // Calcular precio del recurso con el descuento.
 
+    const value_discounted = +resource.becoin_value * (1 - +resource.discount / 100);
     // 3) Verifico que la wallet origen tenga fondos suficientes
     const userWallet = await this.dataSource.manager.findOne(Wallet, {
       where: {user_id}
     })
     if (!userWallet) throw new NotFoundException("Billetera del usuario no encontrada")  
-    if (+userWallet.becoin_balance < (+resource.becoin_value * +dto.quantity))
+    if (+userWallet.becoin_balance < value_discounted)
       throw new ConflictException("Fondos insuficientes. Recargue su Billetera e intente nuevamente")  
 
     // 4) verifico que exista la wallet destino del recurso.
@@ -721,23 +729,23 @@ export class WalletsService {
     if (existing) {
         // actualizar cantidad
         existing.quantity = total;
-        await this.dataSource.manager.save(existing);
+        await queryRunner.manager.save(UserResource, existing);
       } else {
         // crear nuevo registro
-        const newUserResource = this.dataSource.manager.create(UserResource, {
+        const newUserResource = queryRunner.manager.create(UserResource, {
           user_id,
           resource_id: resource.id,
           quantity: +dto.quantity,
           hash_id: randomUUID(),
         });
 
-        await this.dataSource.manager.save(newUserResource);
+        await queryRunner.manager.save(UserResource, newUserResource);
       }
     
     // 5) Si el valor del resource es 0 (o sea gratuito) no realizo la transferencia, en caso contrario si.
-    if (resource.becoin_value > 0) {
+    
+    if ((value_discounted) > 0) {
       // Convertimos el porcentaje a decimal y aplicamos el descuento
-      const value_discounted = +resource.becoin_value * (1 - +resource.discount / 100);
       const wallet = await this.transfer(
           user_id,
           { 
@@ -745,17 +753,24 @@ export class WalletsService {
             amountBecoin: +value_discounted * +dto.quantity,
           },
           TransactionCode.PURCHASE_RESOURCE,
-          TransactionCode.SALE_RESOURCE
+          TransactionCode.SALE_RESOURCE,
+          queryRunner,
         )
 
         if (!wallet) throw new ConflictException("Error al realizar el pago")  
 
+        await queryRunner.commitTransaction();
         return wallet;
     }
-    
+    await queryRunner.commitTransaction();
     return {wallet: userWallet};
-  } catch (err) {
-
+  } catch (error) {
+    // Si algo falla, revertimos todo
+    await queryRunner.rollbackTransaction();
+    throw error;
+  } finally {
+    // Liberar el queryRunner
+    await queryRunner.release();
   }
   }
 
