@@ -166,6 +166,7 @@ export class OrdersService {
         throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
 
       //    - Tomamos algunos campos del carrito y seteamos leader_id = user_id
+
       const { id: _cartId, created_at: _c1, updated_at: _c2, items: _items, payment_type_id, payment_type, address, ...createOrder } = cart as Cart;
       const order = queryRunner.manager.create(Order, {
         ...createOrder,
