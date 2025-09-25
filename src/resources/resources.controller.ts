@@ -43,6 +43,24 @@ export class ResourcesController {
   @ApiQuery({ name: 'resource_type_id', required: false, type: String, description: 'Filtrar por ID del tipo de recurso. (opcional)' })  
   @ApiResponse({ status: 200, description: 'Listado de recursos retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findAllNoExpired(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('resource_type_id') resource_type_id = '',
+  ): Promise<[Resource[], number]> {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.service.findAllNoExpired(resource_type_id, pageNumber, limitNumber);
+  }
+
+  @Get("all")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar recursos con paginación' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+  @ApiQuery({ name: 'resource_type_id', required: false, type: String, description: 'Filtrar por ID del tipo de recurso. (opcional)' })  
+  @ApiResponse({ status: 200, description: 'Listado de recursos retornado correctamente' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findAll(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
