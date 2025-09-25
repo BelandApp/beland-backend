@@ -126,7 +126,7 @@ export class WalletsService {
         where: {
           user_id,
           is_redeemed: false,
-          resource: { user_commerce_id: wallet.user_id, is_expired: false },
+          resource: { user_commerce_id: wallet.user_id },
         },
         relations: { resource: true },
       });
@@ -137,7 +137,7 @@ export class WalletsService {
       description: res.resource.description,
       quanity: res.quantity,
       image_url: res.resource.url_image,
-      discount: res.resource.discount,
+      discount: res.resource.aplicationDiscount,
     }));
 
     return respPayment;

@@ -6,6 +6,7 @@ import {
   UseGuards,
   Query,
   BadRequestException,
+  Put,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -86,5 +87,17 @@ export class DatabaseIntiController {
   @ApiResponse({ status: 500, description: 'No se pudo crear' })
   async loadSuperAdminAndRole(): Promise<void> {
     return await this.service.loadSuperAdminAndRole();
+  }
+
+  @Put('regenerar-qr-superadmin')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ 
+    summary: 'Actualiza el qr solo del SUPERADMIN.', 
+    description: 'GensdfserAdmin. y todos los roles de usuario existentes' })
+  @ApiResponse({ status: 201, description: 'Creacion exitosa' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 500, description: 'No se pudo crear' })
+  async momentaneo() {
+    return await this.service.momentaneo();
   }
 }

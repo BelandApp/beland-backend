@@ -10,15 +10,35 @@ export class ResourcesRepository {
     private repository: Repository<Resource>,
   ) {}
 
+  async findAllNoExpired(
+    resource_type_id:string,
+    page: number,
+    limit: number,
+  ): Promise<[Resource[], number]> {
+     const where: any = {
+       expires_at: MoreThanOrEqual(new Date()), // solo los que no vencieron
+     };
+
+    if (resource_type_id) {
+      where.resource_type_id = resource_type_id;
+    }
+
+    return this.repository.findAndCount({
+        where,
+        order: { created_at: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+        relations: {resource_type:true}
+    });
+  }
+
   async findAll(
     resource_type_id:string,
     page: number,
     limit: number,
   ): Promise<[Resource[], number]> {
-    // const where: any = {
-    //   expires_at: MoreThanOrEqual(new Date()), // solo los que no vencieron
-    // };
-    const where: any = {}
+     const where: any = {};
+
     if (resource_type_id) {
       where.resource_type_id = resource_type_id;
     }
