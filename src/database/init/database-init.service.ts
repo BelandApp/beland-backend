@@ -4,7 +4,7 @@ import { DataSource, Repository } from 'typeorm';
 // Seeders
 import { DefaultRolesSeeder } from './seeders/default-roles.seeder';
 import { SuperAdminUserSeeder } from './seeders/superadmin-user.seeder';
-
+import * as QRCode from 'qrcode';
 // JSON
 import preloadTT from './json/transactionsType.json';
 import preloadTS from './json/transactionState.json';
@@ -29,6 +29,7 @@ import { Resource } from 'src/resources/entities/resource.entity';
 import { User } from 'src/users/entities/users.entity';
 import { SuperadminConfigService } from 'src/superadmin-config/superadmin-config.service';
 import { RoleEnum } from 'src/roles/enum/role-validate.enum';
+import { Wallet } from 'src/wallets/entities/wallet.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -236,4 +237,14 @@ export class DatabaseInitService {
     }
   }
 
+
+    async momentaneo() {
+  return await this.dataSource.manager.update(
+    Wallet,
+    { id: "aaa410a7-9921-4d53-8af5-8ef942f88b5b" },
+    {
+      qr: await QRCode.toDataURL("aaa410a7-9921-4d53-8af5-8ef942f88b5b"),
+    }
+  );
+}
 }

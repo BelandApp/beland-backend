@@ -13,6 +13,23 @@ export class ResourcesService {
 
   constructor(private readonly repository: ResourcesRepository) {}
 
+  async findAllNoExpired(
+    resource_type_id: string,
+    pageNumber: number,
+    limitNumber: number,
+  ): Promise<[Resource[], number]> {
+    try {
+      const response = await this.repository.findAllNoExpired(
+        resource_type_id,
+        pageNumber,
+        limitNumber,
+      );
+      return response;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
   async findAll(
     resource_type_id: string,
     pageNumber: number,

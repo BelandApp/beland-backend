@@ -20,6 +20,14 @@ export class CreateWalletDto {
   alias?: string;
 
   @ApiProperty({
+    description: 'Qr de la billetera',
+    example: 'dsbukhfbkfhxfnbgftjAILIN',
+  })
+  @IsOptional()
+  @IsString()
+  qr?: string;
+
+  @ApiProperty({
     description: 'Clave privada encriptada (si aplica)',
     example: 'encryptedKey123',
   })
