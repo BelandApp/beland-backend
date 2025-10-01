@@ -6,14 +6,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../../../users/users.service';
-import { CreateUserDto } from '../../../users/dto/create-user.dto';
-import { AuthService } from 'src/auth/auth.service';
+import { UsersService } from '../../../modules/users/users.service';
+import { CreateUserDto } from '../../../modules/users/dto/create-user.dto';
+import { AuthService } from 'src/modules/auth/auth.service';
 import { DataSource } from 'typeorm';
-import { User } from 'src/users/entities/users.entity';
-import { Role } from 'src/roles/entities/role.entity';
-import { ROLES_KEY } from 'src/auth/decorators/roles.decorator';
-import { Wallet } from 'src/wallets/entities/wallet.entity';
+import { User } from 'src/modules/users/entities/users.entity';
+import { Role } from 'src/modules/roles/entities/role.entity';
+import { ROLES_KEY } from 'src/modules/auth/decorators/roles.decorator';
+import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
 import { v4 as uuidv4 } from 'uuid';
 import * as QRCode from 'qrcode';
 

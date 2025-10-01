@@ -14,7 +14,7 @@ export const AppDataSource = new DataSource({
   migrations: [isTs ? 'src/database/migrations/*.ts' : 'dist/database/migrations/*.js'],
   synchronize: false,
   logging: false,
-  ssl: { rejectUnauthorized: false },
+  ssl: isTs ? false : { rejectUnauthorized: false },
 });
 
 //export default registerAs('typeorm', () => config);

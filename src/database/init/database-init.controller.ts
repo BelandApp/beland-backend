@@ -15,16 +15,16 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { FlexibleAuthGuard } from 'src/auth/guards/flexible-auth.guard';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { Roles } from 'src/auth/decorators/roles.decorator';
+import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
+import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
+import { Roles } from 'src/modules/auth/decorators/roles.decorator';
 import { DatabaseInitService } from './database-init.service';
 
 @ApiTags('database-init')
 @Controller('database-init')
-@ApiBearerAuth('JWT-auth')
-@UseGuards(FlexibleAuthGuard, RolesGuard)
-@Roles('SUPERADMIN')
+// @ApiBearerAuth('JWT-auth')
+// @UseGuards(FlexibleAuthGuard, RolesGuard)
+// @Roles('SUPERADMIN')
 export class DatabaseIntiController {
   constructor(private readonly service: DatabaseInitService) {}
 
