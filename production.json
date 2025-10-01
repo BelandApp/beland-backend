@@ -6,8 +6,6 @@
     "DB_USERNAME":"belandUser",
     "DB_PASSWORD": "Rkj1cCMhK~_ePE*(",
     "DB_DATABASE": "belandProd",
-    "SUPABASE_URL": "https://jqyvwwlxvarvebxuabuh.supabase.co",
-    "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxeXZ3d2x4dmFydmVieHVhYnVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzODYzMjcsImV4cCI6MjA2ODk2MjMyN30.XqhEZ91JFbYy4Y_c_5R64_9y3UqTyMiQOiGpVwd6APE",
     "AUTH0_AUDIENCE": "https://beland.onrender.com/api",
     "AUTH0_DOMAIN": "beland-dev.us.auth0.com",
     "AUTH0_CLIENT_ID": "TzhaMrSTRVqD0HCUPRX1XLezDk9IRivP",

@@ -5,8 +5,8 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RolesService } from '../../../roles/roles.service'; // Ruta relativa ajustada
-import { CreateRoleDto } from '../../../roles/dto/create-role.dto'; // Ruta relativa ajustada
+import { RolesService } from '../../../modules/roles/roles.service'; // Ruta relativa ajustada
+import { CreateRoleDto } from '../../../modules/roles/dto/create-role.dto'; // Ruta relativa ajustada
 
 @Injectable()
 export class DefaultRolesSeeder {
