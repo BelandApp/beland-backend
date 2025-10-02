@@ -17,12 +17,14 @@ export class WithdrawAccountsService {
     user_id: string,
     pageNumber: number,
     limitNumber: number,
+    is_active?: boolean,
   ): Promise<[WithdrawAccount[], number]> {
     try {
       const response = await this.repository.findAll(
         user_id,
         pageNumber,
         limitNumber,
+        is_active,
       );
       return response;
     } catch (error) {

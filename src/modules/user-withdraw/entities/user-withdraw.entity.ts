@@ -22,6 +22,9 @@ export class UserWithdraw {
   @Column('text', {nullable:true})
   observation: string;
 
+  @Column('varchar', {nullable:true})
+  transaction_banck_id: string;
+
   // 🔹 Usuario que solicita el retiro
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
@@ -57,7 +60,7 @@ export class UserWithdraw {
   @Column({ type: 'uuid' })
   status_id: string;
 
-  // 🔹 Estado del retiro
+  // 🔹 id de la transaccion realizada del retiro
   @OneToOne(() => Transaction, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'transaction_id' })
   transaction: Transaction;

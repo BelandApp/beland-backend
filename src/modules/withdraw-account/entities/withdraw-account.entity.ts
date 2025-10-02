@@ -35,7 +35,7 @@ export class WithdrawAccount {
 
   // 🔹 Solo si es billetera virtual
   @Column({ type: 'varchar', nullable: true })
-  provider?: string; // Ej: 'MercadoPago', 'Payphone'
+  provider?: string; // Ej: 'MercadoPago', 'Payphone', 'Produbanco', 'Pichincha Bank'
 
   @Column({ type: 'varchar', nullable: true })
   phone?: string; // Número de teléfono de la billetera virtual
@@ -48,6 +48,9 @@ export class WithdrawAccount {
 
   @OneToOne(() => Wallet, (wallet) => wallet.withdraw_account, { onDelete: 'CASCADE' })
   wallet: Wallet;
+
+  @Column({ type: 'boolean', default: false })
+  is_active: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
