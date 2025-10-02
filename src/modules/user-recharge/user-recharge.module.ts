@@ -6,7 +6,7 @@ import { RechargeTransfer } from './entities/user-recharge.entity';
 import { UserRechargeRepository } from './user-recharge.repository';
 
 @Module({
-  imports: [TypeOrmModule.forFeature.apply([RechargeTransfer])],
+  imports: [TypeOrmModule.forFeature([RechargeTransfer])],
   controllers: [UserRechargeController],
   providers: [UserRechargeService, UserRechargeRepository],
 })
