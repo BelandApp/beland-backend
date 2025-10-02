@@ -25,7 +25,6 @@ import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { UserWithdraw } from './entities/user-withdraw.entity';
 import { UserWithdrawsService } from './user-withdraw.service';
 import { Request } from 'express';
-import { CreateUserWithdrawDto } from './dto/create-user-withdraw.dto';
 import { UpdateUserWithdrawDto } from './dto/update-user-withdraw.dto';
 import { WithdrawDto, WithdrawResponseDto } from './dto/withdraw.dto';
 import { Wallet } from '../wallets/entities/wallet.entity';

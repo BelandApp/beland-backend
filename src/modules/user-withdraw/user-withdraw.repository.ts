@@ -25,7 +25,7 @@ export class UserWithdrawsRepository {
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: ['status', 'type'],
+        relations: {status:true, user:true, withdraw_account:true},
     });
   }
 
@@ -52,14 +52,14 @@ export class UserWithdrawsRepository {
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: ['status', 'type'],
+        relations: {status:true, withdraw_account:true},
     });
   }
 
   async findOne(id: string): Promise<UserWithdraw> {
     return this.repository.findOne({
       where: { id },
-      relations: ['status', 'type'],
+      relations: {status:true, user:true, withdraw_account:true},
     });
   }
 

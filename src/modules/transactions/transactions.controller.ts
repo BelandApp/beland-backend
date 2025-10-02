@@ -27,6 +27,7 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionsService } from './transactions.service';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { Request } from 'express';
+import { RecentRecipientDto } from './dto/recentRecipient.resp.dto';
 
 @ApiTags('transactions')
 @Controller('transactions')
@@ -48,7 +49,7 @@ export class TransactionsController {
   async findAll(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
-    @Query('wallet_id') wallet_id = '10',
+    @Query('wallet_id') wallet_id = 'no se usa',
     @Req() req: Request,
     @Query('state_id') state_id = '',
     @Query('type_id') type_id = '',
@@ -56,6 +57,23 @@ export class TransactionsController {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     return await this.service.findAll(req.user.id, state_id, type_id, pageNumber, limitNumber);
+  }
+
+  @Get('recent-recipients')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'lista de los ultimos contactos a los que se transfirio.' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+  @ApiResponse({ status: 200, description: 'lista de los ultimos contactos a los que se transfirio retornado correctamente' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findUserRecentRecipients(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Req() req: Request,
+  ): Promise<RecentRecipientDto[]> {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.service.findUserRecentRecipients(req.user.id, pageNumber, limitNumber);
   }
 
   @Get(':id')
