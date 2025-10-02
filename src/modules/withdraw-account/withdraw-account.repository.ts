@@ -14,8 +14,12 @@ export class WithdrawAccountsRepository {
     user_id: string,
     page: number,
     limit: number,
+    is_active?: boolean,
   ): Promise<[WithdrawAccount[], number]> {
-    const where = user_id ? { user_id } : {};
+    const where: any = {} 
+    where.user_id = user_id;
+
+    if (is_active) where.is_active = is_active;
 
     return this.repository.findAndCount({
         where,

@@ -40,16 +40,18 @@ export class WithdrawAccountsController {
   @ApiOperation({ summary: 'Listar cuentas de retiro con paginación y filtrado por usuario' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+  @ApiQuery({ name: 'is_active', required: false, type: Boolean, example: true, description: 'Retorna solo las cuntas activas o inactivas, si no se envia retorna todas' })
   @ApiResponse({ status: 200, description: 'Listado de cuentas de retiro retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findAll(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
+    @Query('is_active') is_active,
     @Req() req: Request,
   ): Promise<[WithdrawAccount[], number]> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(req.user?.id, pageNumber, limitNumber);
+    return await this.service.findAll(req.user?.id, pageNumber, limitNumber, is_active);
   }
 
   @Get(':id')
@@ -71,6 +73,32 @@ export class WithdrawAccountsController {
   @ApiResponse({ status: 500, description: 'No se pudo crear la cuenta de retiro' })
   async create(@Body() body: CreateWithdrawAccountDto): Promise<WithdrawAccount> {
     return await this.service.create(body);
+  }
+
+  @Put('active/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Activa una cuenta desactivada' })
+  @ApiParam({ name: 'id', description: 'UUID de la cuenta de retiro' })
+  @ApiResponse({ status: 200, description: 'Cuenta de retiro actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró la cuenta de retiro a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar la cuenta de retiro' })
+  async activeAccount(
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.update(id, {is_active: false});
+  }
+
+  @Put('disactive/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desactiva una cuenta existente' })
+  @ApiParam({ name: 'id', description: 'UUID de la cuenta de retiro' })
+  @ApiResponse({ status: 200, description: 'Cuenta de retiro actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró la cuenta de retiro a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar la cuenta de retiro' })
+  async disactiveAccount(
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.update(id, {is_active: false});
   }
 
   @Put(':id')

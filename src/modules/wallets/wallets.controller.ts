@@ -231,49 +231,6 @@ export class WalletsController {
     return await this.service.recharge(req.user?.id, dto);
   }
 
-  // ENPOINT PARA EXTRACCIONES MANUALES
-  // SOLICITA RETIRO, QUEDA EN PENDIENTE
-  @Post('withdraw')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crear una Solicitud de Retiro' })
-  @ApiResponse({ status: 201, description: 'Solicita Retira exitosamente' })
-  async withdraw(
-    @Req() req: Request,
-    @Body() dto: WithdrawDto,
-  ): Promise<{ wallet: Wallet }> {
-    return await this.service.withdraw(req.user?.id, dto);
-  }
-  // SI LA TRANSFERENCIA FALLA LLAMA ESTE ENDPOINT
-  @Post('withdraw-failed')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary:
-      'Completa el Flujo de retiro para una transaccion fallida en la cuenta del usuario',
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Se registro el Fallo y se reestablecieron los saldos',
-  })
-  async withdrawFailed(
-    @Body() dto: WithdrawResponseDto,
-  ): Promise<{ wallet: Wallet }> {
-    return await this.service.withdrawFailed(dto);
-  }
-  // SI LA TRANSFERENCIA SALE BIEN LLAMA ESTE ENDPOINT
-  @Post('withdraw-completed')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary:
-      'Completa el Flujo de retiro para una transaccion exitosa en la cuenta del usuario',
-  })
-  @ApiResponse({ status: 201, description: 'Retira exitosamente' })
-  async withdrawCompleted(
-    @Body() dto: WithdrawResponseDto,
-  ): Promise<{ wallet: Wallet }> {
-    return await this.service.withdrawCompleted(dto);
-  }
-  // FIN DE ENPOINT PARA EXTRACCIONES
-
   // TRANSFERENCIAS ENTRE USUARIOS
   @Post('transfer')
   @HttpCode(HttpStatus.CREATED)

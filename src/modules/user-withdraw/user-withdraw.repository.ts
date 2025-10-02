@@ -11,9 +11,28 @@ export class UserWithdrawsRepository {
   ) {}
 
   async findAll(
+    status_id: string,
+    page: number,
+    limit: number,
+  ): Promise<[UserWithdraw[], number]> {
+    const where: any = {};
+    if (status_id) {
+        where.status_id = status_id;
+    }
+
+    return this.repository.findAndCount({
+        where,
+        order: { created_at: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+        relations: ['status', 'type'],
+    });
+  }
+
+  async findAllUser(
     user_id: string,
     status_id: string,
-    type_id: string,
+    account_id: string,
     page: number,
     limit: number,
   ): Promise<[UserWithdraw[], number]> {
@@ -24,8 +43,8 @@ export class UserWithdrawsRepository {
         where.status_id = status_id;
     }
 
-    if (type_id) {
-        where.type_id = type_id;
+    if (account_id) {
+        where.withdraw_account_id = account_id;
     }
 
     return this.repository.findAndCount({
