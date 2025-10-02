@@ -28,8 +28,8 @@ import { WithdrawAccountsService } from './withdraw-account.service';
 import { CreateWithdrawAccountDto } from './dto/create-withdraw-account.dto';
 import { UpdateWithdrawAccountDto } from './dto/update-withdraw-account.dto';
 
-@ApiTags('bank_account')
-@Controller('bank_account')
+@ApiTags('withdraw-account')
+@Controller('withdraw-account')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(FlexibleAuthGuard)
 export class WithdrawAccountsController {

@@ -3,6 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { TransactionState } from 'src/modules/transaction-state/entities/transaction-state.entity';
+import { StatusCode } from '../transaction-state/enum/status.enum';
+import { TransactionCode } from './enum/transaction-code';
+import { Wallet } from '../wallets/entities/wallet.entity';
+import { User } from '../users/entities/users.entity';
+import { RecentRecipientDto } from './dto/recentRecipient.resp.dto';
 
 @Injectable()
 export class TransactionsRepository {
@@ -41,6 +46,37 @@ export class TransactionsRepository {
         take: limit,
         relations: ['status', 'type'],
     });
+  }
+
+  async findUserRecentRecipients(
+    user_id: string, 
+    page: number = 1, 
+    limit: number = 10
+  ): Promise<RecentRecipientDto[]> { 
+    const qb = this.repository 
+    .createQueryBuilder('t') 
+    .distinctOn(['t.related_wallet_id']) 
+    .leftJoinAndSelect('t.type', 'type') 
+    .innerJoinAndSelect('t.wallet', 'w') // wallet origen 
+    .innerJoinAndSelect('t.related_wallet', 'rw') // wallet destino 
+    .innerJoinAndSelect('rw.user', 'u') // user dueño del wallet destino 
+    .where('type.code = :code', { code: TransactionCode.TRANSFER_SEND }) 
+    .andWhere('w.user_id = :user_id', { user_id }) 
+    .orderBy('t.related_wallet_id') 
+    .addOrderBy('t.created_at', 'DESC') 
+    .skip((page - 1) * limit)
+    .take(limit);
+    
+    const rows = await qb.getMany(); 
+    
+    // Mapeamos para enviar solo {wallet, user} 
+    return rows.map(tx => ({ 
+      wallet_id: tx.related_wallet.id, 
+      email: tx.related_wallet.user.email, 
+      full_name: tx.related_wallet.user.full_name, 
+      username: tx.related_wallet.user.username, 
+      picture: tx.related_wallet.user.profile_picture_url,
+    })); 
   }
 
   async findOne(id: string): Promise<Transaction> {

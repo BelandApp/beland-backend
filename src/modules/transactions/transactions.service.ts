@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Transaction } from './entities/transaction.entity';
 import { TransactionsRepository } from './transactions.repository';
+import { RecentRecipientDto } from './dto/recentRecipient.resp.dto';
 
 @Injectable()
 export class TransactionsService {
@@ -29,6 +30,21 @@ export class TransactionsService {
         limitNumber,
       );
       return response;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async findUserRecentRecipients(
+    user_id: string, 
+    page: number = 1, 
+    limit: number = 10
+  ): Promise<RecentRecipientDto[]> {
+    try {
+      const res = await this.repository.findUserRecentRecipients(user_id, page, limit);
+      if (!res)
+        throw new NotFoundException(`No se encontro ${this.completeMessage}`);
+      return res;
     } catch (error) {
       throw new InternalServerErrorException(error);
     }

@@ -46,7 +46,10 @@ export class Transaction {
 
   @Column({ type: 'uuid', nullable: true })
   clientTransactionId: string | null; // para RECHARGE, id interno de seguimiento
-
+  
+  @ManyToOne(() => Wallet)
+  @JoinColumn({ name: 'related_wallet_id' })
+  related_wallet: Wallet;
   @Column({ type: 'uuid', nullable: true })
   related_wallet_id: string | null; // para TRANSFER, id de la wallet destino
 
