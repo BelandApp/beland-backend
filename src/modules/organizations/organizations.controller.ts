@@ -72,6 +72,20 @@ export class OrganizationsController {
     return await this.service.create(body);
   }
 
+  @Put('disactive/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Dar de Baja un comercio y volver a rol USER' })
+  @ApiParam({ name: 'id', description: 'UUID del comercio' })
+  @ApiResponse({ status: 200, description: 'Comercio actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el comercio a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar el comercio' })
+  async disactiveOrganization(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<Organization> {
+    return this.service.disactiveOrganization(id);
+
+  }
+
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar un comercio existente' })

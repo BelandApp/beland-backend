@@ -60,6 +60,10 @@ import { PresetAmountModule } from './modules/preset-amount/preset-amount.module
 import { NotificationsSocketModule } from './modules/notification-socket/notification-socket.module';
 import { TestimoniesModule } from './modules/testimonies/testimonies.module';
 import { UserFeedbackModule } from './modules/user-feedback/user-feedback.module';
+import { UserRechargeModule } from './modules/user-recharge/user-recharge.module';
+import { PaymentAccount } from './modules/payment-account/entities/payment-account.entity';
+import { PaymentAccountModule } from './modules/payment-account/payment-account.module';
+import { DeliveryStatusModule } from './modules/delivery-status/delivery-status.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -158,6 +162,10 @@ const isTs = process.env.NODE_ENV !== 'production';
     TestimoniesModule,
     SuperadminModule,
     UserFeedbackModule,
+    UserRechargeModule,
+    UserResourcesModule,
+    PaymentAccountModule,
+    DeliveryStatusModule,
   ],
   controllers: [],
   providers: [

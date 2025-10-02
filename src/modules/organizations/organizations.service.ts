@@ -54,6 +54,16 @@ export class OrganizationsService {
     }
   }
 
+  async disactiveOrganization(id: string): Promise<Organization> {
+    try {
+      const respuesta = this.repository.disactiveOrganization(id);
+      return respuesta;
+    } catch (error) {
+       console.error(error)
+       throw new InternalServerErrorException(error);
+    }
+  }
+
   async update(id: string, body: Partial<Organization>) {
     try {
       const res = await this.repository.update(id, body);
