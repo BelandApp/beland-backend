@@ -30,6 +30,7 @@ import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { AuthService } from '../auth/auth.service'; // Importar AuthService
 const QRCode = require('qrcode'); // Importar qrcode aquí para que esté disponible en el contexto
 import { UserEventBeland } from './entities/users-event-beland.entity';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 // Constantes para los nombres de roles
 const ROLE_USER = 'USER';
@@ -56,6 +57,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly rolesRepository: RolesRepository,
+    private readonly cloudinaryService: CloudinaryService,
     private dataSource: DataSource,
     @Inject(forwardRef(() => AuthService)) // Inyectar AuthService con forwardRef
     private readonly authService: AuthService,
@@ -393,6 +395,18 @@ export class UsersService {
   }
 
   // MÉTODOS DE CREACIÓN/ACTUALIZACIÓN/ELIMINACIÓN
+
+  async uploadImgProfileService(id: string, file: Express.Multer.File) {
+    const user = await this.usersRepository.findById(id);
+    if (!user)
+      throw new BadRequestException(
+        'El usuario que desea actualizar no existe',
+      );
+    const imgUpload = await this.cloudinaryService.uploadImage(file);
+    user.profile_picture_url = imgUpload.secure_url;
+    const userUpdate = await this.dataSource.manager.save (User, user);
+    return userUpdate;
+  }
 
   /**
    * Crea un nuevo usuario.

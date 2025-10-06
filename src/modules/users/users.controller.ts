@@ -19,7 +19,13 @@ import {
   UsePipes,
   ValidationPipe,
   UseGuards,
-  Req, // Importar Req para acceder al usuario autenticado
+  Req,
+  Put,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator, // Importar Req para acceder al usuario autenticado
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -36,6 +42,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { IsBoolean, IsNotEmpty } from 'class-validator';
 import { PickType } from '@nestjs/swagger';
@@ -51,6 +58,7 @@ import { Request } from 'express'; // Importar la interfaz Request de express pa
 import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { UserEventBeland } from './entities/users-event-beland.entity';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 // DTO para la ruta de bloqueo/desbloqueo (puede vivir aquí o en un archivo separado)
 class BlockUserDto extends PickType(UpdateUserDto, ['isBlocked'] as const) {
@@ -487,6 +495,47 @@ export class UsersController {
       this.handleError(error, 'obtener usuario por ID');
     }
   }
+
+  @Put('imgProfile/:id')
+  @ApiBearerAuth()
+  @UseGuards(FlexibleAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Subir imagen de perfil de usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario', type: 'string', format: 'uuid' })
+  @ApiBody({
+    description: `Debe subir el Archivo de Imagen`,
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Imagen de perfil subida exitosamente' })
+    async uploadImgProfile(
+      @Param('id', ParseUUIDPipe) id: string,
+      @UploadedFile(
+        new ParseFilePipe({
+          validators: [
+            new MaxFileSizeValidator({
+              maxSize: 10000000,
+              message: 'El Archivo debe ser menor a 10Mb',
+            }),
+            new FileTypeValidator({
+              fileType: /(.jpg|.jpeg|.png|.webp)$/,
+            }),
+          ],
+        }),
+      )
+      file: Express.Multer.File,
+    ) {
+      console.log('File', file);
+      return await this.usersService.uploadImgProfileService(id, file);
+    }
 
   @Patch('changeRoleToCommerce')
   @HttpCode(HttpStatus.OK)

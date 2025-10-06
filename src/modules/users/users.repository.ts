@@ -9,7 +9,7 @@ type ValidRoleNames =
   | 'USER'
   | 'LEADER'
   | 'ADMIN'
-  | 'SUPERADMIN'
+  | 'SUPERADMIN' 
   | 'COMMERCE'
   | 'FUNDATION';
 
