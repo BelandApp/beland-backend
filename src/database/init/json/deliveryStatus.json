@@ -1,0 +1,27 @@
+[
+  {
+    "code": "PENDING",
+    "name": "Pendiente",
+    "description": "La orden fue creada pero aún no se ha comenzado a preparar."
+  },
+  {
+    "code": "PREPARING",
+    "name": "En preparación",
+    "description": "Estamos preparando los productos para el envío."
+  },
+  {
+    "code": "ON_ROUTE",
+    "name": "En camino",
+    "description": "El repartidor ha salido a entregar el pedido."
+  },
+  {
+    "code": "DELIVERED",
+    "name": "Entregado",
+    "description": "La orden fue entregada exitosamente al cliente."
+  },
+  {
+    "code": "CANCELLED",
+    "name": "Cancelada",
+    "description": "La orden fue cancelada antes de la entrega."
+  }
+]

@@ -61,9 +61,9 @@ import { NotificationsSocketModule } from './modules/notification-socket/notific
 import { TestimoniesModule } from './modules/testimonies/testimonies.module';
 import { UserFeedbackModule } from './modules/user-feedback/user-feedback.module';
 import { UserRechargeModule } from './modules/user-recharge/user-recharge.module';
-import { PaymentAccount } from './modules/payment-account/entities/payment-account.entity';
 import { PaymentAccountModule } from './modules/payment-account/payment-account.module';
 import { DeliveryStatusModule } from './modules/delivery-status/delivery-status.module';
+import { AdminBecoinModule } from './modules/admin-becoin/admin-becoin.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -166,6 +166,8 @@ const isTs = process.env.NODE_ENV !== 'production';
     UserResourcesModule,
     PaymentAccountModule,
     DeliveryStatusModule,
+    AdminBecoinModule,
+    PaymentAccountModule
   ],
   controllers: [],
   providers: [

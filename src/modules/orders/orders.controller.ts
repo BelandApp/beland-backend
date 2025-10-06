@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   Param,
-  Delete,
   Query,
   ParseUUIDPipe,
   Put,
@@ -12,7 +11,6 @@ import {
   HttpStatus,
   UseGuards,
   Req,
-  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,12 +23,8 @@ import {
 import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
 import { Request } from 'express';
-import { User } from 'src/modules/users/entities/users.entity';
-import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
-import { CreateOrderByCartDto } from './dto/create-order-cart.dto';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -99,26 +93,56 @@ export class OrdersController {
     return await this.service.findOne(id);
   }
 
-  @Put('delivered')
+  @Put('preparing')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Confirma Entrega de la orden por admin' })
+  @ApiOperation({ summary: 'Cambiar el estado de la orden a En Preparacion' })
   @ApiQuery({ name: 'order_id', required: true, description: 'UUID de la orden' })
-  @ApiResponse({ status: 201, description: 'Confirmacion de entrega exitosa' })
+  @ApiResponse({ status: 201, description: 'Actualizacion exitosa' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para la confirmacion' })
   @ApiResponse({ status: 500, description: 'No se pudo realizar la confirmacion' })
-  async confrimedDelivered(@Query('order_id', ParseUUIDPipe) order_id:string): Promise<Order> {
-    return await this.service.confrimed(order_id, true);
+  async preparing(@Query('order_id', ParseUUIDPipe) order_id:string): Promise<Order> {
+    return await this.service.preparing(order_id);
   }
 
-  @Put('received')
+  @Put('on-route')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Confirma Recibo de la orden por usuario' })
+  @ApiOperation({ summary: 'Cambiar el estado de la orden a En Camino' })
   @ApiQuery({ name: 'order_id', required: true, description: 'UUID de la orden' })
   @ApiResponse({ status: 201, description: 'Confirmacion de recibo exitosa' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para la confirmacion' })
   @ApiResponse({ status: 500, description: 'No se pudo realizar la confirmacion' })
-  async confrimedReceived(@Query('order_id', ParseUUIDPipe) order_id:string): Promise<Order> {
-    return await this.service.confrimed(order_id, false);
+  async onRoute(@Query('order_id', ParseUUIDPipe) order_id:string): Promise<Order> {
+    return await this.service.onRoute(order_id);
+  }
+
+  @Put('delivered')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirma Entrega de la orden por admin' })
+  @ApiQuery({ name: 'order_id', required: true, description: 'UUID de la orden' })
+  @ApiQuery({ name: 'code', required: true, description: 'Codigo de orden dado por el usuario, debe cohincidir con el de la orden' })
+  @ApiResponse({ status: 201, description: 'Confirmacion de entrega exitosa' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para la confirmacion' })
+  @ApiResponse({ status: 500, description: 'No se pudo realizar la confirmacion' })
+  async delivered(
+    @Query('order_id', ParseUUIDPipe) order_id:string,
+    @Query('code') code:number,
+   ): Promise<Order> {
+    return await this.service.delivered(order_id, code);
+  }
+
+  @Put('cancelled')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancelacion de la orden' })
+  @ApiQuery({ name: 'order_id', required: true, description: 'UUID de la orden' })
+  @ApiQuery({ name: 'observation', required: true, description: 'Respuesta del porque se canceló la orden' })
+  @ApiResponse({ status: 201, description: 'Cancelacion exitosa' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para la confirmacion' })
+  @ApiResponse({ status: 500, description: 'No se pudo realizar la confirmacion' })
+  async cancelled(
+    @Query('order_id', ParseUUIDPipe) order_id:string,
+    @Query('observation') observation:string,
+  ): Promise<Order> {
+    return await this.service.cancelled(order_id, observation);
   }
 
   @Post()

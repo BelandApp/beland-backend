@@ -40,7 +40,7 @@ export class Transaction {
 
   @Column({ type: 'numeric', precision: 14, scale:2  })
   post_balance: number; // saldo resultante tras la operación
-
+ 
   @Column({ type: 'text', nullable: true })
   payphone_transactionId: string | null; // para RECHARGE, id de la transaccion generada por Payphone
 
