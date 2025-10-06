@@ -8,7 +8,8 @@ import {
   Logger,
   InternalServerErrorException,
   Inject, // Importar Inject
-  forwardRef, // Importar forwardRef
+  forwardRef,
+  HttpException, // Importar forwardRef
 } from '@nestjs/common';
 import { UsersRepository } from './users.repository';
 import { RolesRepository } from '../roles/roles.repository';
@@ -396,16 +397,37 @@ export class UsersService {
 
   // MÉTODOS DE CREACIÓN/ACTUALIZACIÓN/ELIMINACIÓN
 
-  async uploadImgProfileService(id: string, file: Express.Multer.File) {
-    const user = await this.usersRepository.findById(id);
-    if (!user)
-      throw new BadRequestException(
-        'El usuario que desea actualizar no existe',
+  async uploadImgProfileService(id: string, file: Express.Multer.File): Promise<User> {
+    try {
+      if (!file) {
+        throw new BadRequestException('No se recibió ninguna imagen');
+      }
+
+      const user = await this.usersRepository.findById(id);
+      if (!user) {
+        throw new NotFoundException('El usuario que desea actualizar no existe');
+      }
+
+      const imgUpload = await this.cloudinaryService.uploadImage(file);
+      if (!imgUpload || !imgUpload.secure_url) {
+        throw new InternalServerErrorException('Error al subir la imagen a Cloudinary');
+      }
+
+      user.profile_picture_url = imgUpload.secure_url;
+
+      const updatedUser = await this.dataSource.manager.save(User, user);
+      return updatedUser;
+    } catch (error) {
+      console.error('❌ Error al subir imagen de perfil:', error);
+
+      // Si es un error HTTP lanzado por Nest, lo volvemos a lanzar tal cual
+      if (error instanceof HttpException) throw error;
+
+      // Si no, lanzamos un error genérico
+      throw new InternalServerErrorException(
+        'Ocurrió un error al actualizar la imagen de perfil',
       );
-    const imgUpload = await this.cloudinaryService.uploadImage(file);
-    user.profile_picture_url = imgUpload.secure_url;
-    const userUpdate = await this.dataSource.manager.save (User, user);
-    return userUpdate;
+    }
   }
 
   /**
