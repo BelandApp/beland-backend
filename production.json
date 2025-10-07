@@ -34,6 +34,6 @@
     "EMAIL_USER": "belandproject@gmail.com",
     "EMAIL_PASS": "gmkndsuvdehkwsgp",
     "CLOUDINARY_CLOUD_NAME": "Root",
-    "CLOUDINARY_API_KEY": 697279233346878,
+    "CLOUDINARY_API_KEY": "697279233346878",
     "CLOUDINARY_API_SECRET": "RW10KLmMHLE_Z6TWBAfiF8ybrj0"
 }
