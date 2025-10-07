@@ -8,6 +8,7 @@ import { Role } from '../roles/entities/role.entity';
 import { RolesRepository } from '../roles/roles.repository';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { AdminsModule } from 'src/modules/admins/admins.module';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { AdminsModule } from 'src/modules/admins/admins.module';
     AdminsModule,
   ],
   controllers: [UsersController],
-  providers: [UsersService, UsersRepository, RolesRepository],
+  providers: [UsersService, UsersRepository, RolesRepository, CloudinaryService],
   exports: [UsersService, UsersRepository, TypeOrmModule],
 })
 export class UsersModule {}
