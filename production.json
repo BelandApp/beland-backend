@@ -6,8 +6,6 @@
     "DB_USERNAME":"belandUser",
     "DB_PASSWORD": "Rkj1cCMhK~_ePE*(",
     "DB_DATABASE": "belandProd",
-    "SUPABASE_URL": "https://jqyvwwlxvarvebxuabuh.supabase.co",
-    "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxeXZ3d2x4dmFydmVieHVhYnVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzODYzMjcsImV4cCI6MjA2ODk2MjMyN30.XqhEZ91JFbYy4Y_c_5R64_9y3UqTyMiQOiGpVwd6APE",
     "AUTH0_AUDIENCE": "https://beland.onrender.com/api",
     "AUTH0_DOMAIN": "beland-dev.us.auth0.com",
     "AUTH0_CLIENT_ID": "TzhaMrSTRVqD0HCUPRX1XLezDk9IRivP",
@@ -34,5 +32,8 @@
     "PAYPHONE_SECRET_KEY": "MgBXiUaDaUeshGjQAF2cg",
     "PAYPHONE_CODIFICATION_PASSWORD": "195bc70ab87d4bb8be16a92f9bf87b40",
     "EMAIL_USER": "belandproject@gmail.com",
-    "EMAIL_PASS": "gmkndsuvdehkwsgp"
+    "EMAIL_PASS": "gmkndsuvdehkwsgp",
+    "CLOUDINARY_CLOUD_NAME": "Root",
+    "CLOUDINARY_API_KEY": "697279233346878",
+    "CLOUDINARY_API_SECRET": "RW10KLmMHLE_Z6TWBAfiF8ybrj0"
 }

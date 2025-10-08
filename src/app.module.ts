@@ -9,57 +9,62 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 // Comentado para inhabilitar el guard de Throttler
 // import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UsersModule } from './users/users.module';
-import { RolesModule } from './roles/roles.module';
+import { UsersModule } from './modules/users/users.module';
+import { RolesModule } from './modules/roles/roles.module';
 import { CommonModule } from './common/common.module';
-import { AuthModule } from './auth/auth.module';
-import { CouponsModule } from './coupons/coupons.module';
-import { PrizeRedemptionsModule } from './prize-redemptions/prize-redemptions.module';
-import { PrizesModule } from './prizes/prizes.module';
-import { RecycledItemsModule } from './recycled-items/recycled-items.module';
-import { ActionsModule } from './actions/actions.module';
-import { PaymentsModule } from './payments/payments.module';
-import { OrderItemsModule } from './order-items/order-items.module';
-import { OrdersModule } from './orders/orders.module';
-import { InventoryItemsModule } from './inventory-items/inventory-items.module';
-import { ProductsModule } from './products/products.module';
-import { GroupMembersModule } from './group-members/group-members.module';
-import { GroupsModule } from './groups/groups.module';
-import { WalletsModule } from './wallets/wallets.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CouponsModule } from './modules/coupons/coupons.module';
+import { PrizeRedemptionsModule } from './modules/prize-redemptions/prize-redemptions.module';
+import { PrizesModule } from './modules/prizes/prizes.module';
+import { RecycledItemsModule } from './modules/recycled-items/recycled-items.module';
+import { ActionsModule } from './modules/actions/actions.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { OrderItemsModule } from './modules/order-items/order-items.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { InventoryItemsModule } from './modules/inventory-items/inventory-items.module';
+import { ProductsModule } from './modules/products/products.module';
+import { GroupMembersModule } from './modules/group-members/group-members.module';
+import { GroupsModule } from './modules/groups/groups.module';
+import { WalletsModule } from './modules/wallets/wallets.module';
 import { DatabaseModule } from './database/database.module';
 import { DataSourceOptions } from 'typeorm';
 //import typeormConfig from './config/typeorm'; // Asegúrate de que este archivo exista y exporte la configuración
 import { RequestLoggerMiddleware } from './middlleware/request-logger.middleware'; // Asegúrate de que este archivo exista
-import { TransactionsModule } from './transactions/transactions.module';
-import { RecyclePricesModule } from './recycle_prices/recycle_prices.module';
-import { OrganizationsModule } from './organizations/organizations.module';
-import { TransactionTypeModule } from './transaction-type/transaction-type.module';
-import { TransactionStateModule } from './transaction-state/transaction-state.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
+import { RecyclePricesModule } from './modules/recycle_prices/recycle_prices.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { TransactionTypeModule } from './modules/transaction-type/transaction-type.module';
+import { TransactionStateModule } from './modules/transaction-state/transaction-state.module';
 import { DatabaseInitModule } from './database/init/database-init.module';
 import { JwtModule } from '@nestjs/jwt';
-import { AdminsModule } from './admins/admins.module';
-import { CartModule } from './cart/cart.module';
-import { CartItemsModule } from './cart-items/cart-items.module';
-import { UserCardsModule } from './user-cards/user-cards.module';
-import { UserAddressModule } from './user-address/user-address.module';
-import { PaymentTypesModule } from './payment-types/payment-types.module';
-import { CategoryModule } from './category/category.module';
-import { GroupInvitationsModule } from './group-invitations/group-invitations.module';
+import { AdminsModule } from './modules/admins/admins.module';
+import { CartModule } from './modules/cart/cart.module';
+import { CartItemsModule } from './modules/cart-items/cart-items.module';
+import { UserCardsModule } from './modules/user-cards/user-cards.module';
+import { UserAddressModule } from './modules/user-address/user-address.module';
+import { PaymentTypesModule } from './modules/payment-types/payment-types.module';
+import { CategoryModule } from './modules/category/category.module';
+import { GroupInvitationsModule } from './modules/group-invitations/group-invitations.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { GroupTypeModule } from './group-type/group-type.module';
-import { EmailModule } from './email/email.module';
-import { ResourcesModule } from './resources/resources.module';
-import { ResourcesTypesModule } from './resources-types/resources-types.module';
-import { UserResourcesModule } from './user-resources/user-resources.module';
-import { SuperadminModule } from './superadmin-config/superadmin-config.module';
-import { WithdrawAccountModule } from './withdraw-account/withdraw-account.module';
-import { WithdrawAccountTypeModule } from './withdraw-account-type/withdraw-account-type.module';
-import { UserWithdrawModule } from './user-withdraw/user-withdraw.module';
-import { AmountToPaymentModule } from './amount-to-payment/amount-to-payment.module';
-import { PresetAmountModule } from './preset-amount/preset-amount.module';
-import { NotificationsSocketModule } from './notification-socket/notification-socket.module';
-import { TestimoniesModule } from './testimonies/testimonies.module';
-import { UserFeedbackModule } from './user-feedback/user-feedback.module';
+import { GroupTypeModule } from './modules/group-type/group-type.module';
+import { EmailModule } from './modules/email/email.module';
+import { ResourcesModule } from './modules/resources/resources.module';
+import { ResourcesTypesModule } from './modules/resources-types/resources-types.module';
+import { UserResourcesModule } from './modules/user-resources/user-resources.module';
+import { SuperadminModule } from './modules/superadmin-config/superadmin-config.module';
+import { WithdrawAccountModule } from './modules/withdraw-account/withdraw-account.module';
+import { WithdrawAccountTypeModule } from './modules/withdraw-account-type/withdraw-account-type.module';
+import { UserWithdrawModule } from './modules/user-withdraw/user-withdraw.module';
+import { AmountToPaymentModule } from './modules/amount-to-payment/amount-to-payment.module';
+import { PresetAmountModule } from './modules/preset-amount/preset-amount.module';
+import { NotificationsSocketModule } from './modules/notification-socket/notification-socket.module';
+import { TestimoniesModule } from './modules/testimonies/testimonies.module';
+import { UserFeedbackModule } from './modules/user-feedback/user-feedback.module';
+import { UserRechargeModule } from './modules/user-recharge/user-recharge.module';
+import { PaymentAccountModule } from './modules/payment-account/payment-account.module';
+import { DeliveryStatusModule } from './modules/delivery-status/delivery-status.module';
+import { AdminBecoinModule } from './modules/admin-becoin/admin-becoin.module';
+const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
   imports: [
@@ -105,9 +110,7 @@ import { UserFeedbackModule } from './user-feedback/user-feedback.module';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         logging: false,
-        ssl: {
-          rejectUnauthorized: false,
-        },
+        ssl: isTs ? false : {rejectUnauthorized: false},
       }),
     }),
 
@@ -159,6 +162,12 @@ import { UserFeedbackModule } from './user-feedback/user-feedback.module';
     TestimoniesModule,
     SuperadminModule,
     UserFeedbackModule,
+    UserRechargeModule,
+    UserResourcesModule,
+    PaymentAccountModule,
+    DeliveryStatusModule,
+    AdminBecoinModule,
+    PaymentAccountModule
   ],
   controllers: [],
   providers: [

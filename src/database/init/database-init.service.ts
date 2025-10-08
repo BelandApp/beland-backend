@@ -15,21 +15,23 @@ import preloadResourceType from './json/resourceType.json';
 import preloadWithdrawAccountType from './json/withdrawAccountType.json';
 import preloadResource from './json/resource.json'
 import preloadResourceSuperAdmin from './json/resourceSuperadmin.json'
+import preloadDelivery from './json/deliveryStatus.json'
 
 // Entidades
-import { TransactionType } from 'src/transaction-type/entities/transaction-type.entity';
-import { TransactionState } from 'src/transaction-state/entities/transaction-state.entity';
-import { Product } from 'src/products/entities/product.entity';
-import { PaymentType } from 'src/payment-types/entities/payment-type.entity';
-import { Category } from 'src/category/entities/category.entity';
-import { GroupType } from 'src/group-type/entities/group-type.entity';
-import { ResourcesType } from 'src/resources-types/entities/resources-type.entity';
-import { WithdrawAccountType } from 'src/withdraw-account-type/entities/withdraw-account-type.entity';
-import { Resource } from 'src/resources/entities/resource.entity';
-import { User } from 'src/users/entities/users.entity';
-import { SuperadminConfigService } from 'src/superadmin-config/superadmin-config.service';
-import { RoleEnum } from 'src/roles/enum/role-validate.enum';
-import { Wallet } from 'src/wallets/entities/wallet.entity';
+import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
+import { TransactionState } from 'src/modules/transaction-state/entities/transaction-state.entity';
+import { Product } from 'src/modules/products/entities/product.entity';
+import { PaymentType } from 'src/modules/payment-types/entities/payment-type.entity';
+import { Category } from 'src/modules/category/entities/category.entity';
+import { GroupType } from 'src/modules/group-type/entities/group-type.entity';
+import { ResourcesType } from 'src/modules/resources-types/entities/resources-type.entity';
+import { WithdrawAccountType } from 'src/modules/withdraw-account-type/entities/withdraw-account-type.entity';
+import { Resource } from 'src/modules/resources/entities/resource.entity';
+import { User } from 'src/modules/users/entities/users.entity';
+import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
+import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
+import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
+import { DeliveryStatus } from 'src/modules/delivery-status/entities/delivery-status.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -210,6 +212,12 @@ export class DatabaseInitService {
         WithdrawAccountType,
         'code',
         'Tipos de Cuentas para Retiros',
+      );
+      await this.preload<DeliveryStatus>(
+        preloadDelivery,
+        DeliveryStatus,
+        'code',
+        'Tipos de Estados de delivery de Ordenes',
       );
       this.logger.log('✅ Inicialización completada exitosamente.');
     } catch (error: any) {

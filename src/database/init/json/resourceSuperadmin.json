@@ -43,5 +43,20 @@
     "is_expired": false,
     "expires_at": "2025-10-30T23:59:59.000Z",
     "type": "DISCOUNT"
+  },
+  {
+    "code": "MASSANO-2025",
+    "name": "MASSANO - Prueba",
+    "description": "Ser parte del cambio tiene sus beneficios.",
+    "url_image": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1758130954/Ambassador_buhufm.jpg",
+    "becoin_value": 600,
+    "discount": 100,
+    "aplicationDiscount": 100,
+    "limit_user": 0,
+    "used_acount": 0,
+    "limit_app": 0,
+    "is_expired": false,
+    "expires_at": "2025-10-30T23:59:59.000Z",
+    "type": "EVENT_PASS"
   }
 ]

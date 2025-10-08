@@ -1,5 +1,5 @@
 import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
-import { RolesRepository } from '../roles/roles.repository';
+import { RolesRepository } from '../modules/roles/roles.repository';
 // Eliminada la importación de SettingRepository, ya que no se usa o no existe en el contexto actual.
 
 @Injectable()
