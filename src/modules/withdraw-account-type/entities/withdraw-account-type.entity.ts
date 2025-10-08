@@ -21,7 +21,4 @@ export class WithdrawAccountType {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
-
-  @OneToMany(() => WithdrawAccount, (account) => account.type)
-  withdraw_accounts: WithdrawAccount[];
 }
