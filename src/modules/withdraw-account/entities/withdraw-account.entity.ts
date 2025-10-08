@@ -20,11 +20,11 @@ export class WithdrawAccount {
   owner_name: string;
 
   // 🔹 Relación con tipos de cuenta (BANK / WALLET)
-  @ManyToOne(() => WithdrawAccountType, (type) => type.withdraw_accounts, { eager: true })
-  @JoinColumn({ name: 'type_id' })
-  type: WithdrawAccountType;
+  @ManyToOne(() => WithdrawAccountType, { eager: true })
+  @JoinColumn({ name: 'withdraw_account_type_id' })
+  withdraw_account_type: WithdrawAccountType;
   @Column('uuid')
-  type_id: string;
+  withdraw_account_type_id: string;
 
   // 🔹 Solo si es cuenta bancaria
   @Column({ type: 'varchar', nullable: true })
@@ -49,7 +49,7 @@ export class WithdrawAccount {
   @OneToOne(() => Wallet, (wallet) => wallet.withdraw_account, { onDelete: 'CASCADE' })
   wallet: Wallet;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
