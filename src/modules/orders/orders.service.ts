@@ -183,9 +183,14 @@ export class OrdersService {
 
       //    - Tomamos algunos campos del carrito y seteamos leader_id = user_id
 
-      const { id: _cartId, created_at: _c1, updated_at: _c2, items: _items, payment_type_id, payment_type, address, ...createOrder } = cart as Cart;
+      const { id: _cartId, created_at: _c1, updated_at: _c2, items: _items, payment_type_id, payment_type, address, total_amount, total_becoin, ...createOrder } = cart as Cart;
       const order = queryRunner.manager.create(Order, {
         ...createOrder,
+        subtotal_amount: +total_amount,
+        subtotal_becoin: +total_becoin,
+        total_amount: +total_amount + +this.superadminService.getPriceDelivery(),
+        total_becoin: +total_becoin + (+this.superadminService.getPriceDelivery()/+this.superadminService.getPriceOneBecoin()),
+        price_delivery: +this.superadminService.getPriceDelivery(),
         payment_type_id: paymentType.id,
         status_id: statusOrder.id,
       });
@@ -207,7 +212,7 @@ export class OrdersService {
       }
 
       // QUITAR ESTO CUANDO ESTEN TODAS LAS FORMAS DE PAGO DISPONIBLES COMPROBANDO SI ES A UN GRUPO
-      const cartTotal = Number(cart.total_becoin);
+      const cartTotal = Number(cart.total_becoin) + (+this.superadminService.getPriceDelivery()/+this.superadminService.getPriceOneBecoin());
       switch (paymentType.code) {
         case 'FULL':
           // 4) Validar saldo suficiente (y normalizar a número)

@@ -8,17 +8,21 @@ import { Role } from '../roles/entities/role.entity';
 import { RolesRepository } from '../roles/roles.repository';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { AdminsModule } from 'src/modules/admins/admins.module';
-import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Role]),
     forwardRef(() => AuthModule),
     AdminsModule,
-    CloudinaryModule,
   ],
   controllers: [UsersController],
-  providers: [UsersService, UsersRepository, RolesRepository],
+  providers: [
+    UsersService,
+    UsersRepository,
+    RolesRepository,
+    CloudinaryService,
+  ],
   exports: [UsersService, UsersRepository, TypeOrmModule],
 })
 export class UsersModule {}
