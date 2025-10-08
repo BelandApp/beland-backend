@@ -31,7 +31,7 @@ import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { AuthService } from '../auth/auth.service'; // Importar AuthService
 const QRCode = require('qrcode'); // Importar qrcode aquí para que esté disponible en el contexto
 import { UserEventBeland } from './entities/users-event-beland.entity';
-import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 
 // Constantes para los nombres de roles
 const ROLE_USER = 'USER';
