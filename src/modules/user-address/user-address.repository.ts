@@ -40,7 +40,7 @@ export class UserAddressRepository {
     return await this.repository.update(id, body);
   }
 
-  async remove(id: string): Promise<DeleteResult> {
-    return await this.repository.delete(id);
+  async remove(id: string): Promise<UpdateResult> {
+    return await this.repository.softDelete(id);
   }
 }

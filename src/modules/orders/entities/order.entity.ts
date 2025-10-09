@@ -22,7 +22,7 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'integer' })
+  @Column({ type: 'integer', nullable:true})
   code: number;
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
@@ -61,7 +61,7 @@ export class Order {
   @ManyToOne(() => DeliveryStatus)
   @JoinColumn({name: 'status_id'})
   status: DeliveryStatus;
-  @Column('uuid')
+  @Column('uuid', {nullable: true})
   status_id: string;
  
   @ManyToOne(() => UserAddress, (address) => address.orders, {

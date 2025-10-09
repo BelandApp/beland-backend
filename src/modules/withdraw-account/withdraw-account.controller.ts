@@ -71,8 +71,8 @@ export class WithdrawAccountsController {
   @ApiResponse({ status: 201, description: 'Cuenta de retiro creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear la cuenta de retiro' })
   @ApiResponse({ status: 500, description: 'No se pudo crear la cuenta de retiro' })
-  async create(@Body() body: CreateWithdrawAccountDto): Promise<WithdrawAccount> {
-    return await this.service.create(body);
+  async create(@Body() body: CreateWithdrawAccountDto, @Req() req:Request): Promise<WithdrawAccount> {
+    return await this.service.create({...body, user_id: req.user.id});
   }
 
   @Put('active/:id')

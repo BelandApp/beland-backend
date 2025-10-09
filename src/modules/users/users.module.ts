@@ -8,7 +8,7 @@ import { Role } from '../roles/entities/role.entity';
 import { RolesRepository } from '../roles/roles.repository';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { AdminsModule } from 'src/modules/admins/admins.module';
-import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 
 @Module({
   imports: [
