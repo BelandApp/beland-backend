@@ -17,16 +17,16 @@ export class EventPass {
 
   // 🪧 DATOS PRINCIPALES
   @Column({ type: 'varchar', length: 100 })
-  code: string; // codigo unico del pass
+  code: string;
 
   @Column({ type: 'varchar', length: 200 })
-  name: string; // nombre del evento
+  name: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string; // descripcion o mensaje slogan del evento
+  description: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  image_url: string; // imagen publicitaria del evento
+  image_url: string;
 
   // 📅 FECHAS DE CONTROL
   @Column({ type: 'timestamp', nullable: false })
@@ -57,6 +57,13 @@ export class EventPass {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
   total_becoin: number;
+
+  // 💸 CONFIGURACIÓN DE DEVOLUCIÓN
+  @Column({ type: 'boolean', default: false })
+  is_refundable: boolean; // ¿Se puede devolver la entrada?
+
+  @Column({ type: 'int', nullable: true, default: 0 })
+  refund_days_limit: number; // Días antes del evento para solicitar devolución
 
   // 👤 RELACIÓN CON USUARIO (creador)
   @ManyToOne(() => User, { nullable: false })
