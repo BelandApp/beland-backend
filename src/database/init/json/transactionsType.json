@@ -68,5 +68,25 @@
     "code": "RECYCLE",
     "name": "Reciclaje",
     "description": "Intercambio de residuos o materiales reciclables por BECOIN"
+  },
+  {
+    "code": "PURCHASE_EVENTPASS",
+    "name": "Compra de entrada",
+    "description": "El usuario adquiere una entrada para un evento, pagando con BECOIN."
+  },
+  {
+    "code": "SALE_EVENTPASS",
+    "name": "Venta de entrada",
+    "description": "El comerciante recibe BECOIN por la venta de una entrada a su evento."
+  },
+  {
+    "code": "DEVOLUTION_EVENTPASS",
+    "name": "Devolución de entrada",
+    "description": "El usuario recibe de vuelta los BECOIN al devolver o cancelar su entrada dentro del plazo permitido."
+  },
+  {
+    "code": "REFUND_EVENTPASS",
+    "name": "Reembolso de entrada",
+    "description": "El comerciante devuelve los BECOIN al usuario por una entrada reembolsada."
   }
 ]
