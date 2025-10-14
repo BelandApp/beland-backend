@@ -46,10 +46,10 @@ export class OrdersRepository {
 
     return this.repository.findAndCount({
         where: {status_id},
-        order: { created_at: 'ASC' },
+        order: { delivery_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: {address:true},
+        relations: {address:true, user:true},
     });
   }
 

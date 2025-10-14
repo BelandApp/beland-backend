@@ -17,7 +17,7 @@ import { UserEventPassFiltersDto } from './dto/user-eventpass-filters.dto';
 import { Request } from 'express';
 import { CreateUserEventPassDto } from './dto/create-user-event-pass.dto';
 
-@ApiTags('User Event Passes')
+@ApiTags('user-event-passes')
 @ApiBearerAuth()
 @Controller('user-event-passes')
 export class UserEventPassController {
@@ -130,16 +130,16 @@ export class UserEventPassController {
     example: '8aef5c2e-4f83-4a0f-8e6b-d36ac4e4f33a',
   })
   @ApiQuery({
-    name: 'organizer_wallet_id',
+    name: 'eventpass_id',
     required: true,
-    description: 'Wallet ID del organizador del evento',
+    description: 'ID de la entrada Creada por el comerciante que se obtiene desencriptando el QR',
     example: 'b1c3d57f-41a9-4a56-9b6d-24d238a14d8f',
   })
   @ApiResponse({ status: 200, description: 'Entrada consumida correctamente' })
   async consumeEventPass(
     @Query('user_eventpass_id') user_eventpass_id: string,
-    @Query('organizer_wallet_id') organizer_wallet_id: string,
+    @Query('eventpass_id') eventpass_id: string,
   ): Promise<{ success: boolean; message: string; userEventPass?: UserEventPass }> {
-    return this.service.consumeEventPass(user_eventpass_id, organizer_wallet_id);
+    return this.service.consumeEventPass(user_eventpass_id, eventpass_id);
   }
 }

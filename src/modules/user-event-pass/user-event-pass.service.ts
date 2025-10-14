@@ -63,9 +63,9 @@ export class UserEventPassService {
    */
   async consumeEventPass(
     user_eventpass_id: string,
-    organizer_wallet_id: string,
+    eventpass_id: string,
   ): Promise<{ success: boolean; message: string; userEventPass?: UserEventPass }> {
-    return this.repository.consumeEventPass(user_eventpass_id, organizer_wallet_id);
+    return this.repository.consumeEventPass(user_eventpass_id, eventpass_id);
   }
 
 
