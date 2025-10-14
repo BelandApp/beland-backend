@@ -31,11 +31,7 @@ export class CreateOrderItemDto {
   @IsNumber()
   total_becoin: number;
 
-  @ApiProperty({
-    description: 'ID del usuario que consumió el producto',
-    required: false,
-  })
-  @IsOptional()
-  @IsUUID()
-  consumed_by_user_id?: string;
+  @ApiProperty({ description: 'Precio total de la línea del pedido en becoin' })
+  @IsNumber()
+  delivery_at: Date;
 }

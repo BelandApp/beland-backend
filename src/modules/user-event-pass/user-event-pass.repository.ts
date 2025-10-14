@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource, FindOptionsWhere } from 'typeorm';
 import { UserEventPass } from './entities/user-event-pass.entity';
@@ -68,7 +68,6 @@ async findAll(
     holder_document?: string,
   ): Promise<UserEventPass> {
     return await this.dataSource.transaction(async (manager) => {
-      const userRepo = manager.getRepository(User);
       const walletRepo = manager.getRepository(Wallet);
       const eventRepo = manager.getRepository(EventPass);
       const transRepo = manager.getRepository(Transaction);
@@ -99,8 +98,15 @@ async findAll(
       // 2️⃣ Validar saldo y disponibilidad
       if (+walletUser.becoin_balance < +event.price_becoin)
         throw new BadRequestException('Saldo insuficiente.');
-      if (event.sold_tickets >= event.limit_tickets)
+      if (!event.available) {
         throw new BadRequestException('Entradas agotadas.');
+      }
+
+      // 2️⃣ Bis - sumar una entrada vendida y deshabilitar si alcanza el limite.
+      event.sold_tickets = +event.sold_tickets + 1;
+      if (+event.sold_tickets >= +event.limit_tickets)
+          event.available = false;
+      await eventRepo.save(event);
 
       // 3️⃣ Descontar saldo del usuario
       walletUser.becoin_balance = +walletUser.becoin_balance - +event.price_becoin;
@@ -265,44 +271,40 @@ async findAll(
     // user-event-pass.repository.ts
     async consumeEventPass(
     user_eventpass_id: string,
-    organizer_wallet_id: string,
+    eventpass_id: string, // me lo da el qr
     ): Promise<{ success: boolean; message: string; userEventPass?: UserEventPass }> {
     return this.dataSource.transaction(async (manager) => {
         const passRepo = manager.getRepository(UserEventPass);
-        const eventRepo = manager.getRepository(EventPass);
-        const walletRepo = manager.getRepository(Wallet);
+        const eventpassRepo = manager.getRepository(EventPass);
 
         // 1️⃣ Buscar entrada adquirida con su EventPass y usuario
         const userPass = await passRepo.findOne({
         where: { id: user_eventpass_id },
         relations: {event_pass:true},
         });
+        const eventPass = await eventpassRepo.findOne({where: {id: eventpass_id}})
 
-        if (!userPass) throw new NotFoundException('Entrada no encontrada.');
+        if (!userPass) throw new NotFoundException('Entrada de usuario no encontrada.');
+        if (!eventPass) throw new NotFoundException('Entrada no encontrada.');
+
+        if (userPass.event_pass_id !== eventpass_id)
+          throw new BadRequestException('La entrada que estas intentando usar no pertenece a este evento.');
 
         // 2️⃣ Validaciones básicas
         if (!userPass.is_active)
-        throw new BadRequestException('Esta entrada no está activa.');
+          throw new BadRequestException('Esta entrada no está activa.');
         if (userPass.is_consumed)
-        throw new BadRequestException('Esta entrada ya fue utilizada.');
+          throw new BadRequestException('Esta entrada ya fue utilizada.');
         if (userPass.is_refunded)
-        throw new BadRequestException('Esta entrada fue reembolsada y no puede usarse.');
-
-        // 3️⃣ Validar que el EventPass pertenezca al comercio con esa wallet
-        const organizerWallet = await walletRepo.findOne({
-        where: { id: organizer_wallet_id }
-        });
-        if (!organizerWallet)
-        throw new NotFoundException('Wallet del organizador no encontrada.');
-
-        if (userPass.event_pass.created_by_id !== organizerWallet.user_id)
-        throw new BadRequestException('Esta entrada no pertenece a este comercio.');
+          throw new BadRequestException('Esta entrada fue reembolsada y no puede usarse.');
 
         // 4️⃣ Marcar como consumida
         userPass.is_consumed = true;
         userPass.redemption_date = new Date();
-
         await passRepo.save(userPass);
+
+        eventPass.attended_count = +eventPass.attended_count + 1;
+        await eventpassRepo.save(eventPass);
 
         return {
         success: true,
