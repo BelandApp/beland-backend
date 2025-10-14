@@ -1,7 +1,5 @@
-// src/orders/dto/create-order.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID, IsEnum, IsOptional, IsNumber } from 'class-validator';
-import { StatusCode } from 'src/modules/transaction-state/enum/status.enum';
+import { IsUUID, IsOptional, IsNumber, IsDateString } from 'class-validator';
 
 export class CreateOrderDto {
   @ApiProperty({ description: 'ID del grupo asociado a la orden' })
@@ -30,11 +28,20 @@ export class CreateOrderDto {
   total_amount?: number;
 
   @ApiProperty({
-    description: 'Total de la orden en monedas internas',
+    description: 'Cantidad total de ítems en la orden',
     default: 0,
     required: false,
   })
   @IsOptional()
   @IsNumber()
   total_items?: number;
+
+  @ApiProperty({
+    description: 'Fecha y hora estimada de entrega de la orden',
+    example: '2025-10-13T15:30:00Z',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString()
+  delivery_at?: Date;
 }

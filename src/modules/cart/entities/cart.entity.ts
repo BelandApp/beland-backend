@@ -54,6 +54,9 @@ export class Cart {
   })
   items: CartItem[];
 
+  @Column({ type: 'timestamptz', nullable: true })
+  delivery_at: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   created_at: Date; 
 

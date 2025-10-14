@@ -28,13 +28,17 @@ export class EventPass {
   @Column({ type: 'varchar', length: 255, nullable: true })
   image_url: string;
 
+  @Column({ type: 'text', nullable: true })
+  qr: string;
+
   // 📅 FECHAS DE CONTROL
+  // fecha del evento
   @Column({ type: 'timestamp', nullable: false })
   event_date: Date;
-
+  // fecha comienzo de venta
   @Column({ type: 'timestamp', nullable: true })
   start_date: Date;
-
+  // fecha finaliacion de venta
   @Column({ type: 'timestamp', nullable: true })
   end_date: Date;
 
@@ -47,6 +51,9 @@ export class EventPass {
 
   @Column({ type: 'boolean', default: true })
   available: boolean;
+
+  @Column({ type: 'int', nullable: false, default: 0 })
+  attended_count: number;
 
   // 💰 DATOS ECONÓMICOS
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })

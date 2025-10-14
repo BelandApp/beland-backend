@@ -3,5 +3,6 @@ export enum DeliveryStatusCode {
   PREPARING = 'PREPARING',
   ON_ROUTE = 'ON_ROUTE',
   DELIVERED = 'DELIVERED',
+  RECYCLED = 'RECYCLED',
   CANCELLED = 'CANCELLED',
 }

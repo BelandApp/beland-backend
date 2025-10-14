@@ -7,8 +7,6 @@ import {
   Min,
   IsBoolean,
   IsNumber,
-  IsUUID,
-  IsDateString,
   IsDate,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -59,17 +57,6 @@ export class CreateEventPassDto {
   @IsInt()
   @Min(1)
   limit_tickets: number;
-
-  @ApiPropertyOptional({ example: 0, description: 'Entradas vendidas inicialmente' })
-  @IsInt()
-  @Min(0)
-  @IsOptional()
-  sold_tickets?: number;
-
-  @ApiPropertyOptional({ example: true, description: 'Disponibilidad del evento' })
-  @IsBoolean()
-  @IsOptional()
-  available?: boolean;
 
   // 💰 DATOS ECONÓMICOS
   @ApiProperty({ example: 500, description: 'Precio base en becoins' })

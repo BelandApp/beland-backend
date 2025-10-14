@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { EventPassRepository } from './event-pass.repository';
 import { EventPass } from './entities/event-pass.entity';
+import * as QRCode from 'qrcode';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 
@@ -49,7 +50,9 @@ export class EventPassService {
 
   async create(body: Partial<EventPass>): Promise<EventPass> {
     try {
-      const res = await this.repository.create(body);
+      const eventPass = await this.repository.create(body);
+      eventPass.qr = await QRCode.toDataURL(eventPass.id);
+      const res = await this.repository.create(eventPass);
       if (!res)
         throw new InternalServerErrorException(
           `No se pudo crear ${this.completeMessage}`,
