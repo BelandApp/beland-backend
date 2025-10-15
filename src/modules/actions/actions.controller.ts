@@ -37,7 +37,7 @@ export class ActionsController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Listar acciónes con paginación y filtrado por usuario' })
+  @ApiOperation({ summary: 'Listar acciónes con paginación y filtrado' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
   @ApiResponse({ status: 200, description: 'Listado de acciónes retornado correctamente' })
