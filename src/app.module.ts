@@ -115,7 +115,7 @@ const isTs = process.env.NODE_ENV !== 'production';
         ssl: isTs ? false : {rejectUnauthorized: false},
       }),
     }),
-
+    //  hola agragar algo
     ScheduleModule.forRoot(),
 
     DatabaseModule,
