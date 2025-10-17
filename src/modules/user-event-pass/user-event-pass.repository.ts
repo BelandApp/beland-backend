@@ -1,12 +1,12 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource, FindOptionsWhere } from 'typeorm';
 import { UserEventPass } from './entities/user-event-pass.entity';
 import { EventPass } from '../event-pass/entities/event-pass.entity';
-import { User } from '../users/entities/users.entity';
 import { Transaction } from '../transactions/entities/transaction.entity'; 
 import { UserEventPassFiltersDto } from './dto/user-eventpass-filters.dto';
 import { Wallet } from '../wallets/entities/wallet.entity';
+import { NotificationsGateway } from 'src/modules/notification-socket/notification-socket.gateway';
 import { TransactionState } from '../transaction-state/entities/transaction-state.entity';
 import { TransactionType } from '../transaction-type/entities/transaction-type.entity';
 import { StatusCode } from '../transaction-state/enum/status.enum';
@@ -20,6 +20,8 @@ export class UserEventPassRepository {
 
     @InjectDataSource()
     private readonly dataSource: DataSource,
+
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
 // 🔍 FIND ALL (paginated + filters)
@@ -269,50 +271,84 @@ async findAll(
     }
 
     // user-event-pass.repository.ts
+
     async consumeEventPass(
-    user_eventpass_id: string,
-    eventpass_id: string, // me lo da el qr
+      user_eventpass_id: string,
+      eventpass_id: string, // me lo da el QR
     ): Promise<{ success: boolean; message: string; userEventPass?: UserEventPass }> {
-    return this.dataSource.transaction(async (manager) => {
-        const passRepo = manager.getRepository(UserEventPass);
-        const eventpassRepo = manager.getRepository(EventPass);
+      try {
+        // Ejecutamos la transacción completa
+        const result = await this.dataSource.transaction(async (manager) => {
+          const passRepo = manager.getRepository(UserEventPass);
+          const eventpassRepo = manager.getRepository(EventPass);
 
-        // 1️⃣ Buscar entrada adquirida con su EventPass y usuario
-        const userPass = await passRepo.findOne({
-        where: { id: user_eventpass_id },
-        relations: {event_pass:true},
+          // 1️⃣ Buscar entrada adquirida con su EventPass y usuario
+          const userPass = await passRepo.findOne({
+            where: { id: user_eventpass_id },
+            relations: { event_pass: true },
+          });
+
+          const eventPass = await eventpassRepo.findOne({
+            where: { id: eventpass_id }
+          });
+
+          if (!userPass) throw new NotFoundException('Entrada de usuario no encontrada.');
+          if (!eventPass) throw new NotFoundException('Entrada no encontrada.');
+
+          if (userPass.event_pass_id !== eventpass_id)
+            throw new BadRequestException('La entrada que estás intentando usar no pertenece a este evento.');
+
+          // 2️⃣ Validaciones básicas
+          if (!userPass.is_active)
+            throw new BadRequestException('Esta entrada no está activa.');
+          if (userPass.is_consumed)
+            throw new BadRequestException('Esta entrada ya fue utilizada.');
+          if (userPass.is_refunded)
+            throw new BadRequestException('Esta entrada fue reembolsada y no puede usarse.');
+
+          // 3️⃣ Marcar como consumida
+          userPass.is_consumed = true;
+          userPass.redemption_date = new Date();
+          await passRepo.save(userPass);
+
+          // 4️⃣ Actualizar conteo de asistencias
+          eventPass.attended_count = +eventPass.attended_count + 1;
+          await eventpassRepo.save(eventPass);
+
+          // ✅ Devolvemos el resultado si todo salió bien
+          return {
+            success: true,
+            message: 'Entrada validada y consumida correctamente.',
+            userEventPass: userPass,
+          };
         });
-        const eventPass = await eventpassRepo.findOne({where: {id: eventpass_id}})
 
-        if (!userPass) throw new NotFoundException('Entrada de usuario no encontrada.');
-        if (!eventPass) throw new NotFoundException('Entrada no encontrada.');
+        // 🔔 Emitir mensaje por socket solo si la transacción fue exitosa
+        if (result.success) {
+          const eventPass = result.userEventPass.event_pass;
+          const userPass = result.userEventPass;
+          this.notificationsGateway.notifyUserEventPass(eventPass.created_by_id, {
+            code: eventPass.code,
+            name: eventPass.name,
+            limit_tickets: eventPass.limit_tickets,
+            sold_tickets: eventPass.sold_tickets,
+            attended_count: eventPass.attended_count,
+            user_name: userPass.holder_name,
+            user_phone: userPass.holder_phone,
+            user_document: userPass.holder_document,
+          });
+        }
 
-        if (userPass.event_pass_id !== eventpass_id)
-          throw new BadRequestException('La entrada que estas intentando usar no pertenece a este evento.');
-
-        // 2️⃣ Validaciones básicas
-        if (!userPass.is_active)
-          throw new BadRequestException('Esta entrada no está activa.');
-        if (userPass.is_consumed)
-          throw new BadRequestException('Esta entrada ya fue utilizada.');
-        if (userPass.is_refunded)
-          throw new BadRequestException('Esta entrada fue reembolsada y no puede usarse.');
-
-        // 4️⃣ Marcar como consumida
-        userPass.is_consumed = true;
-        userPass.redemption_date = new Date();
-        await passRepo.save(userPass);
-
-        eventPass.attended_count = +eventPass.attended_count + 1;
-        await eventpassRepo.save(eventPass);
-
-        return {
-        success: true,
-        message: 'Entrada validada y consumida correctamente.',
-        userEventPass: userPass,
-        };
-    });
+        return result;
+      } catch (error) {
+        // ❌ Si hay error, no emitimos nada por socket
+        if (error instanceof NotFoundException || error instanceof BadRequestException) {
+          throw error;
+        }
+        throw new InternalServerErrorException('Error al consumir la entrada.');
+      }
     }
+
 
 
 }
