@@ -15,15 +15,8 @@ import {
 import jwksClient, { JwksClient } from 'jwks-rsa';
 import { ConfigService } from '@nestjs/config';
 import { UsersRepository } from 'src/modules/users/users.repository';
-
-export interface respSocket {
-  wallet_id: string;
-  message: string;
-  amount: number;
-  success: boolean;
-  amount_payment_id_deleted?: string | null;
-  noHidden: boolean;
-}
+import { RespSocketDto } from './dto/respSocket.dto';
+import { RespSocketEventpassDto } from './dto/respSocketEventpass.dto';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -188,7 +181,12 @@ export class NotificationsGateway
   }
 
   // Método para notificar a un usuario (mantengo tu tipo respSocket)
-  notifyUser(userId: string, payload: respSocket) {
+  notifyUser(userId: string, payload: RespSocketDto) {
+    this.server.to(`user_${userId}`).emit('payment-success', payload);
+  }
+
+  // Método para notificar a un usuario (mantengo tu tipo respSocket)
+  notifyUserEventPass(userId: string, payload: RespSocketEventpassDto) {
     this.server.to(`user_${userId}`).emit('payment-success', payload);
   }
 }
