@@ -7,7 +7,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { json, raw } from 'express';
 import { ConfigService } from '@nestjs/config';
 
-// Importaciones de middlewares de seguridad
+// Importaciones de middlewares de seguridad. Modificar solo para deploy Eliminar
 import compression from 'compression';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
