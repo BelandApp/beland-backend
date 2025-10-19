@@ -45,7 +45,10 @@ RUN npm install
 RUN npm run build
 
 # Exponer puerto
-EXPOSE 3000
+# EXPOSE 3000
+EXPOSE $PORT
 
 # Comando para iniciar
-CMD [ "node", "./dist/main.js" ]
+# CMD [ "node", "./dist/main.js" ]
+CMD ["npm", "run", "start:prod"]
+

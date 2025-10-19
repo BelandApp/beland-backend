@@ -205,7 +205,8 @@ async function bootstrap() {
 
   // Inicio de la aplicación en el puerto configurado
   const port = configService.get<number>('PORT') || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
+
 
   appLogger.log(`✅ Beland API corriendo en: http://localhost:${port}`);
   appLogger.log(`📘 Swagger disponible en: http://localhost:${port}/api/docs`);
