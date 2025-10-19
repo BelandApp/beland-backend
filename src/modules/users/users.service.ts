@@ -4,7 +4,6 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
-  ForbiddenException,
   Logger,
   InternalServerErrorException,
   Inject, // Importar Inject
@@ -17,10 +16,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { OrderDto } from 'src/common/dto/order.dto';
 import { UserDto } from './dto/user.dto';
-import { DataSource, Not, IsNull, Or, UpdateResult } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';

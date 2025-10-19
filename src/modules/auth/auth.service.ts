@@ -25,7 +25,6 @@ import { RegisterAuthDto } from './dto/register-auth.dto';
 import { Cart } from 'src/modules/cart/entities/cart.entity';
 import { AuthVerification } from './entities/auth.entity';
 import { EmailService } from 'src/modules/email/email.service';
-import { CreateEmailDto } from 'src/modules/email/dto/create-email.dto';
 import { verificationEmailTemplate } from 'src/modules/email/plantilla/htmlVerificacion';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtStrategy } from './jwt.strategy';
