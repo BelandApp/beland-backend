@@ -12,7 +12,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_DATABASE,
   entities: [isTs ? 'src/**/*.entity.ts' : 'dist/**/*.entity.js'],
   migrations: [isTs ? 'src/database/migrations/*.ts' : 'dist/database/migrations/*.js'],
-  synchronize: false,
+  synchronize: false, // comentar algo
   logging: false,
   ssl: isTs ? false : { rejectUnauthorized: false },
 });
