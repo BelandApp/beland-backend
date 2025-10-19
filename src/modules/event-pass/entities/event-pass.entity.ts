@@ -31,16 +31,25 @@ export class EventPass {
   @Column({ type: 'text', nullable: true })
   qr: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  background_url: string; // 🌐 URL o fondo del evento
+
+  // 📍 UBICACIÓN DEL EVENTO
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  event_place: string; // lugar del evento
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  event_city: string; // ciudad del evento
+
   // 📅 FECHAS DE CONTROL
-  // fecha del evento
   @Column({ type: 'timestamp', nullable: false })
-  event_date: Date;
-  // fecha comienzo de venta
+  event_date: Date; // fecha del evento
+
   @Column({ type: 'timestamp', nullable: true })
-  start_date: Date;
-  // fecha finaliacion de venta
+  start_sale_date: Date; // fecha comienzo de venta
+
   @Column({ type: 'timestamp', nullable: true })
-  end_date: Date;
+  end_sale_date: Date; // fecha finalización de venta
 
   // 📊 DATOS DE DISPONIBILIDAD Y CONTROL
   @Column({ type: 'int', nullable: false, default: 0 })
@@ -67,15 +76,20 @@ export class EventPass {
 
   // 💸 CONFIGURACIÓN DE DEVOLUCIÓN
   @Column({ type: 'boolean', default: false })
-  is_refundable: boolean; // ¿Se puede devolver la entrada?
+  is_refundable: boolean;
 
   @Column({ type: 'int', nullable: true, default: 0 })
-  refund_days_limit: number; // Días antes del evento para solicitar devolución
+  refund_days_limit: number;
+
+  // ⭐ FAVORITO DEL USUARIO
+  @Column({ type: 'boolean', default: false })
+  is_user_favorite: boolean;
 
   // 👤 RELACIÓN CON USUARIO (creador)
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'created_by_id' })
   created_by: User;
+
   @Column({ type: 'uuid' })
   created_by_id: string;
 
