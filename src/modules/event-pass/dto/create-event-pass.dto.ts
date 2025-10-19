@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -7,6 +8,7 @@ import {
   IsBoolean,
   IsDateString,
   MaxLength,
+  IsDate,
 } from 'class-validator';
 
 export class CreateEventPassDto {
@@ -78,7 +80,8 @@ export class CreateEventPassDto {
     example: '2025-12-15T20:00:00Z',
     description: 'Fecha y hora del evento.',
   })
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   @IsNotEmpty()
   event_date: Date;
 
@@ -88,7 +91,8 @@ export class CreateEventPassDto {
     required: false,
   })
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   start_sale_date?: Date;
 
   @ApiProperty({
@@ -97,7 +101,8 @@ export class CreateEventPassDto {
     required: false,
   })
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   end_sale_date?: Date;
 
   // 📊 DISPONIBILIDAD
