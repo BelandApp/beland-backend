@@ -204,7 +204,7 @@ async function bootstrap() {
   app.use('/webhook/payphone', raw({ type: 'application/json' }));
 
   // Inicio de la aplicación en el puerto configurado
-  const port = configService.get<number>('PORT') || 3000;
+  const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
 
 
