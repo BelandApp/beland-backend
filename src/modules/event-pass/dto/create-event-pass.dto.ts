@@ -47,15 +47,6 @@ export class CreateEventPassDto {
   @IsString()
   image_url?: string;
 
-  @ApiProperty({
-    example: 'https://example.com/background.jpg',
-    description: 'Imagen o fondo del evento (opcional).',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  background_url?: string;
-
   // 📍 UBICACIÓN DEL EVENTO
   @ApiProperty({
     example: 'Estadio Central',
@@ -145,16 +136,6 @@ export class CreateEventPassDto {
   @IsOptional()
   @IsNumber()
   refund_days_limit?: number;
-
-  // ⭐ FAVORITO
-  @ApiProperty({
-    example: false,
-    description: 'Indica si el evento está marcado como favorito por el usuario.',
-    required: false,
-  })
-  @IsOptional()
-  @IsBoolean()
-  is_user_favorite?: boolean;
 
   // ⚙️ ESTADO
   @ApiProperty({

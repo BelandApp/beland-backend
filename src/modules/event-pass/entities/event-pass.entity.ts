@@ -31,9 +31,6 @@ export class EventPass {
   @Column({ type: 'text', nullable: true })
   qr: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  background_url: string; // 🌐 URL o fondo del evento
-
   // 📍 UBICACIÓN DEL EVENTO
   @Column({ type: 'varchar', length: 255, nullable: true })
   event_place: string; // lugar del evento
@@ -80,10 +77,6 @@ export class EventPass {
 
   @Column({ type: 'int', nullable: true, default: 0 })
   refund_days_limit: number;
-
-  // ⭐ FAVORITO DEL USUARIO
-  @Column({ type: 'boolean', default: false })
-  is_user_favorite: boolean;
 
   // 👤 RELACIÓN CON USUARIO (creador)
   @ManyToOne(() => User, { nullable: false })

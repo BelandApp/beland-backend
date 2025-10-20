@@ -175,7 +175,7 @@ const isTs = process.env.NODE_ENV !== 'production';
   ],
   controllers: [],
   providers: [
-    // Comentado para inhabilitar el guard de Throttler
+    // Comentado para inhabilitar el guard de Throttler. para deploy
     // {
     //   provide: APP_GUARD,
     //   useClass: ThrottlerGuard,
