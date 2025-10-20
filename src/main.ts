@@ -203,7 +203,7 @@ async function bootstrap() {
   app.use(json());
   app.use('/webhook/payphone', raw({ type: 'application/json' }));
 
-  // Inicio de la aplicación en el puerto configurado.. modific para hacer un puch nomas
+  // Inicio de la aplicación en el puerto configurado.. 
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
 
