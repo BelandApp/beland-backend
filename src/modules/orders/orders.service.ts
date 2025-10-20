@@ -202,6 +202,7 @@ export class OrdersService {
       // 6) Crear ítems de la orden a partir de los ítems del carrito
       const orderItemsPayload = (cart.items as CartItem[]).map(({ id, created_at, cart_id, ...rest }) => ({
         ...rest,
+        ordered_quantity: rest.quantity,
         order_id: savedOrder.id,
       }));
 
@@ -297,6 +298,7 @@ export class OrdersService {
 
        // 11) Resetear el carrito
       cart.address_id = null;
+      cart.delivery_at = null;
       cart.group_id = null;
       cart.payment_type_id = null;
       cart.total_amount = 0;
@@ -374,6 +376,7 @@ export class OrdersService {
       if (order.code !== code) throw new BadRequestException('Codigo de orden equivocado')
     
       order.status_id = statusOrder.id;
+      order.delivered_at = new Date();
       const savedOrder = await queryRunner.manager.save(order)
 
       // 4) Busco la solicitud de pago para confirmar su estado a COMPLETED

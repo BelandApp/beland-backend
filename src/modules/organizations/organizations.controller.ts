@@ -109,5 +109,5 @@ export class OrganizationsController {
   @ApiResponse({ status: 409, description: 'No se puede eliminar el comercio (conflicto)' })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.service.remove(id);
-  }M
+  }
 }

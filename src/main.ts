@@ -203,9 +203,10 @@ async function bootstrap() {
   app.use(json());
   app.use('/webhook/payphone', raw({ type: 'application/json' }));
 
-  // Inicio de la aplicación en el puerto configurado
-  const port = configService.get<number>('PORT') || 3000;
-  await app.listen(port);
+  // Inicio de la aplicación en el puerto configurado.. 
+  const port = process.env.PORT || 3000;
+  await app.listen(port, '0.0.0.0');
+
 
   appLogger.log(`✅ Beland API corriendo en: http://localhost:${port}`);
   appLogger.log(`📘 Swagger disponible en: http://localhost:${port}/api/docs`);

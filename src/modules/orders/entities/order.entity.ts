@@ -45,6 +45,12 @@ export class Order {
 
   @Column('varchar', { nullable:true })
   observation: string;
+  
+  @Column({ type: 'timestamptz', nullable: true })
+  delivery_at: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  delivered_at: Date;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

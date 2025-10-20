@@ -72,6 +72,21 @@ export class OrderItemsController {
     return await this.service.create(body);
   }
 
+  @Put('devolution/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Devolucion de un producto de una Orden existente' })
+  @ApiParam({ name: 'id', description: 'UUID del item de Orden' })
+  @ApiQuery({ name: 'returned_quantity', required: true, type: Number, example: 1, description: 'Cantidad devuelta del producto' })
+  @ApiResponse({ status: 200, description: 'item de Orden actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el item de Orden a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar el item de Orden' })
+  async devolution(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('returned_quantity') returned_quantity: number,
+  ) {
+    return this.service.update(id, { returned_quantity });
+  }
+
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar un item de Orden existente' })

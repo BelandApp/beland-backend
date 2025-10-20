@@ -13,7 +13,6 @@ export class CartItem {
   @Column('uuid')
   cart_id: string;
 
-
   @ManyToOne(() => Product)
   @JoinColumn({ name: 'product_id' })
   product: Product;
