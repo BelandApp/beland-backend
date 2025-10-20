@@ -36,12 +36,9 @@ import { UpdateEventPassDto } from './dto/update-event-pass.dto';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 
 @ApiTags('event-pass')
 @Controller('event-pass')
-@ApiBearerAuth('JWT-auth')
-@UseGuards(FlexibleAuthGuard)
 export class EventPassController {
 
   constructor(private readonly service: EventPassService
@@ -67,6 +64,8 @@ export class EventPassController {
   }
 
   @Get('user')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listado con paginación y filtrado por usuario creador' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -100,6 +99,8 @@ export class EventPassController {
   }
 
   @Post()
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear una nueva entrada a evento' })
   @ApiResponse({ status: 201, description: 'Entrada a evento creada exitosamente' })
@@ -114,6 +115,8 @@ export class EventPassController {
   }
 
   @Put('update-image/:id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Actualizar imagen de entrada para evento' })
@@ -153,6 +156,8 @@ export class EventPassController {
     }
 
   @Put('active/:id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una entrada a evento existente' })
   @ApiParam({ name: 'id', description: 'UUID de la entrada a evento' })
@@ -166,6 +171,8 @@ export class EventPassController {
   }
 
   @Put('disactive/:id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una entrada a evento existente' })
   @ApiParam({ name: 'id', description: 'UUID de la entrada a evento' })
@@ -179,6 +186,8 @@ export class EventPassController {
   }
 
   @Put(':id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una entrada a evento existente' })
   @ApiParam({ name: 'id', description: 'UUID de la entrada a evento' })
@@ -193,6 +202,8 @@ export class EventPassController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Eliminar una entrada a evento por su ID' })
   @ApiParam({ name: 'id', description: 'UUID de la entrada a evento' })
