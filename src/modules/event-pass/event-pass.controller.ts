@@ -36,6 +36,7 @@ import { UpdateEventPassDto } from './dto/update-event-pass.dto';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 
 @ApiTags('event-pass')
 @Controller('event-pass')
@@ -43,7 +44,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @UseGuards(FlexibleAuthGuard)
 export class EventPassController {
 
-  constructor(private readonly service: EventPassService) {}
+  constructor(private readonly service: EventPassService
+  ) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -103,8 +105,12 @@ export class EventPassController {
   @ApiResponse({ status: 201, description: 'Entrada a evento creada exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear la entrada a evento' })
   @ApiResponse({ status: 500, description: 'No se pudo crear la entrada a evento' })
-  async create(@Body() body: CreateEventPassDto): Promise<EventPass> {
-    return await this.service.create(body);
+  async create(@Body() body: CreateEventPassDto, @Req() req:Request): Promise<EventPass> {
+    return await this.service.create({
+      ...body,
+      created_by_id: req.user.id,
+      total_becoin: Math.round(+body.price_becoin - (+body.price_becoin * (+body.discount || 0) / 100)),
+    });
   }
 
   @Put('update-image/:id')

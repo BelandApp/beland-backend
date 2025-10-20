@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { Wallet } from './entities/wallet.entity';
+import { RoleEnum } from '../roles/enum/role-validate.enum';
 
 @Injectable()
 export class WalletsRepository {
@@ -42,7 +43,7 @@ export class WalletsRepository {
 
   async findSuperadminWallet(): Promise<Wallet> {
     return await this.repository.findOne({
-      where: { user: {role: {name: 'SUPERADMIN'}} },
+      where: { user: {role: {name: RoleEnum.SUPERADMIN}} },
     });
   }
 
