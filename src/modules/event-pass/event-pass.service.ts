@@ -13,6 +13,9 @@ import * as QRCode from 'qrcode';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { UploadApiResponse } from 'cloudinary';
+import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { CreateEventPassDto } from './dto/create-event-pass.dto';
+import { EventPassType } from './entities/event-pass-type.entity';
 
 @Injectable()
 export class EventPassService {
@@ -28,7 +31,7 @@ export class EventPassService {
     pageNumber: number,
     limitNumber: number,
     filters?: EventPassFiltersDto,
-  ): Promise<[EventPass[], number]> {
+  ): Promise<RespGetArrayDto<EventPass>> {
     this.logger.log(`🔍 Buscando entradas (página ${pageNumber}, límite ${limitNumber})`);
     try {
       const response = await this.repository.findAll(pageNumber, limitNumber, filters);
@@ -36,6 +39,21 @@ export class EventPassService {
       return response;
     } catch (error) {
       this.logger.error(`❌ Error al obtener entradas: ${error}`);
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async findAllTypes(
+    pageNumber: number,
+    limitNumber: number,
+  ): Promise<RespGetArrayDto<EventPassType>> {
+    this.logger.log(`🔍 Buscando tipos de entradas (página ${pageNumber}, límite ${limitNumber})`);
+    try {
+      const response = await this.repository.findAllTypes(pageNumber, limitNumber);
+      this.logger.log(`✅ ${response[0].length} tipos de entradas obtenidas correctamente`);
+      return response;
+    } catch (error) {
+      this.logger.error(`❌ Error al obtener los tipos de entradas: ${error}`);
       throw new InternalServerErrorException(error);
     }
   }
@@ -56,25 +74,52 @@ export class EventPassService {
     }
   }
 
-  async create(body: Partial<EventPass>): Promise<EventPass> {
-    this.logger.log(`🆕 Creando nueva entrada: ${body.name}`);
+  async create(
+    dto: CreateEventPassDto,
+    files: Express.Multer.File[],
+    user_id: string,
+  ): Promise<EventPass> {
+    this.logger.log(`Iniciando creación de EventPass para el evento: ${dto.name}`);
+
     try {
-      const eventPass = await this.repository.create(body);
-
-      this.logger.log(`🔗 Generando código QR para entrada ID: ${eventPass.id}`);
-      eventPass.qr = await QRCode.toDataURL(eventPass.id);
-
-      const res = await this.repository.create(eventPass);
-      if (!res) {
-        this.logger.error(`❌ No se pudo crear ${this.completeMessage}`);
-        throw new InternalServerErrorException(`No se pudo crear ${this.completeMessage}`);
+      // --- 1️⃣ Validaciones previas ---
+      if (!files || files.length === 0) {
+        throw new BadRequestException('Debe subir al menos una imagen principal');
       }
 
-      this.logger.log(`✅ Entrada creada correctamente con ID: ${res.id}`);
-      return res;
+      // --- 2️⃣ Separar la imagen principal de las adicionales ---
+      const mainImageFile = files[0];
+      const additionalFiles = files.slice(1);
+      this.logger.debug(`Archivos recibidos: principal (${mainImageFile?.originalname}), adicionales: ${additionalFiles.length}`);
+
+      // --- 3️⃣ Subir imágenes a Cloudinary ---
+      this.logger.log('Subiendo imágenes a Cloudinary...');
+      const mainImage = await this.cloudinaryService.uploadImage(mainImageFile) as string;
+      const additionalImages = additionalFiles.length > 0 ? await this.cloudinaryService.uploadImage(additionalFiles) as string[] : [] as string[];
+
+      // --- 4️⃣ Calcular el precio total con descuento ---
+      const discount = Number(dto.discount ?? 0);
+      const totalPrice = +dto.price_becoin - (+dto.price_becoin * discount) / 100;
+
+      this.logger.debug(`Precio base: ${dto.price_becoin}, descuento: ${discount}%, total final: ${totalPrice}`);
+
+      // --- 5️⃣ Crear la entidad EventPass ---
+      const eventPass = await this.repository.create({
+        ...dto,
+        image_url: mainImage,
+        images_urls: additionalImages,
+        total_becoin: totalPrice,
+        created_by_id: user_id, // o user.id según tu entidad
+      });
+
+      const qr = await QRCode.toDataURL(eventPass.id);
+      const saveEventPass = await this.repository.create({...eventPass, qr});
+
+      this.logger.log(`EventPass creado con éxito: ID ${eventPass.id}`);
+      return eventPass;
     } catch (error) {
-      this.logger.error(`❌ Error al crear entrada: ${error}`);
-      throw new InternalServerErrorException(error);
+      this.logger.error(`Error al crear EventPass: ${error}`);
+      throw new InternalServerErrorException('Error al crear el evento');
     }
   }
 

@@ -17,6 +17,8 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  UploadedFiles,
+  ParseFilePipeBuilder,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -35,7 +37,9 @@ import { CreateEventPassDto } from './dto/create-event-pass.dto';
 import { UpdateEventPassDto } from './dto/update-event-pass.dto';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { Request } from 'express';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { EventPassType } from './entities/event-pass-type.entity';
 
 @ApiTags('event-pass')
 @Controller('event-pass')
@@ -55,12 +59,30 @@ export class EventPassController {
     @Query('page') page = '1',
     @Query('limit') limit = '10',
     @Query() filters: EventPassFiltersDto, 
-  ): Promise<[EventPass[], number]> {
+  ): Promise<RespGetArrayDto<EventPass>> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
 
     // En el service, pasás filters directamente
     return await this.service.findAll(pageNumber, limitNumber, filters);
+  }
+
+  @Get('event-type')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listado de los tipos de eventos' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiResponse({ status: 200, description: 'Listado retornado correctamente' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findAllTypes(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ): Promise<RespGetArrayDto<EventPassType>> {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+
+    // En el service, pasás filters directamente
+    return await this.service.findAllTypes(pageNumber, limitNumber);
   }
 
   @Get('user')
@@ -77,7 +99,7 @@ export class EventPassController {
     @Query('limit') limit = '10',
     @Req() req: Request,
     @Query() filters: EventPassFiltersDto, 
-  ): Promise<[EventPass[], number]> {
+  ): Promise<RespGetArrayDto<EventPass>> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
 
@@ -101,17 +123,37 @@ export class EventPassController {
   @Post()
   @ApiBearerAuth('JWT-auth')
   @UseGuards(FlexibleAuthGuard)
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crear una nueva entrada a evento' })
-  @ApiResponse({ status: 201, description: 'Entrada a evento creada exitosamente' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos para crear la entrada a evento' })
-  @ApiResponse({ status: 500, description: 'No se pudo crear la entrada a evento' })
-  async create(@Body() body: CreateEventPassDto, @Req() req:Request): Promise<EventPass> {
-    return await this.service.create({
-      ...body,
-      created_by_id: req.user.id,
-      total_becoin: Math.round(+body.price_becoin - (+body.price_becoin * (+body.discount || 0) / 100)),
-    });
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description:
+      'Crea un nuevo EventPass con imagen principal e imágenes adicionales.',
+    type: CreateEventPassDto,
+  })
+  async create(
+    @Body() createEventPassDto: CreateEventPassDto,
+    @UploadedFiles(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: /(jpg|jpeg|png|webp)$/,
+        })
+        .addMaxSizeValidator({
+          maxSize: 10_000_000, // 10 MB
+          message: 'El archivo debe ser menor a 10 MB',
+        })
+        .build({
+          errorHttpStatusCode: HttpStatus.BAD_REQUEST,
+        }),
+    ) 
+    files: Express.Multer.File[],
+    @Req() req: Request,
+  ) {
+    const user = req.user; // Usuario autenticado desde el token JWT
+    return this.service.create(
+      createEventPassDto,
+      files,
+      user.id,
+    );
   }
 
   @Put('update-image/:id')
