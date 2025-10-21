@@ -28,6 +28,9 @@ export class EventPass {
   @Column({ type: 'varchar', length: 255, nullable: true })
   image_url: string;
 
+  @Column('varchar', { array: true, nullable:true })
+  images_urls: string[];
+
   @Column({ type: 'text', nullable: true })
   qr: string;
 

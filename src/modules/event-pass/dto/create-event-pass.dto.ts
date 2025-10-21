@@ -9,6 +9,9 @@ import {
   IsDateString,
   MaxLength,
   IsDate,
+  IsArray,
+  ArrayNotEmpty,
+  ArrayUnique,
 } from 'class-validator';
 
 export class CreateEventPassDto {
@@ -46,6 +49,22 @@ export class CreateEventPassDto {
   @IsOptional()
   @IsString()
   image_url?: string;
+
+  @ApiProperty({
+    example: [
+      'https://example.com/event-image-1.jpg',
+      'https://example.com/event-image-2.jpg',
+    ],
+    required: false,
+    description: 'URLs de las imágenes adicionales del evento',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayUnique()
+  @IsString({ each: true })
+  images_urls?: string[];
 
   // 📍 UBICACIÓN DEL EVENTO
   @ApiProperty({
