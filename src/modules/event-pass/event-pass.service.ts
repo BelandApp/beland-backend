@@ -12,6 +12,7 @@ import { EventPass } from './entities/event-pass.entity';
 import * as QRCode from 'qrcode';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
+import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class EventPassService {
@@ -91,13 +92,13 @@ export class EventPassService {
         throw new NotFoundException('La entrada que desea actualizar no existe');
       }
 
-      const imgUpload = await this.cloudinaryService.uploadImage(file);
-      if (!imgUpload || !imgUpload.secure_url) {
+      const imgUpload_url = await this.cloudinaryService.uploadImage(file) as string;
+      if (!imgUpload_url) {
         this.logger.error('❌ Error al subir la imagen a Cloudinary');
         throw new InternalServerErrorException('Error al subir la imagen a Cloudinary');
       }
 
-      eventPass.image_url = imgUpload.secure_url;
+      eventPass.image_url = imgUpload_url;
       const updatedEvent = await this.repository.create(eventPass);
 
       this.logger.log(`✅ Imagen actualizada correctamente para entrada ID: ${id}`);
