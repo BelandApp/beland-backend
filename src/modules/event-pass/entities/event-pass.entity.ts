@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
+import { EventPassType } from './event-pass-type.entity';
 
 @Entity({ name: 'event_pass' })
 export class EventPass {
@@ -92,6 +93,12 @@ export class EventPass {
   // ⚙️ ESTADO
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
+
+  @ManyToOne(() => EventPassType)
+  @JoinColumn({name: 'type_id'})
+  type: EventPassType;
+  @Column('uuid', {nullable:true})
+  type_id: string
 
   // 🕓 CONTROL DE CREACIÓN / ACTUALIZACIÓN
   @CreateDateColumn({ type: 'timestamp' })

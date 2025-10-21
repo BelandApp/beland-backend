@@ -6,12 +6,8 @@ import {
   IsOptional,
   IsNumber,
   IsBoolean,
-  IsDateString,
-  MaxLength,
   IsDate,
-  IsArray,
-  ArrayNotEmpty,
-  ArrayUnique,
+  MaxLength,
 } from 'class-validator';
 
 export class CreateEventPassDto {
@@ -43,33 +39,17 @@ export class CreateEventPassDto {
   description?: string;
 
   @ApiProperty({
-    example: 'https://example.com/event-image.jpg',
-    required: false,
+    description: 'UUID del tipo de evento',
+    example: '123ferfe4-34rt-45yt-56yd-345y6gdd.',
+    required: true,
   })
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  image_url?: string;
+  type_id: string;
 
-  @ApiProperty({
-    example: [
-      'https://example.com/event-image-1.jpg',
-      'https://example.com/event-image-2.jpg',
-    ],
-    required: false,
-    description: 'URLs de las imágenes adicionales del evento',
-    type: [String],
-  })
-  @IsOptional()
-  @IsArray()
-  @ArrayNotEmpty()
-  @ArrayUnique()
-  @IsString({ each: true })
-  images_urls?: string[];
-
-  // 📍 UBICACIÓN DEL EVENTO
+  // 📍 UBICACIÓN
   @ApiProperty({
     example: 'Estadio Central',
-    description: 'Lugar donde se realiza el evento.',
     required: false,
   })
   @IsOptional()
@@ -78,26 +58,23 @@ export class CreateEventPassDto {
 
   @ApiProperty({
     example: 'Buenos Aires',
-    description: 'Ciudad donde se realiza el evento.',
     required: false,
   })
   @IsOptional()
   @IsString()
   event_city?: string;
 
-  // 📅 FECHAS DE CONTROL
+  // 📅 FECHAS
   @ApiProperty({
     example: '2025-12-15T20:00:00Z',
     description: 'Fecha y hora del evento.',
   })
   @Type(() => Date)
   @IsDate()
-  @IsNotEmpty()
   event_date: Date;
 
   @ApiProperty({
     example: '2025-10-01T00:00:00Z',
-    description: 'Fecha de inicio de venta.',
     required: false,
   })
   @IsOptional()
@@ -107,7 +84,6 @@ export class CreateEventPassDto {
 
   @ApiProperty({
     example: '2025-12-10T23:59:59Z',
-    description: 'Fecha de finalización de venta.',
     required: false,
   })
   @IsOptional()
@@ -116,7 +92,7 @@ export class CreateEventPassDto {
   end_sale_date?: Date;
 
   // 📊 DISPONIBILIDAD
-  @ApiProperty({ example: 500, description: 'Límite total de entradas.' })
+  @ApiProperty({ example: 500 })
   @IsNumber()
   limit_tickets: number;
 
@@ -130,17 +106,15 @@ export class CreateEventPassDto {
 
   @ApiProperty({
     example: 10,
-    description: 'Descuento aplicado (opcional).',
     required: false,
   })
   @IsOptional()
   @IsNumber()
   discount?: number;
 
-  // 💸 CONFIGURACIÓN DE DEVOLUCIÓN
+  // 💸 DEVOLUCIÓN
   @ApiProperty({
     example: true,
-    description: 'Indica si la entrada puede ser devuelta.',
     required: false,
   })
   @IsOptional()
@@ -149,7 +123,6 @@ export class CreateEventPassDto {
 
   @ApiProperty({
     example: 3,
-    description: 'Días antes del evento para solicitar reembolso.',
     required: false,
   })
   @IsOptional()
@@ -159,7 +132,6 @@ export class CreateEventPassDto {
   // ⚙️ ESTADO
   @ApiProperty({
     example: true,
-    description: 'Indica si el evento o pase está activo. Por defecto True',
     required: false,
   })
   @IsOptional()
