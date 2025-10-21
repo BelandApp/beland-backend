@@ -1,5 +1,4 @@
-// src/coupons/dto/create-coupon.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsEnum,
@@ -7,39 +6,96 @@ import {
   IsOptional,
   IsUUID,
   IsDate,
+  IsBoolean,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CouponType } from '../enum/coupon-type.enum';
 
 export class CreateCouponDto {
-  @ApiProperty({ description: 'Código del cupón (texto o QR)' })
+  @ApiProperty({ description: 'Nombre/descripción para el usuario' })
   @IsString()
-  code: string;
+  name: string;
+
+  @ApiPropertyOptional({
+    description: 'Código del cupón. Opcional si se usa por ID.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  code: string | null;
 
   @ApiProperty({
     description: 'Tipo de cupón',
-    enum: ['DISCOUNT', 'BONUS_COINS'],
+    enum: CouponType,
+    enumName: 'CouponType',
   })
-  @IsEnum(['DISCOUNT', 'BONUS_COINS'])
-  type: 'DISCOUNT' | 'BONUS_COINS';
+  @IsEnum(CouponType)
+  type: CouponType;
 
-  @ApiProperty({ description: 'Valor del cupón (descuento o monedas)' })
-  @IsNumber()
+  @ApiProperty({ description: 'Valor del descuento (10 para 10% o $10)' })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
   value: number;
 
-  @ApiProperty({
-    description: 'Fecha de expiración del cupón',
-    type: 'string',
-    format: 'date-time',
-  })
-  @Type(() => Date)
-  @IsDate()
-  expires_at: Date;
-
-  @ApiProperty({
-    description: 'ID del usuario que lo redimió',
-    required: false,
+  @ApiPropertyOptional({
+    description: 'Tope máximo de descuento (para cupones PERCENTAGE)',
+    nullable: true,
   })
   @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  max_discount_cap: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Gasto mínimo requerido (para cupones FIXED)',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  min_spend_required: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Fecha y hora de expiración (null = nunca expira)',
+    type: 'string',
+    format: 'date-time',
+    nullable: true,
+  })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  expires_at: Date | null;
+
+  @ApiPropertyOptional({
+    description: 'Cantidad máxima de usos total (0 o null = ilimitado)',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  max_usage_count: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Usos máximos por usuario (0 o null = ilimitado)',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  usage_limit_per_user: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Define si el cupón está activo (por defecto: true)',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_active: boolean;
+
+  @ApiProperty({
+    description: 'ID del usuario/comercio que crea el cupón',
+  })
   @IsUUID()
-  redeemed_by_user_id?: string;
+  created_by_user_id: string;
 }
