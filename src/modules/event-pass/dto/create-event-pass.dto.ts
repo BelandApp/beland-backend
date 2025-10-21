@@ -1,83 +1,149 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsUrl,
-  IsInt,
-  Min,
-  IsBoolean,
   IsNumber,
+  IsBoolean,
+  IsDateString,
+  MaxLength,
   IsDate,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 
 export class CreateEventPassDto {
   // 🪧 DATOS PRINCIPALES
-  @ApiProperty({ example: 'EVT-2025-001', description: 'Código único del evento' })
+  @ApiProperty({
+    example: 'EVT-2025-001',
+    description: 'Código único del pase o evento.',
+  })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   code: string;
 
-  @ApiProperty({ example: 'Concierto de Verano', description: 'Nombre del evento' })
+  @ApiProperty({
+    example: 'Concierto Primavera 2025',
+    description: 'Nombre descriptivo del evento o pase.',
+  })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   name: string;
 
-  @ApiPropertyOptional({ example: 'Un concierto al aire libre con artistas locales.' })
-  @IsString()
+  @ApiProperty({
+    example: 'Un gran evento musical en la ciudad.',
+    required: false,
+  })
   @IsOptional()
+  @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ example: 'https://example.com/images/concierto.jpg' })
-  @IsUrl()
+  @ApiProperty({
+    example: 'https://example.com/event-image.jpg',
+    required: false,
+  })
   @IsOptional()
+  @IsString()
   image_url?: string;
 
+  // 📍 UBICACIÓN DEL EVENTO
+  @ApiProperty({
+    example: 'Estadio Central',
+    description: 'Lugar donde se realiza el evento.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  event_place?: string;
+
+  @ApiProperty({
+    example: 'Buenos Aires',
+    description: 'Ciudad donde se realiza el evento.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  event_city?: string;
+
   // 📅 FECHAS DE CONTROL
-  @ApiProperty({ example: '2025-12-15T20:00:00Z' })
-  @IsDate()
+  @ApiProperty({
+    example: '2025-12-15T20:00:00Z',
+    description: 'Fecha y hora del evento.',
+  })
   @Type(() => Date)
+  @IsDate()
+  @IsNotEmpty()
   event_date: Date;
 
-  @ApiPropertyOptional({ example: '2025-11-01T00:00:00Z' })
-  @IsDate()
+  @ApiProperty({
+    example: '2025-10-01T00:00:00Z',
+    description: 'Fecha de inicio de venta.',
+    required: false,
+  })
   @IsOptional()
   @Type(() => Date)
-  start_date?: Date;
-
-  @ApiPropertyOptional({ example: '2025-12-14T23:59:59Z' })
   @IsDate()
+  start_sale_date?: Date;
+
+  @ApiProperty({
+    example: '2025-12-10T23:59:59Z',
+    description: 'Fecha de finalización de venta.',
+    required: false,
+  })
   @IsOptional()
   @Type(() => Date)
-  end_date?: Date;
+  @IsDate()
+  end_sale_date?: Date;
 
-  // 📊 DATOS DE DISPONIBILIDAD Y CONTROL
-  @ApiProperty({ example: 100, description: 'Cantidad total de entradas disponibles' })
-  @IsInt()
-  @Min(1)
+  // 📊 DISPONIBILIDAD
+  @ApiProperty({ example: 500, description: 'Límite total de entradas.' })
+  @IsNumber()
   limit_tickets: number;
 
   // 💰 DATOS ECONÓMICOS
-  @ApiProperty({ example: 500, description: 'Precio base en becoins' })
+  @ApiProperty({
+    example: 150.5,
+    description: 'Precio en BECOIN del evento.',
+  })
   @IsNumber()
-  @Min(0)
   price_becoin: number;
 
-  @ApiPropertyOptional({ example: 50, description: 'Descuento en becoins' })
-  @IsNumber()
-  @Min(0)
+  @ApiProperty({
+    example: 10,
+    description: 'Descuento aplicado (opcional).',
+    required: false,
+  })
   @IsOptional()
+  @IsNumber()
   discount?: number;
 
-  @ApiProperty({ example: 450, description: 'Precio final en becoins (precio - descuento)' })
+  // 💸 CONFIGURACIÓN DE DEVOLUCIÓN
+  @ApiProperty({
+    example: true,
+    description: 'Indica si la entrada puede ser devuelta.',
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_refundable?: boolean;
+
+  @ApiProperty({
+    example: 3,
+    description: 'Días antes del evento para solicitar reembolso.',
+    required: false,
+  })
+  @IsOptional()
   @IsNumber()
-  @Min(0)
-  total_becoin: number;
+  refund_days_limit?: number;
 
   // ⚙️ ESTADO
-  @ApiPropertyOptional({ example: true, description: 'Indica si el evento está activo' })
-  @IsBoolean()
+  @ApiProperty({
+    example: true,
+    description: 'Indica si el evento o pase está activo. Por defecto True',
+    required: false,
+  })
   @IsOptional()
+  @IsBoolean()
   is_active?: boolean;
 }

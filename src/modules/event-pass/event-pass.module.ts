@@ -5,6 +5,7 @@ import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventPass } from './entities/event-pass.entity';
 import { EventPassRepository } from './event-pass.repository';
+import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([EventPass])],
