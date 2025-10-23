@@ -34,6 +34,6 @@ export class UpdateEventPassDto extends PartialType(CreateEventPassDto) {
     })
     @IsOptional()
     @IsNumber()
-    total_becoin?: number;
+    total_becoin?: number; // cambios para develop
 }
 
