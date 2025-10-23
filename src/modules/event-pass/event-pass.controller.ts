@@ -51,20 +51,15 @@ export class EventPassController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listado con paginación y filtrado' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiResponse({ status: 200, description: 'Listado retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findAll(
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
     @Query() filters: EventPassFiltersDto, 
   ): Promise<RespGetArrayDto<EventPass>> {
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
     // En el service, pasás filters directamente
-    return await this.service.findAll(pageNumber, limitNumber, filters);
+    return await this.service.findAll(page, limit, filters);
   }
 
   @Get('event-type')

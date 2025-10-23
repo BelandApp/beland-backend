@@ -45,12 +45,14 @@ export class CartItemsRepository {
       body.unit_becoin = +product.price_becoin;
       body.total_price = +product.price * +body.quantity;
       body.total_becoin = +product.price_becoin * +body.quantity;
+      body.total_weight = +product.weight * +body.quantity;
       return await this.repository.save(body);
     }
     const quantity = +item.quantity + +body.quantity;
     item.quantity = +quantity;
     item.total_price = +item.unit_price * +quantity
     item.total_becoin = +item.unit_becoin * +quantity
+    item.total_weight = +item.unit_weight * +quantity
     return await this.repository.save(item);
   }
 

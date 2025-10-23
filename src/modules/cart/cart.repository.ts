@@ -45,6 +45,8 @@ export class CartsRepository {
     cart.payment_type_id = null;
     cart.total_amount = 0;
     cart.total_items = 0;
+    cart.total_becoin = 0;
+    cart.total_weight = 0;
 
     await this.dataSource.manager.delete(CartItem, {cart_id : cart.id})
 

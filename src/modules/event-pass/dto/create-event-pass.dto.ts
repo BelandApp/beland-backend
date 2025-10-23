@@ -39,6 +39,15 @@ export class CreateEventPassDto {
   description?: string;
 
   @ApiProperty({
+    description: 'Aclaracion importante a mostrar',
+    example: 'Si no traes tus residuos no tendras el 20% de descuento y deberas abonar los $ 5.00 en la entrada.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  message?: string;
+
+  @ApiProperty({
     description: 'UUID del tipo de evento',
     example: '123ferfe4-34rt-45yt-56yd-345y6gdd.',
     required: true,

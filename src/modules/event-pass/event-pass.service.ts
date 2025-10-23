@@ -35,7 +35,7 @@ export class EventPassService {
     this.logger.log(`🔍 Buscando entradas (página ${pageNumber}, límite ${limitNumber})`);
     try {
       const response = await this.repository.findAll(pageNumber, limitNumber, filters);
-      this.logger.log(`✅ ${response[0].length} entradas obtenidas correctamente`);
+      this.logger.log(`✅ ${response.data.length} entradas obtenidas correctamente`);
       return response;
     } catch (error) {
       this.logger.error(`❌ Error al obtener entradas: ${error}`);
