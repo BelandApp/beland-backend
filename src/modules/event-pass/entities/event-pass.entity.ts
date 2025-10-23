@@ -26,6 +26,9 @@ export class EventPass {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Column({ type: 'text', nullable: true })
+  message: string;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   image_url: string;
 
