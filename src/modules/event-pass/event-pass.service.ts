@@ -50,7 +50,7 @@ export class EventPassService {
     this.logger.log(`🔍 Buscando tipos de entradas (página ${pageNumber}, límite ${limitNumber})`);
     try {
       const response = await this.repository.findAllTypes(pageNumber, limitNumber);
-      this.logger.log(`✅ ${response[0].length} tipos de entradas obtenidas correctamente`);
+      this.logger.log(`✅ ${response.data.length} tipos de entradas obtenidas correctamente`);
       return response;
     } catch (error) {
       this.logger.error(`❌ Error al obtener los tipos de entradas: ${error}`);
