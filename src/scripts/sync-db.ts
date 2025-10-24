@@ -1,5 +1,5 @@
 // sync-db.ts
-
+/*
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
 import { AppDataSource } from '../config/typeorm';
@@ -38,3 +38,4 @@ async function syncDatabase() {
 }
 
 syncDatabase();
+*/
