@@ -37,6 +37,9 @@ export class OrderItem {
   @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
   total_becoin: number;
 
+  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
+  total_weight: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 

@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Concierto"
+  },
+  {
+    "name": "Recital"
+  },
+  {
+    "name": "Taller"
+  },
+  {
+    "name": "Curso"
+  },
+  {
+    "name": "Feria"
+  },
+  {
+    "name": "Festival"
+  },
+  {
+    "name": "Obra de Teatro"
+  },
+  {
+    "name": "Conferencia"
+  },
+  {
+    "name": "Otros"
+  }
+]
