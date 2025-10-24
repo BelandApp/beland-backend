@@ -31,6 +31,9 @@ export class Wallet {
   @Column({ type: 'numeric', precision: 14, scale: 2, default: 0 })
   locked_balance: number;             // opcional: fondos en proceso de retiro
 
+  @Column('numeric', { precision: 14, scale: 2, default: 0, nullable: true })
+  becoin_green: number; 
+
   @Column({ type: 'text', nullable: true })
   private_key_encrypted: string;
 

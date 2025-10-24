@@ -1,7 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateEventPassDto } from './create-event-pass.dto';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsArray, ArrayNotEmpty, IsUrl, IsNumber } from 'class-validator';
+import { IsOptional, IsString, IsArray, IsUrl, IsNumber } from 'class-validator';
 
 export class UpdateEventPassDto extends PartialType(CreateEventPassDto) {
   @ApiProperty({

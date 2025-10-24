@@ -47,6 +47,9 @@ export class Cart {
   @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
   total_weight: number;
 
+  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
+  total_weight_recycled: number;
+
   @Column({ type: 'int', default: 0 })
   total_items: number;
 
