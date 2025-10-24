@@ -13,10 +13,6 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { CouponsService, ApplyResult } from './coupons.service'; // Import ApplyResult
-import { Coupon } from './entities/coupon.entity';
-import { UpdateCouponDto } from './dto/update-coupon.dto';
-import { CreateCouponDto } from './dto/create-coupon.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -28,6 +24,12 @@ import {
 import { Request } from 'express';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { User } from 'src/modules/users/entities/users.entity'; // Import User entity
+import { CouponsService } from './coupons.service';
+import { Coupon } from './entities/coupon.entity';
+import { UpdateCouponDto } from './dto/update-coupon.dto';
+import { CreateCouponDto } from './dto/create-coupon.dto';
+import { ApplyCouponDto } from './dto/apply-coupon.dto';
+import { ApplyResult } from './interfaces/apply-result.interface';
 
 // Fix TS2430: Asegurar que el usuario tiene la estructura correcta
 interface AuthenticatedRequest extends Request {
@@ -69,7 +71,6 @@ export class CouponsController {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
 
-    // FIX: Usar 'role_name' en lugar de 'role'.
     // Si el usuario es un ADMIN, el user_id se pasa como vacío para listar todos.
     const user_id = req.user.role_name === 'ADMIN' ? '' : req.user.id;
 
@@ -132,8 +133,13 @@ export class CouponsController {
     description: 'Datos inválidos para crear el cupón',
   })
   @ApiResponse({ status: 500, description: 'No se pudo crear el cupón' })
-  async create(@Body() body: CreateCouponDto): Promise<Coupon> {
-    return await this.service.create(body);
+  async create(
+    @Req() req: AuthenticatedRequest, // Añadido Req para obtener el ID del creador
+    @Body() body: CreateCouponDto,
+  ): Promise<Coupon> {
+    // Seguridad: Inyectar el ID del usuario creador desde el token de autenticación
+    const couponData = { ...body, created_by_user_id: req.user.id };
+    return await this.service.create(couponData);
   }
 
   @Put(':id')
@@ -165,7 +171,10 @@ export class CouponsController {
 
   @Post('apply')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Aplicar un cupón a una compra' })
+  @ApiOperation({
+    summary:
+      'Aplicar/Redimir un cupón a una compra. Realiza la validación y registra el uso.',
+  })
   @ApiResponse({
     status: 200,
     description: 'Cupón aplicado exitosamente',
@@ -179,17 +188,15 @@ export class CouponsController {
   })
   async applyCoupon(
     @Req() req: AuthenticatedRequest,
-    @Body('code') code: string,
-    @Body('commerce_id', ParseUUIDPipe) commerce_id: string,
-    @Body('current_purchase_amount') current_purchase_amount: number,
-    // Se podría incluir el order_id en el DTO o en el body si se registra el uso en este momento
+    @Body() applyDto: ApplyCouponDto, // Usamos el DTO refactorizado
   ): Promise<ApplyResult> {
-    const user_id = req.user.id;
-    return await this.service.applyCoupon(
-      code,
+    const user_id = req.user.id; // Seguridad: ID del usuario desde el token
+    return await this.service.validateAndRedeemCoupon(
+      applyDto.coupon_id,
       user_id,
-      commerce_id,
-      current_purchase_amount,
+      applyDto.commerce_id,
+      applyDto.purchase_total,
+      applyDto.order_id,
     );
   }
 }

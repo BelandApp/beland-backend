@@ -1,8 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository, UpdateResult, MoreThan } from 'typeorm';
+import {
+  DeleteResult,
+  Repository,
+  UpdateResult,
+  MoreThan,
+  IsNull,
+  Or,
+} from 'typeorm';
 import { Coupon } from './entities/coupon.entity';
-import { CouponUsage } from './entities/coupon-usage.entity'; // Importar CouponUsage
+import { CouponUsage } from './entities/coupon-usage.entity';
 
 // Helper para verificar si un error tiene una propiedad stack (para log)
 function isError(error: unknown): error is Error {
@@ -20,9 +27,9 @@ export class CouponsRepository {
 
   constructor(
     @InjectRepository(Coupon)
-    private couponRepository: Repository<Coupon>,
+    private couponRepository: Repository<Coupon>, // Inyección para la entidad Coupon
     @InjectRepository(CouponUsage)
-    private usageRepository: Repository<CouponUsage>, // Inyectar CouponUsage Repository
+    private usageRepository: Repository<CouponUsage>, // Inyección para la entidad CouponUsage
   ) {}
 
   /**
@@ -33,24 +40,15 @@ export class CouponsRepository {
     page: number,
     limit: number,
   ): Promise<[Coupon[], number]> {
-    try {
-      // Si user_id está presente, se filtra por el creador (Asumido rol COMMERCE)
-      const where: any = user_id ? { created_by_user_id: user_id } : {};
+    const where = user_id ? { created_by_user_id: user_id } : {};
 
-      return this.couponRepository.findAndCount({
-        where,
-        order: { created_at: 'DESC' },
-        skip: (page - 1) * limit,
-        take: limit,
-        relations: ['created_by_user'],
-      });
-    } catch (error) {
-      this.logger.error(
-        'Error al buscar todos los cupones:',
-        isError(error) ? error.stack : String(error),
-      );
-      throw error;
-    }
+    return this.couponRepository.findAndCount({
+      where,
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: ['created_by_user'],
+    });
   }
 
   async findAvailableByCommerce(
@@ -63,9 +61,11 @@ export class CouponsRepository {
 
       return this.couponRepository.findAndCount({
         where: {
-          created_by_user_id: commerceId, // Usar created_by_user_id
+          created_by_user_id: commerceId,
           is_active: true,
-          expires_at: MoreThan(now), // Cupones no expirados
+          // LÓGICA MEJORADA: Incluye cupones donde expires_at es NULL (nunca expira)
+          // O la fecha de expiración es mayor que ahora.
+          expires_at: Or(IsNull(), MoreThan(now)),
         },
         order: { created_at: 'ASC' },
         skip: (page - 1) * limit,

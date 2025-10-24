@@ -5,11 +5,12 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
+import { DeleteResult, UpdateResult } from 'typeorm';
 import { Coupon } from './entities/coupon.entity';
 import { CouponsRepository } from './coupons.repository';
-import { DeleteResult, UpdateResult } from 'typeorm';
-import { CouponUsage } from './entities/coupon-usage.entity'; // Importar la entidad de uso
+import { CouponUsage } from './entities/coupon-usage.entity';
 import { CouponType } from './enum/coupon-type.enum';
+import { ApplyResult } from './interfaces/apply-result.interface'; // Importar la interfaz correcta
 
 // Helper para verificar si un error es una instancia de Error
 function isError(error: unknown): error is Error {
@@ -21,12 +22,7 @@ function isError(error: unknown): error is Error {
   );
 }
 
-// Exportar el tipo de retorno para applyCoupon
-export type ApplyResult = {
-  discount_amount: number;
-  message: string;
-  coupon: Coupon;
-};
+// REMOVIDO: export type ApplyResult = { ... } para evitar el shadowing.
 
 @Injectable()
 export class CouponsService {
@@ -143,25 +139,27 @@ export class CouponsService {
       );
       throw new InternalServerErrorException(error);
     }
-  }
+  } // --- LÓGICA DE APLICACIÓN Y REDENCIÓN DE CUPÓN (VALIDATE + REDEEM) ---
+  /**
+   * Valida un cupón, calcula el descuento y registra el uso (redención).
+   * NOTA: Para producción con límites de uso, esta lógica debería estar envuelta
+   * en una transacción para asegurar atomicidad y evitar doble redención.
+   */
 
-  // --- LÓGICA DE APLICACIÓN DE CUPÓN ---
-
-  async applyCoupon(
+  async validateAndRedeemCoupon(
     code: string,
     user_id: string,
     commerce_id: string,
-    current_purchase_amount: number,
-    order_id?: string, // Opcional, para el registro de uso
+    purchase_total: number, // Nombre armonizado con el DTO
+    order_id?: string | null, // Opcional, para el registro de uso
   ): Promise<ApplyResult> {
     try {
       // 1. Buscar el cupón por código
       const coupon = await this.repository.findByCode(code);
       if (!coupon) {
         throw new NotFoundException('Cupón no encontrado.');
-      }
+      } // 2. Validaciones básicas del cupón
 
-      // 2. Validaciones básicas del cupón
       const now = new Date();
 
       if (!coupon.is_active) {
@@ -170,18 +168,14 @@ export class CouponsService {
 
       if (coupon.expires_at && coupon.expires_at < now) {
         throw new ConflictException('El cupón ha expirado.');
-      }
+      } // 2.1 Validar que el cupón sea para el comercio correcto
 
-      // 2.1 Validar que el cupón sea para el comercio correcto
       if (coupon.created_by_user_id !== commerce_id) {
         throw new ConflictException(
           'El cupón no es válido para este comercio.',
         );
-      }
+      } // 3. Validaciones de Uso (Límites) // 3.1 Límite de usos total (max_usage_count)
 
-      // 3. Validaciones de Uso (Límites)
-
-      // 3.1 Límite de usos total (max_usage_count)
       if (coupon.max_usage_count !== null && coupon.max_usage_count > 0) {
         const totalUsages = await this.repository.countTotalUsages(coupon.id);
         if (totalUsages >= coupon.max_usage_count) {
@@ -189,9 +183,8 @@ export class CouponsService {
             'El cupón ha alcanzado su límite máximo de usos.',
           );
         }
-      }
+      } // 3.2 Límite de usos por usuario (usage_limit_per_user)
 
-      // 3.2 Límite de usos por usuario (usage_limit_per_user)
       if (
         coupon.usage_limit_per_user !== null &&
         coupon.usage_limit_per_user > 0
@@ -205,29 +198,26 @@ export class CouponsService {
             'Ya has alcanzado el límite de uso para este cupón.',
           );
         }
-      }
+      } // 4. Lógica de cálculo y validación de reglas de negocio específicas
 
-      // 4. Lógica de cálculo y validación de reglas de negocio específicas
-      let discount_amount = 0;
+      let discountAmount = 0; // Cambiado a camelCase
       let message = `Cupón ${code} aplicado exitosamente.`;
 
       if (coupon.type === CouponType.PERCENTAGE) {
         // Validación de gasto mínimo
         if (
           coupon.min_spend_required !== null &&
-          current_purchase_amount < coupon.min_spend_required
+          purchase_total < coupon.min_spend_required
         ) {
           throw new ConflictException(
             `El cupón requiere una compra mínima de $${coupon.min_spend_required.toFixed(
               2,
             )}.`,
           );
-        }
+        } // Aplicar porcentaje
 
-        // Aplicar porcentaje
-        let calculatedDiscount = current_purchase_amount * (coupon.value / 100);
+        let calculatedDiscount = purchase_total * (coupon.value / 100); // Aplicar tope máximo (max_discount_cap)
 
-        // Aplicar tope máximo (max_discount_cap)
         if (
           coupon.max_discount_cap !== null &&
           calculatedDiscount > coupon.max_discount_cap
@@ -238,53 +228,55 @@ export class CouponsService {
           )}.`;
         }
 
-        discount_amount = parseFloat(calculatedDiscount.toFixed(2));
+        discountAmount = parseFloat(calculatedDiscount.toFixed(2));
         message = `¡Descuento de ${
           coupon.value
-        }% aplicado! Monto: $${discount_amount.toFixed(2)}`;
+        }% aplicado! Monto: $${discountAmount.toFixed(2)}`;
       } else if (coupon.type === CouponType.FIXED) {
-        // Validación de gasto mínimo (MANDATORIO para FIXED)
+        // Validación de gasto mínimo (MANDATORIO si se configuró)
         if (
-          coupon.min_spend_required === null ||
-          current_purchase_amount < coupon.min_spend_required
+          coupon.min_spend_required !== null &&
+          purchase_total < coupon.min_spend_required
         ) {
           throw new ConflictException(
-            `El cupón fijo requiere una compra mínima de $${
-              coupon.min_spend_required
-                ? coupon.min_spend_required.toFixed(2)
-                : 0
-            }.`,
+            `El cupón fijo requiere una compra mínima de $${coupon.min_spend_required.toFixed(
+              2,
+            )}.`,
           );
+        } // Aplicar monto fijo
+
+        discountAmount = coupon.value; // El descuento no puede ser mayor que el monto de la compra
+
+        if (discountAmount > purchase_total) {
+          discountAmount = purchase_total;
         }
 
-        // Aplicar monto fijo
-        discount_amount = coupon.value;
-
-        // El descuento no puede ser mayor que el monto de la compra
-        if (discount_amount > current_purchase_amount) {
-          discount_amount = current_purchase_amount;
-        }
-
-        message = `¡Descuento fijo de $${discount_amount.toFixed(2)} aplicado!`;
+        message = `¡Descuento fijo de $${discountAmount.toFixed(2)} aplicado!`;
       } else {
         // Esto no debería suceder si el enum está bien tipado
         throw new ConflictException('Tipo de cupón no soportado.');
-      }
+      } // Asegurar que el descuento no sea negativo y no exceda el total
 
-      // 5. Registrar el uso del cupón
+      discountAmount = Math.max(0, Math.min(discountAmount, purchase_total)); // Calcular el nuevo total
+
+      const newTotal = purchase_total - discountAmount; // 5. Registrar el uso del cupón (Redención)
+
       const usageData: Partial<CouponUsage> = {
         coupon_id: coupon.id,
         user_id: user_id,
-        original_amount: current_purchase_amount,
-        discount_amount: discount_amount,
+        original_amount: purchase_total,
+        discount_amount: discountAmount, // Usar discountAmount
         order_id: order_id || null, // Se puede pasar el ID de la orden o nulo
       };
 
-      await this.repository.createCouponUsage(usageData);
+      await this.repository.createCouponUsage(usageData); // 6. Devolver resultado de aplicación (Alineado con ApplyResult Interface)
 
-      // 6. Devolver resultado de aplicación
       return {
-        discount_amount,
+        success: true, // Requerido por la interfaz
+        couponId: coupon.id, // Requerido por la interfaz
+        originalTotal: purchase_total, // Requerido por la interfaz
+        discountAmount, // Requerido por la interfaz
+        newTotal: parseFloat(newTotal.toFixed(2)), // Requerido por la interfaz
         message,
         coupon,
       };

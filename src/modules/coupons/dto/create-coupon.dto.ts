@@ -18,7 +18,7 @@ export class CreateCouponDto {
   name: string;
 
   @ApiPropertyOptional({
-    description: 'Código del cupón. Opcional si se usa por ID.',
+    description: 'Código del cupón. Opcional si se usa por ID. (Recomendado)',
     nullable: true,
   })
   @IsOptional()
@@ -34,6 +34,7 @@ export class CreateCouponDto {
   type: CouponType;
 
   @ApiProperty({ description: 'Valor del descuento (10 para 10% o $10)' })
+  @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
   value: number;
@@ -43,15 +44,17 @@ export class CreateCouponDto {
     nullable: true,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   max_discount_cap: number | null;
 
   @ApiPropertyOptional({
-    description: 'Gasto mínimo requerido (para cupones FIXED)',
+    description: 'Gasto mínimo requerido (para cupones FIXED o PERCENTAGE)',
     nullable: true,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   min_spend_required: number | null;
@@ -72,6 +75,7 @@ export class CreateCouponDto {
     nullable: true,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   max_usage_count: number | null;
@@ -81,6 +85,7 @@ export class CreateCouponDto {
     nullable: true,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   usage_limit_per_user: number | null;
@@ -93,9 +98,6 @@ export class CreateCouponDto {
   @IsBoolean()
   is_active: boolean;
 
-  @ApiProperty({
-    description: 'ID del usuario/comercio que crea el cupón',
-  })
-  @IsUUID()
-  created_by_user_id: string;
+  // REMOVED: created_by_user_id: string;
+  // Este campo se inyecta desde el token del usuario autenticado en el Controller.
 }
