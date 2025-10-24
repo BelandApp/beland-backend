@@ -77,6 +77,7 @@ export class OrderItem {
       // Calcular total_becoin si aplica
       const becoin = Number(this.unit_becoin ?? 0);
       this.total_becoin = this.unit_becoin ? this.quantity * becoin : null;
+
     }
   }
 }
