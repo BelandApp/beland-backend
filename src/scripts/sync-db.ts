@@ -2,7 +2,7 @@
 
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
-import { AppDataSource } from './src/config/typeorm';
+import { AppDataSource } from '../config/typeorm';
 
 async function syncDatabase() {
   console.log('Iniciando script de SINCRONIZACIÓN de ESQUEMA...');
