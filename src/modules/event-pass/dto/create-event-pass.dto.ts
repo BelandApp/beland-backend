@@ -8,6 +8,7 @@ import {
   IsBoolean,
   IsDate,
   MaxLength,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateEventPassDto {
@@ -29,6 +30,27 @@ export class CreateEventPassDto {
   @IsNotEmpty()
   @MaxLength(200)
   name: string;
+
+  @ApiProperty({
+    description: 'Imagen principal del EventPass',
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
+  @IsOptional()
+  image_url?: any;
+
+  @ApiProperty({
+    description: 'Imágenes adicionales del EventPass',
+    type: 'array',
+    items: {
+      type: 'string',
+      format: 'binary',
+    },
+    required: false,
+  })
+  @IsOptional()
+  images_urls?: any[];
 
   @ApiProperty({
     example: 'Un gran evento musical en la ciudad.',
@@ -53,7 +75,7 @@ export class CreateEventPassDto {
     required: true,
   })
   @IsNotEmpty()
-  @IsString()
+  @IsUUID()
   type_id: string;
 
   // 📍 UBICACIÓN
