@@ -76,20 +76,23 @@ export class EventPassService {
 
   async create(
     dto: CreateEventPassDto,
-    files: Express.Multer.File[],
+    files: {
+      image_url?: Express.Multer.File[];
+      images_urls?: Express.Multer.File[];
+    },
     user_id: string,
   ): Promise<EventPass> {
     this.logger.log(`Iniciando creación de EventPass para el evento: ${dto.name}`);
 
     try {
       // --- 1️⃣ Validaciones previas ---
-      if (!files || files.length === 0) {
+      if (files.image_url.length === 0) {
         throw new BadRequestException('Debe subir al menos una imagen principal');
       }
 
       // --- 2️⃣ Separar la imagen principal de las adicionales ---
-      const mainImageFile = files[0];
-      const additionalFiles = files.slice(1);
+      const mainImageFile = files.image_url[0];
+      const additionalFiles = files.images_urls;
       this.logger.debug(`Archivos recibidos: principal (${mainImageFile?.originalname}), adicionales: ${additionalFiles.length}`);
 
       // --- 3️⃣ Subir imágenes a Cloudinary ---
@@ -118,8 +121,8 @@ export class EventPassService {
       this.logger.log(`EventPass creado con éxito: ID ${eventPass.id}`);
       return eventPass;
     } catch (error) {
-      this.logger.error(`Error al crear EventPass: ${error}`);
-      throw new InternalServerErrorException('Error al crear el evento');
+  console.error('Error al subir a Cloudinary:', error); // 🔹 así vemos todo
+  throw new InternalServerErrorException('Error al crear el evento: ' + JSON.stringify(error));
     }
   }
 
@@ -149,11 +152,8 @@ export class EventPassService {
       this.logger.log(`✅ Imagen actualizada correctamente para entrada ID: ${id}`);
       return updatedEvent;
     } catch (error) {
-      this.logger.error(`❌ Error al actualizar imagen: ${error}`);
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        'Ocurrió un error al actualizar la imagen de la entrada',
-      );
+      console.error('Error al subir a Cloudinary:', error); // 🔹 así vemos todo
+      throw new InternalServerErrorException('Error al actualizar la imagen del evento: ' + JSON.stringify(error));
     }
   }
 

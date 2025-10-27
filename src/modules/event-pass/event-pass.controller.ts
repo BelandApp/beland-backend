@@ -19,6 +19,7 @@ import {
   FileTypeValidator,
   UploadedFiles,
   ParseFilePipeBuilder,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -37,7 +38,7 @@ import { CreateEventPassDto } from './dto/create-event-pass.dto';
 import { UpdateEventPassDto } from './dto/update-event-pass.dto';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { Request } from 'express';
-import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
 import { EventPassType } from './entities/event-pass-type.entity';
 
@@ -118,7 +119,12 @@ export class EventPassController {
   @Post()
   @ApiBearerAuth('JWT-auth')
   @UseGuards(FlexibleAuthGuard)
-  @UseInterceptors(AnyFilesInterceptor())
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'image_url', maxCount: 1 },
+      { name: 'images_urls', maxCount: 10 },
+    ]),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description:
@@ -127,23 +133,35 @@ export class EventPassController {
   })
   async create(
     @Body() createEventPassDto: CreateEventPassDto,
-    @UploadedFiles(
-      new ParseFilePipeBuilder()
-        .addFileTypeValidator({
-          fileType: /(jpg|jpeg|png|webp)$/,
-        })
-        .addMaxSizeValidator({
-          maxSize: 10_000_000, // 10 MB
-          message: 'El archivo debe ser menor a 10 MB',
-        })
-        .build({
-          errorHttpStatusCode: HttpStatus.BAD_REQUEST,
-        }),
-    ) 
-    files: Express.Multer.File[],
+    @UploadedFiles() 
+    files: {
+      image_url?: Express.Multer.File[];
+      images_urls?: Express.Multer.File[];
+    },
     @Req() req: Request,
   ) {
     const user = req.user; // Usuario autenticado desde el token JWT
+
+    // ✅ Validación manual
+  const allFiles = [
+    ...(files.image_url || []),
+    ...(files.images_urls || []),
+  ];
+
+  for (const file of allFiles) {
+    if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)) {
+      throw new BadRequestException(
+        `Formato de archivo inválido (${file.originalname}). Solo se permiten JPG, PNG o WEBP.`,
+      );
+    }
+
+    if (file.size > 10_000_000) {
+      throw new BadRequestException(
+        `El archivo ${file.originalname} supera los 10 MB permitidos.`,
+      );
+    }
+  }
+
     return this.service.create(
       createEventPassDto,
       files,
