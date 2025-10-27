@@ -35,11 +35,14 @@ export class UserEventPass {
   @Column({ length: 100 })
   holder_name: string;
 
+  @Column({ length: 100 })
+  holder_instagram_tiktok: string;
+
   @Column({ length: 20, nullable: true })
   holder_phone?: string;
 
   @Column({ length: 30, nullable: true })
-  holder_document?: string;
+  holder_email?: string;
 
   // 📅 FECHAS DE CONTROL
   @CreateDateColumn({ name: 'purchase_date' })

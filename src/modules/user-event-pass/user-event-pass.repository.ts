@@ -66,8 +66,9 @@ async findAll(
     user_id: string,
     event_pass_id: string,
     holder_name: string,
+    holder_instagram_tiktok: string,
     holder_phone?: string,
-    holder_document?: string,
+    holder_email?: string,
   ): Promise<UserEventPass> {
     return await this.dataSource.transaction(async (manager) => {
       const walletRepo = manager.getRepository(Wallet);
@@ -98,7 +99,7 @@ async findAll(
         throw new NotFoundException('Tipo de transaccion no encontrado. ', TransactionCode.SALE_EVENTPASS);
 
       // 2️⃣ Validar saldo y disponibilidad
-      if (+walletUser.becoin_balance < +event.price_becoin)
+      if (+walletUser.becoin_balance < +event.total_becoin)
         throw new BadRequestException('Saldo insuficiente.');
       if (!event.available) {
         throw new BadRequestException('Entradas agotadas.');
@@ -111,7 +112,7 @@ async findAll(
       await eventRepo.save(event);
 
       // 3️⃣ Descontar saldo del usuario
-      walletUser.becoin_balance = +walletUser.becoin_balance - +event.price_becoin;
+      walletUser.becoin_balance = +walletUser.becoin_balance - +event.total_becoin;
       await walletRepo.save(walletUser);
 
       // 4️⃣ Acreditar saldo al organizador (si existe)
@@ -120,7 +121,7 @@ async findAll(
       });
       if (!walletEvent) throw new NotFoundException('Billetera del Organizador del evento No encontrada.');
 
-      walletEvent.becoin_balance = +walletEvent.becoin_balance + +event.price_becoin;
+      walletEvent.becoin_balance = +walletEvent.becoin_balance + +event.total_becoin;
       await walletRepo.save(walletEvent);
 
       // 5️⃣ Crear transacción PURCHASE_EVENTPASS en la wallet del usuario
@@ -130,7 +131,7 @@ async findAll(
         status_id: status.id,
         related_wallet_id: walletEvent.id,
         post_balance: +walletUser.becoin_balance,
-        amount_becoin: event.price_becoin,
+        amount_becoin: event.total_becoin,
         reference: 'EVENTPASS -' + event_pass_id,
       });
       await transRepo.save(purchaseTx);
@@ -142,7 +143,7 @@ async findAll(
         status_id: status.id,
         related_wallet_id: walletUser.id,
         post_balance: +walletEvent.becoin_balance,
-        amount_becoin: event.price_becoin,
+        amount_becoin: event.total_becoin,
         reference: 'EVENTPASS -' + event_pass_id,
       });
       await transRepo.save(saleTx);
@@ -152,17 +153,14 @@ async findAll(
         user_id,
         event_pass_id,
         holder_name,
+        holder_instagram_tiktok,
         holder_phone,
-        holder_document,
-        purchase_price: event.price_becoin,
+        holder_email,
+        purchase_price: event.total_becoin,
         is_consumed: false,
         is_active: true,
       });
       const savedPass = await passRepo.save(newPass);
-
-      // 7️⃣ Actualizar contador de tickets vendidos
-      event.sold_tickets = +event.sold_tickets + 1;
-      await eventRepo.save(event);
 
       return savedPass;
     });
@@ -258,6 +256,8 @@ async findAll(
 
         // 8️⃣ Actualizar contador de tickets vendidos
         event.sold_tickets = Math.max(0, +event.sold_tickets - 1);
+        if ((+event.sold_tickets + 1) === +event.limit_tickets)
+            event.available = true;
         await eventRepo.save(event);
 
         // 9️⃣ Desactivar o eliminar la entrada
@@ -334,8 +334,9 @@ async findAll(
             sold_tickets: eventPass.sold_tickets,
             attended_count: eventPass.attended_count,
             user_name: userPass.holder_name,
+            user_instagram_tiktok: userPass.holder_instagram_tiktok,
             user_phone: userPass.holder_phone,
-            user_document: userPass.holder_document,
+            user_email: userPass.holder_email,
           });
         }
 

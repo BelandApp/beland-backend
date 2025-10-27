@@ -35,15 +35,17 @@ export class UserEventPassService {
     user_id: string,
     event_pass_id: string,
     holder_name: string,
+    holder_instagram_tiktok: string,
     holder_phone?: string,
-    holder_document?: string,
+    holder_email?: string,
   ): Promise<UserEventPass> {
     return this.repository.purchaseEventPass(
       user_id,
       event_pass_id,
       holder_name,
+      holder_instagram_tiktok,
       holder_phone,
-      holder_document,
+      holder_email,
     );
   }
 
