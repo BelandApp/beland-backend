@@ -97,8 +97,9 @@ export class UserEventPassController {
       user_id,
       createDto.event_pass_id,
       createDto.holder_name,
+      createDto.holder_instagram_tiktok,
       createDto.holder_phone,
-      createDto.holder_document,
+      createDto.holder_email,
     );
   }
 
