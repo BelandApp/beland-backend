@@ -42,7 +42,7 @@ export class CreateUserEventPassDto {
     example: '+5491122334455',
     description: 'Teléfono del titular (opcional)',
   })
-  @IsPhoneNumber('AR') // Podés cambiar 'AR' por el código del país o quitarlo si es multi-país
+  @IsString() // Podés cambiar 'AR' por el código del país o quitarlo si es multi-país
   @IsOptional()
   holder_phone?: string;
 
