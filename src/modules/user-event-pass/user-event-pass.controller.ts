@@ -8,7 +8,8 @@ import {
   Req,
   HttpCode,
   HttpStatus,
-  ParseUUIDPipe
+  ParseUUIDPipe,
+  UseGuards
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { UserEventPassService } from './user-event-pass.service';
@@ -16,9 +17,11 @@ import { UserEventPass } from './entities/user-event-pass.entity';
 import { UserEventPassFiltersDto } from './dto/user-eventpass-filters.dto';
 import { Request } from 'express';
 import { CreateUserEventPassDto } from './dto/create-user-event-pass.dto';
+import { FlexibleAuthGuard } from '../auth/guards/flexible-auth.guard';
 
 @ApiTags('user-event-passes')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
+@UseGuards(FlexibleAuthGuard)
 @Controller('user-event-passes')
 export class UserEventPassController {
   constructor(private readonly service: UserEventPassService) {}
