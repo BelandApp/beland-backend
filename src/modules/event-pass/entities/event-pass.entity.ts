@@ -45,6 +45,15 @@ export class EventPass {
   @Column({ type: 'varchar', length: 150, nullable: true })
   event_city: string; // ciudad del evento
 
+  @Column({ length: 200 , nullable:true})
+  address: string; // Calle principal, número
+
+  @Column({ type: 'decimal', precision: 14, scale: 6, nullable: true })
+  latitude?: number;
+
+  @Column({ type: 'decimal', precision: 14, scale: 6, nullable: true })
+  longitude?: number;
+
   // 📅 FECHAS DE CONTROL
   @Column({ type: 'timestamp', nullable: false })
   event_date: Date; // fecha del evento
