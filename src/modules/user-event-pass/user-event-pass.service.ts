@@ -3,7 +3,6 @@ import { UserEventPassRepository } from './user-event-pass.repository';
 import { UserEventPass } from './entities/user-event-pass.entity';
 import { UserEventPassFiltersDto } from './dto/user-eventpass-filters.dto';
 import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
-import { EventPass } from '../event-pass/entities/event-pass.entity';
 
 @Injectable()
 export class UserEventPassService {
@@ -17,7 +16,7 @@ export class UserEventPassService {
     page: number,
     limit: number,
     filters?: UserEventPassFiltersDto,
-  ): Promise<RespGetArrayDto<EventPass>> {
+  ): Promise<RespGetArrayDto<UserEventPass>> {
     return this.repository.findAll(page, limit, filters);
   }
 
