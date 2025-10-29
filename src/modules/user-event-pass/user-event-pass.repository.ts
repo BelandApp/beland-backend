@@ -30,37 +30,51 @@ async findAll(
   page: number,
   limit: number,
   filters?: UserEventPassFiltersDto,
-): Promise<RespGetArrayDto<UserEventPass>> {
-  const where: FindOptionsWhere<UserEventPass> = {};
+): Promise<RespGetArrayDto<EventPass>> {
+  const query = this.dataSource
+    .getRepository(EventPass)
+    .createQueryBuilder('eventPass')
+    .innerJoinAndSelect(
+      'eventPass.userEventPasses',
+      'userEventPasses',
+      '1=1'
+    );
+
+  // 📌 Filtros aplicados sobre userEventPasses
+  if (filters?.user_id)
+    query.andWhere('userEventPasses.user_id = :user_id', { user_id: filters.user_id });
 
   if (filters?.is_consumed !== undefined)
-    where.is_consumed = filters.is_consumed;
+    query.andWhere('userEventPasses.is_consumed = :is_consumed', { is_consumed: filters.is_consumed });
+
   if (filters?.is_active !== undefined)
-    where.is_active = filters.is_active;
+    query.andWhere('userEventPasses.is_active = :is_active', { is_active: filters.is_active });
+
   if (filters?.is_refunded !== undefined)
-    where.is_refunded = filters.is_refunded;
+    query.andWhere('userEventPasses.is_refunded = :is_refunded', { is_refunded: filters.is_refunded });
+
   if (filters?.event_pass_id)
-    where.event_pass_id = filters.event_pass_id;
-  if (filters?.user_id)
-    where.user_id = filters.user_id;
- 
- const [data, total] = await this.repository.findAndCount({
-    where,
-    relations: ['event_pass', 'user'],
-    order: { purchase_date: 'DESC' },
-    skip: (page - 1) * limit,
-    take: limit,
-  });
+    query.andWhere('userEventPasses.event_pass_id = :event_pass_id', { event_pass_id: filters.event_pass_id });
 
-  const respUserEventPass: RespGetArrayDto<UserEventPass> = {
-      page,
-      limit,
-      total,
-      data
-    }
+  // ⚠️ Asegura que solo se devuelvan eventPass con al menos una coincidencia
+  // (INNER JOIN + condiciones hacen esto implícitamente)
 
-  return respUserEventPass
+  // 🔢 Orden y paginación
+  query
+    .orderBy('userEventPasses.purchase_date', 'DESC')
+    .skip((page - 1) * limit)
+    .take(limit);
+
+  const [data, total] = await query.getManyAndCount();
+
+  return {
+    page,
+    limit,
+    total,
+    data,
+  };
 }
+
 
 
   // 🔎 FIND ONE (with relations)

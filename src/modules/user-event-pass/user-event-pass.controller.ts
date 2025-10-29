@@ -19,6 +19,7 @@ import { Request } from 'express';
 import { CreateUserEventPassDto } from './dto/create-user-event-pass.dto';
 import { FlexibleAuthGuard } from '../auth/guards/flexible-auth.guard';
 import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { EventPass } from '../event-pass/entities/event-pass.entity';
 
 @ApiTags('user-event-passes')
 @ApiBearerAuth('JWT-auth')
@@ -40,7 +41,7 @@ export class UserEventPassController {
     @Query('page') page = '1',
     @Query('limit') limit = '10',
     @Query() filters?: UserEventPassFiltersDto,
-  ): Promise<RespGetArrayDto<UserEventPass>> {
+  ): Promise<RespGetArrayDto<EventPass>> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     return this.service.findAll(pageNumber, limitNumber, filters);
@@ -61,7 +62,7 @@ export class UserEventPassController {
     @Query('limit') limit = '10',
     @Req() req: Request,
     @Query() filters?: UserEventPassFiltersDto,
-  ): Promise<RespGetArrayDto<UserEventPass>> {
+  ): Promise<RespGetArrayDto<EventPass>> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
 
