@@ -11,6 +11,7 @@ import { TransactionState } from '../transaction-state/entities/transaction-stat
 import { TransactionType } from '../transaction-type/entities/transaction-type.entity';
 import { StatusCode } from '../transaction-state/enum/status.enum';
 import { TransactionCode } from '../transactions/enum/transaction-code';
+import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
 
 @Injectable()
 export class UserEventPassRepository {
@@ -29,7 +30,7 @@ async findAll(
   page: number,
   limit: number,
   filters?: UserEventPassFiltersDto,
-): Promise<[UserEventPass[], number]> {
+): Promise<RespGetArrayDto<UserEventPass>> {
   const where: FindOptionsWhere<UserEventPass> = {};
 
   if (filters?.is_consumed !== undefined)
@@ -42,14 +43,23 @@ async findAll(
     where.event_pass_id = filters.event_pass_id;
   if (filters?.user_id)
     where.user_id = filters.user_id;
-
-  return this.repository.findAndCount({
+ 
+ const [data, total] = await this.repository.findAndCount({
     where,
     relations: ['event_pass', 'user'],
     order: { purchase_date: 'DESC' },
     skip: (page - 1) * limit,
     take: limit,
   });
+
+  const respUserEventPass: RespGetArrayDto<UserEventPass> = {
+      page,
+      limit,
+      total,
+      data
+    }
+
+  return respUserEventPass
 }
 
 
