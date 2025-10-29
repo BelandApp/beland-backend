@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsString,
@@ -9,6 +9,8 @@ import {
   IsDate,
   MaxLength,
   IsUUID,
+  IsLongitude,
+  IsLatitude,
 } from 'class-validator';
 
 export class CreateEventPassDto {
@@ -94,6 +96,34 @@ export class CreateEventPassDto {
   @IsOptional()
   @IsString()
   event_city?: string;
+
+  @ApiPropertyOptional({
+    description: 'dirección',
+    example: 'Av. Siempre Viva 742',
+    maxLength: 150,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(200)
+  address: string;
+
+   @ApiPropertyOptional({
+      description: 'Latitud de la dirección',
+      example: -34.6037,
+    })
+    @IsOptional()
+    @Type(() => Number)
+    @IsLatitude()
+    latitude?: number;
+  
+    @ApiPropertyOptional({
+      description: 'Longitud de la dirección',
+      example: -58.3816,
+    })
+    @IsOptional()
+    @Type(() => Number)
+    @IsLongitude()
+    longitude?: number;
 
   // 📅 FECHAS
   @ApiProperty({

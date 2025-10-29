@@ -38,10 +38,10 @@ export class UserEventPass {
   @Column({ length: 100 })
   holder_instagram_tiktok: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ length: 30, nullable: true })
   holder_phone?: string;
 
-  @Column({ length: 30, nullable: true })
+  @Column({ length: 100, nullable: true })
   holder_email?: string;
 
   // 📅 FECHAS DE CONTROL
