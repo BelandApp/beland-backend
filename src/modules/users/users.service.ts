@@ -405,12 +405,12 @@ export class UsersService {
         throw new NotFoundException('El usuario que desea actualizar no existe');
       }
 
-      const imgUpload = await this.cloudinaryService.uploadImage(file);
-      if (!imgUpload || !imgUpload.secure_url) {
+      const imgUpload_url = await this.cloudinaryService.uploadImage(file) as string;
+      if (!imgUpload_url) {
         throw new InternalServerErrorException('Error al subir la imagen a Cloudinary');
       }
 
-      user.profile_picture_url = imgUpload.secure_url;
+      user.profile_picture_url = imgUpload_url;
 
       const updatedUser = await this.dataSource.manager.save(User, user);
       return updatedUser;

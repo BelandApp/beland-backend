@@ -30,6 +30,7 @@ import { GroupInvitation } from '../../group-invitations/entities/group-invitati
 import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';
 import { Testimony } from '../../testimonies/entities/testimony.entity';
 import { ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
+import { CouponUsage } from '../../coupons/entities/coupon-usage.entity';
 
 @Entity('users')
 export class User {
@@ -150,8 +151,17 @@ export class User {
   @OneToMany(() => PrizeRedemption, (redemption) => redemption.user)
   prize_redemptions: PrizeRedemption[];
 
-  @OneToMany(() => Coupon, (coupon) => coupon.redeemed_by_user)
-  redeemed_coupons: Coupon[];
+  // **CUPONES NUEVAS RELACIONES**
+
+  // 1. Cupones Creados (Por Usuario comercio)
+  @OneToMany(() => Coupon, (coupon) => coupon.created_by_user)
+  created_coupons: Coupon[];
+
+  // 2. Historial de Usos del Cupón (Registro de cada vez que el usuario usa un cupón)
+  @OneToMany(() => CouponUsage, (usage) => usage.user)
+  coupon_usages: CouponUsage[];
+
+  // **FIN CUPONES**
 
   @OneToOne(() => Organization, (org) => org.user)
   organization: Organization;

@@ -347,6 +347,7 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Orden no encontrada')
 
     order.status_id = statusOrder.id;
+    order.delivery_at = new Date ();
     
     return await this.repository.create(order);
   }

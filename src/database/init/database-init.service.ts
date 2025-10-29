@@ -16,6 +16,7 @@ import preloadWithdrawAccountType from './json/withdrawAccountType.json';
 import preloadResource from './json/resource.json'
 import preloadResourceSuperAdmin from './json/resourceSuperadmin.json'
 import preloadDelivery from './json/deliveryStatus.json'
+import preloadTypeEvent from './json/eventType.json'
 
 // Entidades
 import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
@@ -32,6 +33,7 @@ import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmi
 import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
 import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
 import { DeliveryStatus } from 'src/modules/delivery-status/entities/delivery-status.entity';
+import { EventPassType } from 'src/modules/event-pass/entities/event-pass-type.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -200,6 +202,12 @@ export class DatabaseInitService {
         GroupType,
         'name',
         'Tipos de Grupos',
+      );
+      await this.preload<EventPassType>(
+        preloadTypeEvent,
+        EventPassType,
+        'name',
+        'Tipos de Eventos',
       );
       await this.preload<ResourcesType>(
         preloadResourceType,

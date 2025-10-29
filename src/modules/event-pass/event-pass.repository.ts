@@ -1,21 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository, UpdateResult } from 'typeorm';
+import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { EventPass } from './entities/event-pass.entity';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
+import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { EventPassType } from './entities/event-pass-type.entity';
 
 @Injectable()
 export class EventPassRepository {
   constructor(
     @InjectRepository(EventPass)
     private repository: Repository<EventPass>,
+    private readonly datasource: DataSource,
   ) {}
 
   async findAll(
     page: number,
     limit: number,
     filters?: EventPassFiltersDto,
-    ): Promise<[EventPass[], number]> {
+    ): Promise<RespGetArrayDto<EventPass>> {
     const query = this.repository.createQueryBuilder('event');
 
     // FILTROS DINÁMICOS
@@ -54,8 +57,34 @@ export class EventPassRepository {
         .skip((page - 1) * limit)
         .take(limit);
 
-    const [data, count] = await query.getManyAndCount();
-    return [data, count];
+    const [data, total] = await query.getManyAndCount();
+    const respEventPass: RespGetArrayDto<EventPass> = {
+      page,
+      limit,
+      total,
+      data
+    }
+    return respEventPass;
+    }
+  
+  async findAllTypes(
+    page: number,
+    limit: number,
+    ): Promise<RespGetArrayDto<EventPassType>> {
+    const typeRepo = this.datasource.manager.getRepository(EventPassType)
+    const query = typeRepo.createQueryBuilder('event_type');
+
+    query.skip((page - 1) * limit)
+        .take(limit);
+
+    const [data, total] = await query.getManyAndCount();
+    const respEventPass: RespGetArrayDto<EventPassType> = {
+      page,
+      limit,
+      total,
+      data
+    }
+    return respEventPass;
     }
 
   async findOne(id: string): Promise<EventPass> {

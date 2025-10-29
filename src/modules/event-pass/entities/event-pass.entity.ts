@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
+import { EventPassType } from './event-pass-type.entity';
 
 @Entity({ name: 'event_pass' })
 export class EventPass {
@@ -25,14 +26,17 @@ export class EventPass {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Column({ type: 'text', nullable: true })
+  message: string;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   image_url: string;
 
+  @Column('varchar', { array: true, nullable:true })
+  images_urls: string[];
+
   @Column({ type: 'text', nullable: true })
   qr: string;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  background_url: string; // 🌐 URL o fondo del evento
 
   // 📍 UBICACIÓN DEL EVENTO
   @Column({ type: 'varchar', length: 255, nullable: true })
@@ -40,6 +44,15 @@ export class EventPass {
 
   @Column({ type: 'varchar', length: 150, nullable: true })
   event_city: string; // ciudad del evento
+
+  @Column({ length: 200 , nullable:true})
+  address: string; // Calle principal, número
+
+  @Column({ type: 'decimal', precision: 14, scale: 6, nullable: true })
+  latitude?: number;
+
+  @Column({ type: 'decimal', precision: 14, scale: 6, nullable: true })
+  longitude?: number;
 
   // 📅 FECHAS DE CONTROL
   @Column({ type: 'timestamp', nullable: false })
@@ -81,10 +94,6 @@ export class EventPass {
   @Column({ type: 'int', nullable: true, default: 0 })
   refund_days_limit: number;
 
-  // ⭐ FAVORITO DEL USUARIO
-  @Column({ type: 'boolean', default: false })
-  is_user_favorite: boolean;
-
   // 👤 RELACIÓN CON USUARIO (creador)
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'created_by_id' })
@@ -96,6 +105,12 @@ export class EventPass {
   // ⚙️ ESTADO
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
+
+  @ManyToOne(() => EventPassType)
+  @JoinColumn({name: 'type_id'})
+  type: EventPassType;
+  @Column('uuid', {nullable:true})
+  type_id: string
 
   // 🕓 CONTROL DE CREACIÓN / ACTUALIZACIÓN
   @CreateDateColumn({ type: 'timestamp' })

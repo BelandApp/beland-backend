@@ -47,5 +47,11 @@ export class RespSocketEventpassDto {
     example: '12345678',
     description: 'Documento o identificación del usuario.',
   })
-  user_document: string;
+  user_email: string;
+
+  @ApiProperty({
+    example: '12345678',
+    description: 'Documento o identificación del usuario.',
+  })
+  user_instagram_tiktok: string;
 }

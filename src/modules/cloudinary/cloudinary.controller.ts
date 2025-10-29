@@ -4,6 +4,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
@@ -18,7 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { CloudinaryService } from './cloudinary.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { UploadApiResponse } from 'cloudinary';
 
 @ApiTags('cloudinary')
@@ -28,42 +29,88 @@ import { UploadApiResponse } from 'cloudinary';
 export class CloudinaryController {
   constructor(private readonly service: CloudinaryService) {}
 
-    @Post('upload-image')
-    @UseInterceptors(FileInterceptor('file'))
-    @ApiConsumes('multipart/form-data')
-    @ApiOperation({ summary: 'Subir Imagen' })
-    @ApiBody({
-    description: `Debe subir el Archivo de Imagen`,
+  // ===============================
+  // 🖼️ SUBIR UNA SOLA IMAGEN
+  // ===============================
+  @Post('upload-image')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Subir una sola imagen' })
+  @ApiBody({
+    description: 'Debe subir un archivo de imagen (jpg, jpeg, png o webp)',
     schema: {
-        type: 'object',
-        properties: {
+      type: 'object',
+      properties: {
         file: {
-            type: 'string',
-            format: 'binary',
+          type: 'string',
+          format: 'binary',
         },
-        },
+      },
     },
   })
   @ApiResponse({ status: 200, description: 'Imagen subida exitosamente' })
-    async uploadImage(
-      @UploadedFile(
-        new ParseFilePipe({
-          validators: [
-            new MaxFileSizeValidator({
-              maxSize: 10000000,
-              message: 'El Archivo debe ser menor a 10Mb',
-            }),
-            new FileTypeValidator({
-              fileType: /(.jpg|.jpeg|.png|.webp)$/,
-            }),
-          ],
-        }),
-      )
-      file: Express.Multer.File,
-    ): Promise<UploadApiResponse>  {
-      console.log('File', file);
-      return await this.service.uploadImage(file);
-    }
+  async uploadImage(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 10_000_000,
+            message: 'El archivo debe ser menor a 10Mb',
+          }),
+          new FileTypeValidator({
+            fileType: /(.jpg|.jpeg|.png|.webp)$/,
+          }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ): Promise<string> {
+    console.log('File recibido:', file.originalname);
+    const result = await this.service.uploadImage(file);
+    return result as string;
+  }
 
-
+  // ===============================
+  // 🖼️ SUBIR VARIAS IMÁGENES
+  // ===============================
+  @Post('upload-images')
+  @UseInterceptors(FilesInterceptor('files'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Subir múltiples imágenes' })
+  @ApiBody({
+    description: 'Debe subir uno o varios archivos de imagen (jpg, jpeg, png o webp)',
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Imágenes subidas exitosamente' })
+  async uploadImages(
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 10_000_000,
+            message: 'Cada archivo debe ser menor a 10Mb',
+          }),
+          new FileTypeValidator({
+            fileType: /(.jpg|.jpeg|.png|.webp)$/,
+          }),
+        ],
+      }),
+    )
+    files: Express.Multer.File[],
+  ): Promise<string[]> {
+    console.log(`Cantidad de archivos recibidos: ${files.length}`);
+    const urls = await this.service.uploadImage(files);
+    return urls as string[];
+  }
 }

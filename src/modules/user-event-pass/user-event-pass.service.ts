@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { UserEventPassRepository } from './user-event-pass.repository';
 import { UserEventPass } from './entities/user-event-pass.entity';
 import { UserEventPassFiltersDto } from './dto/user-eventpass-filters.dto';
+import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
 
 @Injectable()
 export class UserEventPassService {
@@ -15,7 +16,7 @@ export class UserEventPassService {
     page: number,
     limit: number,
     filters?: UserEventPassFiltersDto,
-  ): Promise<[UserEventPass[], number]> {
+  ): Promise<RespGetArrayDto<UserEventPass>> {
     return this.repository.findAll(page, limit, filters);
   }
 
@@ -35,15 +36,17 @@ export class UserEventPassService {
     user_id: string,
     event_pass_id: string,
     holder_name: string,
+    holder_instagram_tiktok: string,
     holder_phone?: string,
-    holder_document?: string,
+    holder_email?: string,
   ): Promise<UserEventPass> {
     return this.repository.purchaseEventPass(
       user_id,
       event_pass_id,
       holder_name,
+      holder_instagram_tiktok,
       holder_phone,
-      holder_document,
+      holder_email,
     );
   }
 

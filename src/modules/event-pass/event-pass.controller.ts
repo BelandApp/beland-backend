@@ -17,6 +17,9 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  UploadedFiles,
+  ParseFilePipeBuilder,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -35,36 +38,52 @@ import { CreateEventPassDto } from './dto/create-event-pass.dto';
 import { UpdateEventPassDto } from './dto/update-event-pass.dto';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { Request } from 'express';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { EventPassType } from './entities/event-pass-type.entity';
 
 @ApiTags('event-pass')
 @Controller('event-pass')
-@ApiBearerAuth('JWT-auth')
-@UseGuards(FlexibleAuthGuard)
 export class EventPassController {
 
-  constructor(private readonly service: EventPassService) {}
+  constructor(private readonly service: EventPassService
+  ) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listado con paginación y filtrado' })
+  @ApiResponse({ status: 200, description: 'Listado retornado correctamente' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findAll(
+    @Query() filters: EventPassFiltersDto, 
+  ): Promise<RespGetArrayDto<EventPass>> {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    // En el service, pasás filters directamente
+    return await this.service.findAll(page, limit, filters);
+  }
+
+  @Get('event-type')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listado de los tipos de eventos' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiResponse({ status: 200, description: 'Listado retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async findAll(
+  async findAllTypes(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
-    @Query() filters: EventPassFiltersDto, 
-  ): Promise<[EventPass[], number]> {
+  ): Promise<RespGetArrayDto<EventPassType>> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
 
     // En el service, pasás filters directamente
-    return await this.service.findAll(pageNumber, limitNumber, filters);
+    return await this.service.findAllTypes(pageNumber, limitNumber);
   }
 
   @Get('user')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listado con paginación y filtrado por usuario creador' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -76,7 +95,7 @@ export class EventPassController {
     @Query('limit') limit = '10',
     @Req() req: Request,
     @Query() filters: EventPassFiltersDto, 
-  ): Promise<[EventPass[], number]> {
+  ): Promise<RespGetArrayDto<EventPass>> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
 
@@ -98,16 +117,61 @@ export class EventPassController {
   }
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crear una nueva entrada a evento' })
-  @ApiResponse({ status: 201, description: 'Entrada a evento creada exitosamente' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos para crear la entrada a evento' })
-  @ApiResponse({ status: 500, description: 'No se pudo crear la entrada a evento' })
-  async create(@Body() body: CreateEventPassDto): Promise<EventPass> {
-    return await this.service.create(body);
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'image_url', maxCount: 1 },
+      { name: 'images_urls', maxCount: 10 },
+    ]),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description:
+      'Crea un nuevo EventPass con imagen principal e imágenes adicionales.',
+    type: CreateEventPassDto,
+  })
+  async create(
+    @Body() createEventPassDto: CreateEventPassDto,
+    @UploadedFiles() 
+    files: {
+      image_url?: Express.Multer.File[];
+      images_urls?: Express.Multer.File[];
+    },
+    @Req() req: Request,
+  ) {
+    const user = req.user; // Usuario autenticado desde el token JWT
+
+    // ✅ Validación manual
+  const allFiles = [
+    ...(files.image_url || []),
+    ...(files.images_urls || []),
+  ];
+
+  for (const file of allFiles) {
+    if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)) {
+      throw new BadRequestException(
+        `Formato de archivo inválido (${file.originalname}). Solo se permiten JPG, PNG o WEBP.`,
+      );
+    }
+
+    if (file.size > 10_000_000) {
+      throw new BadRequestException(
+        `El archivo ${file.originalname} supera los 10 MB permitidos.`,
+      );
+    }
+  }
+
+    return this.service.create(
+      createEventPassDto,
+      files,
+      user.id,
+    );
   }
 
   @Put('update-image/:id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Actualizar imagen de entrada para evento' })
@@ -147,6 +211,8 @@ export class EventPassController {
     }
 
   @Put('active/:id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una entrada a evento existente' })
   @ApiParam({ name: 'id', description: 'UUID de la entrada a evento' })
@@ -160,6 +226,8 @@ export class EventPassController {
   }
 
   @Put('disactive/:id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una entrada a evento existente' })
   @ApiParam({ name: 'id', description: 'UUID de la entrada a evento' })
@@ -173,6 +241,8 @@ export class EventPassController {
   }
 
   @Put(':id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una entrada a evento existente' })
   @ApiParam({ name: 'id', description: 'UUID de la entrada a evento' })
@@ -187,6 +257,8 @@ export class EventPassController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Eliminar una entrada a evento por su ID' })
   @ApiParam({ name: 'id', description: 'UUID de la entrada a evento' })

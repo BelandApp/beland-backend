@@ -37,6 +37,9 @@ export class OrderItem {
   @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
   total_becoin: number;
 
+  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
+  total_weight: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
@@ -74,6 +77,7 @@ export class OrderItem {
       // Calcular total_becoin si aplica
       const becoin = Number(this.unit_becoin ?? 0);
       this.total_becoin = this.unit_becoin ? this.quantity * becoin : null;
+
     }
   }
 }

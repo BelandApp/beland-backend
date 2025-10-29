@@ -17,7 +17,12 @@ import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
     AdminsModule,
   ],
   controllers: [UsersController],
-  providers: [UsersService, UsersRepository, RolesRepository, CloudinaryService],
+  providers: [
+    UsersService,
+    UsersRepository,
+    RolesRepository,
+    CloudinaryService,
+  ],
   exports: [UsersService, UsersRepository, TypeOrmModule],
 })
 export class UsersModule {}

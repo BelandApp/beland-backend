@@ -34,6 +34,12 @@ export class CartItem {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true  })
   total_becoin: number; 
 
+  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
+  unit_weight: number;
+
+  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
+  total_weight: number;
+
   @CreateDateColumn({ name: 'created_at' })
   created_at: Date;
 

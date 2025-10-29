@@ -43,6 +43,9 @@ export class Order {
   @Column({ type: 'int', default: 0 })
   total_items: number;
 
+  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
+  total_weight: number;
+
   @Column('varchar', { nullable:true })
   observation: string;
   

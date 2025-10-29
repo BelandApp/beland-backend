@@ -61,7 +61,8 @@ export class CartItemsService {
         const itemCart = await this.findOne(id);
         const total_price = +itemCart.unit_price * +body.quantity;
         const total_becoin = +itemCart.unit_becoin * +body.quantity;
-        updateItem = {...updateItem, total_price, total_becoin};
+        const total_weight = +itemCart.unit_weight * +body.quantity;
+        updateItem = {...updateItem, total_price, total_becoin, total_weight};
       }
       const res = await this.repository.update(id, updateItem);
       if (res.affected === 0)

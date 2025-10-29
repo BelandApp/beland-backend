@@ -6,6 +6,7 @@ import {
   IsPhoneNumber,
   IsNumber,
   Min,
+  IsEmail,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -29,20 +30,28 @@ export class CreateUserEventPassDto {
   @IsNotEmpty()
   holder_name: string;
 
+  @ApiProperty({
+    example: '@JuanPerez',
+    description: 'Usuario de Instagram o Tiktok',
+  })
+  @IsString()
+  @IsNotEmpty()
+  holder_instagram_tiktok: string;
+
   @ApiPropertyOptional({
     example: '+5491122334455',
     description: 'Teléfono del titular (opcional)',
   })
-  @IsPhoneNumber('AR') // Podés cambiar 'AR' por el código del país o quitarlo si es multi-país
+  @IsString() // Podés cambiar 'AR' por el código del país o quitarlo si es multi-país
   @IsOptional()
   holder_phone?: string;
 
   @ApiPropertyOptional({
-    example: 'DNI 40222333',
-    description: 'Documento del titular (opcional)',
+    example: 'example@email.com',
+    description: 'Correo Electronico (opcional)',
   })
-  @IsString()
+  @IsEmail()
   @IsOptional()
-  holder_document?: string;
+  holder_email?: string;
 
 }
