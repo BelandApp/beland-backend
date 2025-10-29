@@ -41,7 +41,7 @@ export class UserEventPassController {
     @Query('page') page = '1',
     @Query('limit') limit = '10',
     @Query() filters?: UserEventPassFiltersDto,
-  ): Promise<RespGetArrayDto<EventPass>> {
+  ): Promise<RespGetArrayDto<UserEventPass>> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     return this.service.findAll(pageNumber, limitNumber, filters);
@@ -62,7 +62,7 @@ export class UserEventPassController {
     @Query('limit') limit = '10',
     @Req() req: Request,
     @Query() filters?: UserEventPassFiltersDto,
-  ): Promise<RespGetArrayDto<EventPass>> {
+  ): Promise<RespGetArrayDto<UserEventPass>> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
 
