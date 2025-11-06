@@ -1,4 +1,5 @@
 // src/auth/entities/auth.entity.ts
+import { User } from '../../users/entities/users.entity';
 import { Role } from '../../roles/entities/role.entity';
 import {
   Column,
@@ -68,4 +69,36 @@ export class AuthVerification {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updated_at: Date;
+}
+
+@Entity({ name: 'forgot_password_codes' }) // Nombre de tabla en plural
+export class ForgotPasswordCode {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @ManyToOne (() => User)
+  @JoinColumn({name:'user_id'})
+  user: User;
+  @Column('uuid')
+  user_id:string;
+
+  @Column('varchar')
+  code: string; // Código de verificación de 6 dígitos
+
+  @Column('int' , {default:0} )
+  count: number; // Código de verificación de 6 dígitos
+
+  // Nuevas propiedades para la verificación
+  @Column({ type: 'boolean', default: false })
+  is_verified: boolean;
+
+  @Column({ type: 'timestamp', nullable: true }) // Coincide con NULLABLE en la DB
+  expires_at: Date;
+
+  @CreateDateColumn({ name: 'created_at' })
+  created_at: Date;
+
+  @UpdateDateColumn({ name: 'update_at' })
+  update_at: Date;
+
 }
