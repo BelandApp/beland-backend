@@ -29,6 +29,7 @@ import { ConfirmAuthDto, RegisterAuthDto } from './dto/register-auth.dto';
 import { Request } from 'express';
 import { FlexibleAuthGuard } from './guards/flexible-auth.guard';
 import { Auth0ExchangeTokenDto } from './dto/auth0-exchange-token.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -135,7 +136,7 @@ export class AuthController {
   })
   async signupVerification(
     @Body() user: RegisterAuthDto,
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string, success: boolean }> {
     this.logger.log(
       `POST /auth/signup-verification: Solicitud de verificación para email: ${user.email}`,
     );
@@ -210,9 +211,9 @@ export class AuthController {
     return await this.authService.getTokenEmail(clave, identificador);
   }
 
-  @Post('forgot-password/:email')
+  @Post('forgot-password-code/:email')
   @ApiOperation({
-    summary: 'Solicita un enlace para restablecer la contraseña',
+    summary: 'Solicita un codigo enviado al email para restablecer la contraseña, solo si el email esta registrado',
   })
   @ApiParam({
     name: 'email',
@@ -221,26 +222,57 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description:
-      'Enlace para restablecer contraseña enviado si el email existe.',
+      'Codigo para restablecer contraseña enviado si el email existe.',
     schema: {
       type: 'object',
       properties: {
         message: {
           type: 'string',
           example:
-            'Si el email está registrado, se ha enviado un enlace para restablecer la contraseña.',
+            'Si el email está registrado, se ha enviado un codigo para restablecer la contraseña.',
         },
       },
     },
   })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  async forgotPassword(
+  async forgotPasswordCode(
     @Param('email') email: string,
-  ): Promise<{ token: string }> {
+  ): Promise<{ message: string, success: boolean }> {
     this.logger.log(
       `POST /auth/forgot-password/${email}: Solicitud de recuperación de contraseña.`,
     );
-    return await this.authService.forgotPassword(email);
+    return await this.authService.forgotPasswordCode(email);
+  }
+
+  @Post('forgot-password-verification-code')
+  @ApiOperation({
+    summary: 'Verifica que el codigo sea correcto para proceder al cambio de clave',
+  })
+  @ApiQuery({ name: 'email', description: 'Correo electronico a recuperar' })
+  @ApiQuery({ name: 'code', description: 'Codigo de 6 digitos enviado por email' })
+  @ApiResponse({
+    status: 200,
+    description: 'Responde con {success: true} si el codigo es correcto.',
+  })
+  async forgotPasswordVerificationCode(
+    @Query('email') email:string, 
+    @Query('code') code:string
+  ): Promise<{message: string, success:boolean}> {
+     return await this.authService.forgotPasswordVerificationCode(email, code);
+  }
+
+  @Post('forgot-password-verification-code')
+  @ApiOperation({
+    summary: 'Verifica que el codigo sea correcto para proceder al cambio de clave',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Responde con {token: string} si se cambio correctamente la clave.',
+  })
+  async forgotPasswordChange(
+    @Body() changePass: ChangePasswordDto,
+  ): Promise<{token:string}> {
+     return await this.authService.forgotPasswordChange(changePass.email, changePass.password);
   }
 
   @Post('exchange-auth0-token')
