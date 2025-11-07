@@ -11,6 +11,7 @@ import {
   Logger,
   UnauthorizedException,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -261,7 +262,7 @@ export class AuthController {
      return await this.authService.forgotPasswordVerificationCode(email, code);
   }
 
-  @Post('forgot-password-verification-code')
+  @Post('forgot-password-change')
   @ApiOperation({
     summary: 'Verifica que el codigo sea correcto para proceder al cambio de clave',
   })
@@ -272,6 +273,8 @@ export class AuthController {
   async forgotPasswordChange(
     @Body() changePass: ChangePasswordDto,
   ): Promise<{token:string}> {
+    if (changePass.password !== changePass.confirmPassword)
+      throw new BadRequestException('Las clave y su confirmacion son diferentes')
      return await this.authService.forgotPasswordChange(changePass.email, changePass.password);
   }
 
