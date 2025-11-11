@@ -48,8 +48,8 @@ export class AuthVerification {
   @Column({ nullable: true })
   address?: string;
 
-  @Column({ type: 'integer', nullable: true }) // Coincide con el tipo 'integer' en la DB
-  phone?: number;
+  @Column({ type: 'varchar', nullable: true }) // Coincide con el tipo 'integer' en la DB
+  phone?: string;
 
   @Column({ nullable: true })
   country?: string;
