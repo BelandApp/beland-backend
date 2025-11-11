@@ -9,7 +9,8 @@ import {
   IsNumber, // Añadir IsNumber para la validación de 'phone'
   IsNotEmpty,
   MinLength,
-  Matches, // Para validación de contraseña fuerte si se usa
+  Matches,
+  IsPhoneNumber, // Para validación de contraseña fuerte si se usa
 } from 'class-validator';
 
 // RegisterAuthDto define los campos necesarios para el registro directo (signup).
@@ -69,8 +70,8 @@ export class RegisterAuthDto extends PickType(CreateUserDto, [
     required: false,
   })
   @IsOptional()
-  @IsNumber({}, { message: 'phone debe ser un número válido' })
-  phone?: number; // Ahora es opcional
+  @IsPhoneNumber()
+  phone?: string; // Ahora es opcional
 
   @ApiPropertyOptional({
     description: 'País del usuario (opcional)',
