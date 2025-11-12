@@ -111,8 +111,8 @@ export class CreateUserDto {
     required: true, // Marked as required for Swagger and validation
   })
   @IsNotEmpty()
-  @IsNumber()
-  phone: number;
+  @IsString()
+  phone: string;
 
   @ApiProperty({
     description: 'País del usuario',

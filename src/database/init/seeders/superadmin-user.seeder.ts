@@ -47,9 +47,8 @@ export class SuperAdminUserSeeder {
     const superAdminAddress =
       this.configService.get<string>('SUPERADMIN_ADDRESS') ||
       'Av. Principal, Edif. Central, Piso 1';
-    const superAdminPhoneStr =
+    const superAdminPhone =
       this.configService.get<string>('SUPERADMIN_PHONE') || '+584140000000';
-    const superAdminPhone = parseInt(superAdminPhoneStr.replace(/\D/g, ''), 10);
     const superAdminCountry =
       this.configService.get<string>('SUPERADMIN_COUNTRY') || 'Venezuela';
     const superAdminCity =
