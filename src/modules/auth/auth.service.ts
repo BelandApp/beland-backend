@@ -367,6 +367,7 @@ export class AuthService {
         city: verificationEntry.city,
         role_relation: defaultRole,
         role_name: defaultRole.name,
+        role_id: defaultRole.role_id,
         isBlocked: false,
         deleted_at: null,
       });
