@@ -17,7 +17,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
 import { UserDto } from './dto/user.dto';
-import { DataSource } from 'typeorm';
+import { DataSource, DeleteResult } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
@@ -758,5 +758,20 @@ export class UsersService {
 
     await this.usersRepository.softDelete(id);
     this.logger.log(`deleteUser(): Usuario ${id} eliminado permanentemente.`);
+  }
+
+  async remove (id:string): Promise<DeleteResult> {
+    try {
+    const result = await this.usersRepository.remove(id);
+
+    if (result.affected === 0) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return result;
+  } catch (error) {
+    console.error ("no se puede borrar, ", JSON.stringify(error))
+    throw new InternalServerErrorException("no se puede borrar, ", JSON.stringify(error))
+  }
   }
 }
