@@ -180,6 +180,21 @@ export class AuthController {
     );
   }
 
+  @Post ('resend-code')
+  @ApiOperation({
+    summary: 'Solicitar un reenvio de codigo. Tiempo de espero entre solicitudes de 1 min',
+  })
+  async resendCode(
+    @Query('email') email: string,
+  ): Promise<{ message: string, success: boolean }> {
+    this.logger.log(
+      `POST /auth/signup-register: Solicitud de reenvio de codigo de verificacion para ${email}`,
+    );
+    return await this.authService.resendCode(
+      email,
+    );
+  }
+
   @Get('tbe')
   @ApiOperation({
     summary: 'identifica',
