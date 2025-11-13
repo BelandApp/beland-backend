@@ -247,7 +247,7 @@ export class AuthService {
       const verificationCode = Math.floor(
         100000 + Math.random() * 900000,
       ).toString();
-      const expiresAt = new Date(Date.now() + 3600 * 1000);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       const newAuthVerification = this.authVerificationRepository.create({
         email: userDto.email,
@@ -276,7 +276,7 @@ export class AuthService {
         to: userDto.email,
         subject: 'Código de Verificación para Beland',
         html: emailContent,
-        text: `Tu código de verificación para Beland es: ${verificationCode}. Este código expira en 1 hora.`, // Añadido campo 'text'
+        text: `Tu código de verificación para Beland es: ${verificationCode}. Este código expira en 10 minutos.`, // Añadido campo 'text'
       });
 
       await queryRunner.commitTransaction();
@@ -365,7 +365,6 @@ export class AuthService {
         phone: verificationEntry.phone, // Ya es number y coincide con User
         country: verificationEntry.country,
         city: verificationEntry.city,
-        role_relation: defaultRole,
         role_name: defaultRole.name,
         role_id: defaultRole.role_id,
         isBlocked: false,
@@ -413,6 +412,92 @@ export class AuthService {
       );
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  async resendCode(email: string): Promise<{ message: string; success: boolean }> {
+    try {
+      const exist = await this.authVerificationRepository.findOne({
+        where: { email },
+        order: { expires_at: 'DESC' },
+      });
+
+      if (!exist)
+        throw new NotFoundException(
+          `El correo ${email} no ha iniciado ningún proceso de verificación.`,
+        );
+
+      if (exist.is_verified)
+        throw new BadRequestException(`El correo ${email} ya fue verificado.`);
+
+      const now = new Date();
+
+      // 🕒 Verificar si expiró completamente
+      if (exist.expires_at && exist.expires_at < now) {
+        await this.authVerificationRepository.delete({ id: exist.id });
+        throw new BadRequestException(
+          'Tu solicitud de verificación expiró. Por favor, vuelve a registrarte.',
+        );
+      }
+
+      // 🧩 Control de reenvío (cooldown de 1 minuto)
+      const diffMs = now.getTime() - new Date(exist.updated_at).getTime();
+      const diffSec = Math.floor(diffMs / 1000);
+      if (diffSec < 60) {
+        const remaining = 60 - diffSec;
+        throw new BadRequestException(
+          `Debes esperar ${remaining} segundos antes de solicitar un nuevo código.`,
+        );
+      }
+
+      // 🔢 Generar nuevo código y actualizar expiración (10 minutos)
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      exist.code = verificationCode;
+      exist.expires_at = expiresAt;
+
+      await this.authVerificationRepository.save(exist);
+
+      // 📨 Enviar correo
+      try {
+        const emailContent = verificationEmailTemplate(
+          exist.full_name || exist.email,
+          verificationCode,
+        );
+
+        const resp = await this.emailService.sendMail({
+          to: exist.email,
+          subject: 'Código de Verificación para Beland',
+          html: emailContent,
+          text: `Tu código de verificación para Beland es: ${verificationCode}. Este código expira en 10 minutos.`,
+        });
+
+        // (Opcional) verificar si fue aceptado por el servidor SMTP
+        if (!resp.info.accepted || resp.info.accepted.length === 0) {
+          console.error('Correo no aceptado por el servidor SMTP:', resp);
+          throw new Error('El servidor de correo rechazó el envío.');
+        }
+
+        return { message: 'Código reenviado correctamente.', success: true };
+      } catch (mailError) {
+        console.error('❌ Falló el envío del correo:', mailError);
+        return {
+          message:
+            'El código se generó correctamente, pero ocurrió un error al enviar el correo. Inténtalo nuevamente.',
+          success: false,
+        };
+      }
+    } catch (error) {
+      console.error('Error al reenviar el código:', error);
+
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error interno al reenviar el código de verificación.',
+      );
     }
   }
 
