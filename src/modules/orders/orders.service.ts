@@ -168,7 +168,7 @@ export class OrdersService {
         throw new ConflictException("No se encuentra el estado de pago ", StatusCode.PENDING);
 
       // b) busco el type id de las transacciones PURCHASE_BELAND
-      const typeTrans = await queryRunner.manager.findOne(TransactionState, {
+      const typeTrans = await queryRunner.manager.findOne(TransactionType, {
         where: { code: TransactionCode.PURCHASE_BELAND },
       });
       if (!typeTrans)
@@ -183,9 +183,10 @@ export class OrdersService {
 
       //    - Tomamos algunos campos del carrito y seteamos leader_id = user_id
 
-      const { id: _cartId, created_at: _c1, updated_at: _c2, items: _items, payment_type_id, payment_type, address, total_amount, total_becoin, ...createOrder } = cart as Cart;
+      const { id: _cartId, created_at: _c1, updated_at: _c2, items: _items, user_id, payment_type_id, payment_type, address, total_amount, total_becoin, ...createOrder } = cart as Cart;
       const order = queryRunner.manager.create(Order, {
         ...createOrder,
+        user_id,
         subtotal_amount: +total_amount,
         subtotal_becoin: +total_becoin,
         total_amount: +total_amount + +this.superadminService.getPriceDelivery(),
