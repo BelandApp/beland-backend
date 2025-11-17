@@ -22,7 +22,6 @@ import {
 } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
-import { CreateOrderDto } from './dto/create-order.dto';
 import { Request } from 'express';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 
@@ -130,6 +129,32 @@ export class OrdersController {
     return await this.service.delivered(order_id, code);
   }
 
+  @Put('collected')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cambiar el estado de la orden a Recolectado. y Entregando las Becoin_Green. Retorna codigo de reciclaje' })
+  @ApiQuery({ name: 'order_id', required: true, description: 'UUID de la orden' })
+  @ApiResponse({ status: 201, description: 'Confirmacion de recoleccion exitosa' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para la confirmacion' })
+  @ApiResponse({ status: 500, description: 'No se pudo realizar la confirmacion' })
+  async collected(@Query('order_id', ParseUUIDPipe) order_id:string): Promise<{success:boolean, code:string}> {
+    return await this.service.collected(order_id);
+  }
+
+  @Put('recycled')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Registra el peso de la cantidad reciclada de una orden' })
+  @ApiQuery({ name: 'code', required: true, description: 'Codigo de reciclaje, debe cohincidir con el de la orden' })
+  @ApiQuery({ name: 'weight', required: true, description: 'Peso total del residuo que entrego el usuario' })
+  @ApiResponse({ status: 201, description: 'Registro exitoso del reciclaje' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para la confirmacion' })
+  @ApiResponse({ status: 500, description: 'No se pudo realizar la confirmacion' })
+  async recycled(
+    @Query('code') code:string,
+    @Query('weight') weight:number,
+   ): Promise<Order> {
+    return await this.service.recycled(code, weight);
+  }
+
   @Put('cancelled')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancelacion de la orden' })
@@ -143,16 +168,6 @@ export class OrdersController {
     @Query('observation') observation:string,
   ): Promise<Order> {
     return await this.service.cancelled(order_id, observation);
-  }
-
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crear una nueva orden' })
-  @ApiResponse({ status: 201, description: 'Orden creado exitosamente' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos para crear la orden' })
-  @ApiResponse({ status: 500, description: 'No se pudo crear la orden' })
-  async create(@Body() body: CreateOrderDto): Promise<Order> {
-    return await this.service.create(body);
   }
 
   @Post('cart')

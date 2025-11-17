@@ -4,5 +4,6 @@ export enum DeliveryStatusCode {
   ON_ROUTE = 'ON_ROUTE',
   DELIVERED = 'DELIVERED',
   RECYCLED = 'RECYCLED',
+  COLLECTED = 'COLLECTED',
   CANCELLED = 'CANCELLED',
 }
