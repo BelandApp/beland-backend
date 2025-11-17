@@ -8,6 +8,7 @@ export class SuperadminConfigService implements OnModuleInit {
   private superadminWalletId: string;
   private readonly priceOneBecoin = 0.05;
   private readonly priceDelivery = 2.5;
+  public readonly recicled_becoin = 2;
 
 
   constructor(private readonly dataSource: DataSource) {}
