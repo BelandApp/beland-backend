@@ -8,6 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 // } from '@nestjs/throttler';
 // Comentado para inhabilitar el guard de Throttler
 // import { APP_GUARD } from '@nestjs/core';
+
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
