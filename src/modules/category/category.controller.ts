@@ -30,8 +30,6 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @ApiTags('category')
 @Controller('category')
-@ApiBearerAuth('JWT-auth')
-@UseGuards(FlexibleAuthGuard)
 export class CategoryController {
   constructor(private readonly service: CategoryService) {}
 
@@ -63,6 +61,8 @@ export class CategoryController {
   }
 
   @Post()
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear una nueva categoria' })
   @ApiResponse({ status: 201, description: 'Categoria creado exitosamente' })
@@ -73,6 +73,8 @@ export class CategoryController {
   }
 
   @Put(':id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una categoria existente' })
   @ApiParam({ name: 'id', description: 'UUID de la categoria' })
@@ -87,6 +89,8 @@ export class CategoryController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Eliminar una categoria por su ID' })
   @ApiParam({ name: 'id', description: 'UUID de la categoria' })

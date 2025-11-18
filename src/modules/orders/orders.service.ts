@@ -357,12 +357,12 @@ export class OrdersService {
     })
     if (!statusOrder) throw new NotFoundException('Estado de envio de orden no encontrada ', DeliveryStatusCode.PREPARING)
 
-    const order = await this.repository.findOne(order_id);
+    const order = await this.dataSource.manager.findOne(Order, {where: {id: order_id}});
     if (!order) throw new NotFoundException('Orden no encontrada')
 
     order.status_id = statusOrder.id;
     
-    return await this.repository.create(order);
+    return await this.dataSource.manager.save(order);
   }
 
   async onRoute (order_id: string): Promise<Order> {
@@ -371,13 +371,13 @@ export class OrdersService {
     })
     if (!statusOrder) throw new NotFoundException('Estado de envio de orden no encontrada ', DeliveryStatusCode.ON_ROUTE)
 
-    const order = await this.repository.findOne(order_id);
+    const order = await this.dataSource.manager.findOne(Order, {where: {id:order_id}});
     if (!order) throw new NotFoundException('Orden no encontrada')
 
     order.status_id = statusOrder.id;
     order.delivery_at = new Date ();
     
-    return await this.repository.create(order);
+    return await this.dataSource.manager.save(order);
   }
 
   async delivered (order_id: string, code: number): Promise<Order> {
@@ -394,7 +394,7 @@ export class OrdersService {
       if (!statusOrder) throw new NotFoundException('Estado de envio de orden no encontrada ', DeliveryStatusCode.DELIVERED)
 
       // 2) Busco la orden a actualizar y actualizo su status a entregado
-      const order = await this.repository.findOne(order_id);
+      const order = await queryRunner.manager.findOne(Order, {where: {id:order_id}});
       if (!order) throw new NotFoundException('Orden no encontrada')
 
       // 2 BIS) PROVISORIO esto esta porque solo esta realizada el pago FULL. 
@@ -546,11 +546,11 @@ export class OrdersService {
     order.recycled_weight= recycled_weight;
     order.recycled_at = new Date ();
     
-    return await this.repository.create(order);
+    return await this.dataSource.manager.save(order);
   }
 
   async cancelled (order_id: string, observation:string): Promise<Order> {
-    // 0) Preparar transacción
+    /*// 0) Preparar transacción
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction(); // opcional: pasar aislamiento
@@ -615,7 +615,8 @@ export class OrdersService {
     } finally {
       // Liberar recursos
       await queryRunner.release();
-    }
+    }*/
+   return
   }
 
   async transferOrder (queryRunner: QueryRunner, order:Order,status: TransactionState ): Promise<void> {
