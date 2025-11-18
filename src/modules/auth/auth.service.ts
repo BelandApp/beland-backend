@@ -527,11 +527,13 @@ export class AuthService {
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await queryRunner.manager.delete(ForgotPasswordCode, { user_id: user.id });
-    
+
     const forgotPassCode = await queryRunner.manager.save(ForgotPasswordCode, {
       user_id: user.id,
       code: await bcrypt.hash(verificationCode, 10),
       expires_at: expiresAt,
+      is_verified: false,
+      count: 0,
     })
     if (!forgotPassCode) {
       this.logger.warn(
@@ -541,10 +543,6 @@ export class AuthService {
         'Error al intentar guardar el codigo para cambio de clave.',
       );
     }
-
-    this.logger.log(
-      `forgotPassword(): Email enviado con codigo de recuperacion : ${verificationCode}.`,
-    );
 
     await queryRunner.commitTransaction();
 
@@ -560,6 +558,10 @@ export class AuthService {
         html: emailContent,
         text: `Tu código de verificación para Cambio de clave es: ${verificationCode}. Este código expira en 1 hora.`, // Añadido campo 'text'
       });
+
+          this.logger.log(
+      `forgotPassword(): Email enviado con codigo de recuperacion : ${verificationCode}.`,
+    );
 
     return {message: "Codigo enviado por correo", success: true}
 
