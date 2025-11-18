@@ -525,6 +525,8 @@ export class AuthService {
         100000 + Math.random() * 900000,
       ).toString();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await queryRunner.manager.delete(ForgotPasswordCode, { user_id: user.id });
     
     const forgotPassCode = await queryRunner.manager.save(ForgotPasswordCode, {
       user_id: user.id,
@@ -544,6 +546,8 @@ export class AuthService {
       `forgotPassword(): Email enviado con codigo de recuperacion : ${verificationCode}.`,
     );
 
+    await queryRunner.commitTransaction();
+
     //envio de email 
 
     const emailContent = ForgotPasswordCodeEmailTemplate(
@@ -556,8 +560,6 @@ export class AuthService {
         html: emailContent,
         text: `Tu código de verificación para Cambio de clave es: ${verificationCode}. Este código expira en 1 hora.`, // Añadido campo 'text'
       });
-
-    await queryRunner.commitTransaction();
 
     return {message: "Codigo enviado por correo", success: true}
 
@@ -631,7 +633,6 @@ export class AuthService {
       // 1. Crear la nueva Wallet sin el QR ni el alias
       const newWallet = queryRunner.manager.create(Wallet, {
         user: user,
-        balance: 0,
       });
 
       // 2. Guardar la Wallet para que se le asigne un ID de la base de datos

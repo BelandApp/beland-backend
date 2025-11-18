@@ -30,10 +30,11 @@ import { WithdrawAccountType } from 'src/modules/withdraw-account-type/entities/
 import { Resource } from 'src/modules/resources/entities/resource.entity';
 import { User } from 'src/modules/users/entities/users.entity';
 import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
-import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
+import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
 import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
 import { DeliveryStatus } from 'src/modules/delivery-status/entities/delivery-status.entity';
 import { EventPassType } from 'src/modules/event-pass/entities/event-pass-type.entity';
+import { Cart } from 'src/modules/cart/entities/cart.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -127,6 +128,10 @@ export class DatabaseInitService {
     }
   }
 
+  async loadUser(): Promise<void> {
+
+  }
+
   async loadResourceByUser (email: string): Promise <void> {
     const user = await this.dataSource.manager.findOne(User, {
       where: {email},
@@ -190,6 +195,7 @@ export class DatabaseInitService {
         'code',
         'Estados de Transacciones',
       );
+
       await this.preloadProd();
       await this.preload<PaymentType>(
         preloadPaymentType,
@@ -253,14 +259,5 @@ export class DatabaseInitService {
     }
   }
 
+}
 
-    async momentaneo() {
-  return await this.dataSource.manager.update(
-    Wallet,
-    { id: "aaa410a7-9921-4d53-8af5-8ef942f88b5b" },
-    {
-      qr: await QRCode.toDataURL("aaa410a7-9921-4d53-8af5-8ef942f88b5b"),
-    }
-  );
-}
-}
