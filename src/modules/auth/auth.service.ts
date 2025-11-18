@@ -301,7 +301,8 @@ export class AuthService {
     } finally {
       await queryRunner.release();
     }
-  }
+  } 
+  
 
   async signupRegister(
     code: string,
