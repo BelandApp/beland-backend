@@ -6,6 +6,7 @@ import {
   NotAcceptableException,
   NotFoundException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { OrdersRepository } from './orders.repository';
 import { Order } from './entities/order.entity';
 import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
@@ -24,11 +25,23 @@ import { StatusCode } from 'src/modules/transaction-state/enum/status.enum';
 import { PaymentTypeCode } from 'src/modules/payment-types/enum/payment-type.enum';
 import { DeliveryStatus } from '../delivery-status/entities/delivery-status.entity';
 import { DeliveryStatusCode } from '../delivery-status/enums/delivery-status.enum';
-import { AmountToPaymentsRepository } from '../amount-to-payment/amount-to-payment.repository';
 
 @Injectable()
 export class OrdersService {
   private readonly completeMessage = 'la orden';
+
+  private generateRandomCode(length = 8): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    const bytes = randomBytes(length);
+
+    for (let i = 0; i < length; i++) {
+      const index = bytes[i] % chars.length;
+      code += chars[index];
+    }
+
+    return code;
+  }
 
   constructor(
     private readonly repository: OrdersRepository,
@@ -36,6 +49,20 @@ export class OrdersService {
     private readonly dataSource: DataSource
 
   ) {}
+
+  async generateUniqueCode(): Promise<string> {
+    let code = this.generateRandomCode();
+
+    const exists = await this.dataSource.manager.findOne(Order, {
+      where: { recycled_code: code },
+    });
+
+    if (exists) {
+      return this.generateUniqueCode(); // recursion hasta que salga único
+    }
+
+    return code;
+  }
 
    async findAll(
     pageNumber: number,
@@ -168,7 +195,7 @@ export class OrdersService {
         throw new ConflictException("No se encuentra el estado de pago ", StatusCode.PENDING);
 
       // b) busco el type id de las transacciones PURCHASE_BELAND
-      const typeTrans = await queryRunner.manager.findOne(TransactionState, {
+      const typeTrans = await queryRunner.manager.findOne(TransactionType, {
         where: { code: TransactionCode.PURCHASE_BELAND },
       });
       if (!typeTrans)
@@ -183,9 +210,10 @@ export class OrdersService {
 
       //    - Tomamos algunos campos del carrito y seteamos leader_id = user_id
 
-      const { id: _cartId, created_at: _c1, updated_at: _c2, items: _items, payment_type_id, payment_type, address, total_amount, total_becoin, ...createOrder } = cart as Cart;
+      const { id: _cartId, created_at: _c1, updated_at: _c2, items: _items, user_id, payment_type_id, payment_type, address, total_amount, total_becoin, ...createOrder } = cart as Cart;
       const order = queryRunner.manager.create(Order, {
         ...createOrder,
+        user_id,
         subtotal_amount: +total_amount,
         subtotal_becoin: +total_becoin,
         total_amount: +total_amount + +this.superadminService.getPriceDelivery(),
@@ -329,12 +357,12 @@ export class OrdersService {
     })
     if (!statusOrder) throw new NotFoundException('Estado de envio de orden no encontrada ', DeliveryStatusCode.PREPARING)
 
-    const order = await this.repository.findOne(order_id);
+    const order = await this.dataSource.manager.findOne(Order, {where: {id: order_id}});
     if (!order) throw new NotFoundException('Orden no encontrada')
 
     order.status_id = statusOrder.id;
     
-    return await this.repository.create(order);
+    return await this.dataSource.manager.save(order);
   }
 
   async onRoute (order_id: string): Promise<Order> {
@@ -343,13 +371,13 @@ export class OrdersService {
     })
     if (!statusOrder) throw new NotFoundException('Estado de envio de orden no encontrada ', DeliveryStatusCode.ON_ROUTE)
 
-    const order = await this.repository.findOne(order_id);
+    const order = await this.dataSource.manager.findOne(Order, {where: {id:order_id}});
     if (!order) throw new NotFoundException('Orden no encontrada')
 
     order.status_id = statusOrder.id;
     order.delivery_at = new Date ();
     
-    return await this.repository.create(order);
+    return await this.dataSource.manager.save(order);
   }
 
   async delivered (order_id: string, code: number): Promise<Order> {
@@ -366,7 +394,7 @@ export class OrdersService {
       if (!statusOrder) throw new NotFoundException('Estado de envio de orden no encontrada ', DeliveryStatusCode.DELIVERED)
 
       // 2) Busco la orden a actualizar y actualizo su status a entregado
-      const order = await this.repository.findOne(order_id);
+      const order = await queryRunner.manager.findOne(Order, {where: {id:order_id}});
       if (!order) throw new NotFoundException('Orden no encontrada')
 
       // 2 BIS) PROVISORIO esto esta porque solo esta realizada el pago FULL. 
@@ -446,8 +474,83 @@ export class OrdersService {
     }
   }
 
+  async collected(order_id: string): Promise<{ success: boolean; code: string }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+
+      // 1. Estado COLLECTED
+      const statusOrder = await queryRunner.manager.findOne(DeliveryStatus, {
+        where: { code: DeliveryStatusCode.COLLECTED },
+      });
+      if (!statusOrder)
+        throw new NotFoundException(
+          'Estado de envio de orden no encontrada',
+          DeliveryStatusCode.COLLECTED,
+        );
+
+      // 2. Orden
+      const order = await queryRunner.manager.findOne(Order, {
+        where: { id: order_id },
+      });
+      if (!order) throw new NotFoundException('Orden no encontrada');
+
+      order.status_id = statusOrder.id;
+      order.recycled_code = await this.generateUniqueCode();
+      order.collected_at = new Date();
+
+      await queryRunner.manager.save(order);
+
+      // 3. Wallet
+      const wallet = await queryRunner.manager.findOne(Wallet, {
+        where: { user_id: order.user_id },
+      });
+      if (!wallet) throw new NotFoundException('No se encontró la billetera');
+
+      wallet.becoin_green =
+        +wallet.becoin_green + +this.superadminService.recicled_becoin;
+
+      await queryRunner.manager.save(wallet);
+
+      // 4. Commit
+      await queryRunner.commitTransaction();
+
+      return { success: true, code: order.recycled_code };
+
+    } catch (error) {
+
+      // ❌ Rollback automático si algo falla
+      await queryRunner.rollbackTransaction();
+      throw error;
+
+    } finally {
+
+      // Cerrar conexión siempre
+      await queryRunner.release();
+    }
+  }
+
+  async recycled (code:string, recycled_weight:number): Promise<Order> {
+    const statusOrder = await this.dataSource.manager.findOne(DeliveryStatus, {
+      where: {code: DeliveryStatusCode.RECYCLED}
+    })
+    if (!statusOrder) throw new NotFoundException('Estado de envio de orden no encontrada ', DeliveryStatusCode.RECYCLED)
+
+    const order = await this.dataSource.manager.findOne(Order, {where: {recycled_code: code}});
+    if (!order) throw new NotFoundException('Orden no encontrada con codigo: ', code)
+
+    order.status_id = statusOrder.id;
+    order.recycled_weight= recycled_weight;
+    order.recycled_at = new Date ();
+    
+    return await this.dataSource.manager.save(order);
+  }
+
   async cancelled (order_id: string, observation:string): Promise<Order> {
-    // 0) Preparar transacción
+    /*// 0) Preparar transacción
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction(); // opcional: pasar aislamiento
@@ -512,8 +615,9 @@ export class OrdersService {
     } finally {
       // Liberar recursos
       await queryRunner.release();
-    }
-  }  
+    }*/
+   return
+  }
 
   async transferOrder (queryRunner: QueryRunner, order:Order,status: TransactionState ): Promise<void> {
     // 8) Traer tipo y estado de transacción (correcto: TransactionType y TransactionState)

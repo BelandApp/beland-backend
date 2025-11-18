@@ -623,6 +623,36 @@ export class UsersController {
     }
   }
 
+  @Delete("finally/:id")
+  @ApiOperation({
+    summary:
+      'Elimina definitivamente Solo Superadmin',
+  })
+  @UseGuards(FlexibleAuthGuard, RolesGuard) // Requiere autenticación, rol y permiso
+  @Roles('ADMIN', 'SUPERADMIN')
+  @ApiParam({
+    name: 'id',
+    description: 'ID del usuario a desactivar',
+    type: String,
+  })
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    this.logger.log(
+      `DELETE /users/${id}: Solicitud para desactivar usuario con ID: ${id} por SuperAdmin`,
+    );
+    try {
+      const result = await this.usersService.remove(id);
+      this.logger.log(
+        `Usuario con ID ${id} desactivado exitosamente por SuperAdmin.`,
+      );
+      // No retorna nada para 204 No Content
+      return result;
+    } catch (error) {
+      this.handleError(error, 'eliminar usuario');
+    }
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard) // Requiere autenticación, rol y permiso

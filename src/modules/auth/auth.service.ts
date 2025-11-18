@@ -23,12 +23,13 @@ import { DataSource, QueryRunner, Repository } from 'typeorm';
 import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { Cart } from 'src/modules/cart/entities/cart.entity';
-import { AuthVerification } from './entities/auth.entity';
+import { AuthVerification, ForgotPasswordCode } from './entities/auth.entity';
 import { EmailService } from 'src/modules/email/email.service';
-import { verificationEmailTemplate } from 'src/modules/email/plantilla/htmlVerificacion';
+import { ForgotPasswordCodeEmailTemplate, verificationEmailTemplate } from 'src/modules/email/plantilla/htmlVerificacion';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtStrategy } from './jwt.strategy';
 import { Request } from 'express';
+import { use } from 'passport';
 
 @Injectable()
 export class AuthService {
@@ -206,9 +207,10 @@ export class AuthService {
     throw new UnauthorizedException('Invalid credentials.');
   }
 
+  //captura un registro y envia un codigo de verificacion al email
   async signupVerification(
     userDto: RegisterAuthDto,
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string, success: boolean }> {
     this.logger.debug(
       `signupVerification(): Iniciando verificación de registro para el email: ${userDto.email}`,
     );
@@ -245,7 +247,7 @@ export class AuthService {
       const verificationCode = Math.floor(
         100000 + Math.random() * 900000,
       ).toString();
-      const expiresAt = new Date(Date.now() + 3600 * 1000);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       const newAuthVerification = this.authVerificationRepository.create({
         email: userDto.email,
@@ -274,14 +276,14 @@ export class AuthService {
         to: userDto.email,
         subject: 'Código de Verificación para Beland',
         html: emailContent,
-        text: `Tu código de verificación para Beland es: ${verificationCode}. Este código expira en 1 hora.`, // Añadido campo 'text'
+        text: `Tu código de verificación para Beland es: ${verificationCode}. Este código expira en 10 minutos.`, // Añadido campo 'text'
       });
 
       await queryRunner.commitTransaction();
       this.logger.log(
         `signupVerification(): Email de verificación enviado a ${userDto.email}.`,
       );
-      return { message: 'Código de verificación enviado a su email.' };
+      return { message: 'Código de verificación enviado a su email.', success:true };
     } catch (error: unknown) {
       await queryRunner.rollbackTransaction();
       this.logger.error(
@@ -363,8 +365,8 @@ export class AuthService {
         phone: verificationEntry.phone, // Ya es number y coincide con User
         country: verificationEntry.country,
         city: verificationEntry.city,
-        role_relation: defaultRole,
         role_name: defaultRole.name,
+        role_id: defaultRole.role_id,
         isBlocked: false,
         deleted_at: null,
       });
@@ -413,7 +415,94 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(email: string): Promise<{ token: string }> {
+  async resendCode(email: string): Promise<{ message: string; success: boolean }> {
+    try {
+      const exist = await this.authVerificationRepository.findOne({
+        where: { email },
+        order: { expires_at: 'DESC' },
+      });
+
+      if (!exist)
+        throw new NotFoundException(
+          `El correo ${email} no ha iniciado ningún proceso de verificación.`,
+        );
+
+      if (exist.is_verified)
+        throw new BadRequestException(`El correo ${email} ya fue verificado.`);
+
+      const now = new Date();
+
+      // 🕒 Verificar si expiró completamente
+      if (exist.expires_at && exist.expires_at < now) {
+        await this.authVerificationRepository.delete({ id: exist.id });
+        throw new BadRequestException(
+          'Tu solicitud de verificación expiró. Por favor, vuelve a registrarte.',
+        );
+      }
+
+      // 🧩 Control de reenvío (cooldown de 1 minuto)
+      const diffMs = now.getTime() - new Date(exist.updated_at).getTime();
+      const diffSec = Math.floor(diffMs / 1000);
+      if (diffSec < 60) {
+        const remaining = 60 - diffSec;
+        throw new BadRequestException(
+          `Debes esperar ${remaining} segundos antes de solicitar un nuevo código.`,
+        );
+      }
+
+      // 🔢 Generar nuevo código y actualizar expiración (10 minutos)
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      exist.code = verificationCode;
+      exist.expires_at = expiresAt;
+
+      await this.authVerificationRepository.save(exist);
+
+      // 📨 Enviar correo
+      try {
+        const emailContent = verificationEmailTemplate(
+          exist.full_name || exist.email,
+          verificationCode,
+        );
+
+        const resp = await this.emailService.sendMail({
+          to: exist.email,
+          subject: 'Código de Verificación para Beland',
+          html: emailContent,
+          text: `Tu código de verificación para Beland es: ${verificationCode}. Este código expira en 10 minutos.`,
+        });
+
+        // (Opcional) verificar si fue aceptado por el servidor SMTP
+        if (!resp.info.accepted || resp.info.accepted.length === 0) {
+          console.error('Correo no aceptado por el servidor SMTP:', resp);
+          throw new Error('El servidor de correo rechazó el envío.');
+        }
+
+        return { message: 'Código reenviado correctamente.', success: true };
+      } catch (mailError) {
+        console.error('❌ Falló el envío del correo:', mailError);
+        return {
+          message:
+            'El código se generó correctamente, pero ocurrió un error al enviar el correo. Inténtalo nuevamente.',
+          success: false,
+        };
+      }
+    } catch (error) {
+      console.error('Error al reenviar el código:', error);
+
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error interno al reenviar el código de verificación.',
+      );
+    }
+  }
+
+  async forgotPasswordCode(email: string): Promise<{ message: string, success: boolean }> {
+    
     this.logger.debug(
       `forgotPassword(): Solicitud para recuperar contraseña para el email: ${email}`,
     );
@@ -423,29 +512,112 @@ export class AuthService {
         `forgotPassword(): Email ${email} no encontrado para recuperación de contraseña.`,
       );
       throw new NotFoundException(
-        'Todavia no es usuario. Debe registrarse primero',
+        'Error al intentar retornar codigo.',
       );
     }
-    const userPayload = {
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+    const verificationCode = Math.floor(
+        100000 + Math.random() * 900000,
+      ).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    
+    const forgotPassCode = await queryRunner.manager.save(ForgotPasswordCode, {
       user_id: user.id,
-    };
-    const secret = this.configService.get<string>('JWT_SECRET');
-    if (!secret) {
-      this.logger.error(
-        'JWT_SECRET no está configurado para forgotPassword. No se puede firmar el token.',
+      code: await bcrypt.hash(verificationCode, 10),
+      expires_at: expiresAt,
+    })
+    if (!forgotPassCode) {
+      this.logger.warn(
+        `forgotPassword(): Error al intentar guardar el codigo para cambio de clave.`,
       );
-      throw new InternalServerErrorException(
-        'Configuración de autenticación faltante.',
+      throw new ConflictException(
+        'Error al intentar guardar el codigo para cambio de clave.',
       );
     }
-    const token = this.jwtService.sign(userPayload, {
-      secret: secret,
-      expiresIn: '1h',
-    });
+
     this.logger.log(
-      `forgotPassword(): Token de recuperación generado para el usuario ID: ${user.id}.`,
+      `forgotPassword(): Email enviado con codigo de recuperacion : ${verificationCode}.`,
     );
-    return { token };
+
+    //envio de email 
+
+    const emailContent = ForgotPasswordCodeEmailTemplate(
+        user.full_name || user.email,
+        verificationCode,
+      );
+      await this.emailService.sendMail({
+        to: user.email,
+        subject: 'Código para Cambio de Clave - BELAND',
+        html: emailContent,
+        text: `Tu código de verificación para Cambio de clave es: ${verificationCode}. Este código expira en 1 hora.`, // Añadido campo 'text'
+      });
+
+    await queryRunner.commitTransaction();
+
+    return {message: "Codigo enviado por correo", success: true}
+
+    } catch (error: unknown) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(
+        `forgotPassword(): Error durante la recuperacion de clave para ${
+          user.email
+        }: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error al iniciar el proceso de recuperacion. ', JSON.stringify(error),
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async forgotPasswordVerificationCode (email:string, code:string): Promise<{message: string, success: boolean}> {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) throw new NotFoundException('Usuario no encontrado')
+
+    const forgotPasswordUser = await this.dataSource.manager.findOne(ForgotPasswordCode, {where: {user_id: user.id, is_verified:false}});
+    if (!forgotPasswordUser) throw new ConflictException('Solicitu inexistente')
+    if (forgotPasswordUser.expires_at <= new Date()) {
+      await this.dataSource.manager.delete(ForgotPasswordCode, {id:forgotPasswordUser.id})
+      throw new BadRequestException ('La solicitud ya expiró')
+    }
+    const isCodeValid = await bcrypt.compare(code, forgotPasswordUser.code);
+    if (!isCodeValid) {
+      forgotPasswordUser.count += 1;
+      if (forgotPasswordUser.count === 4) return {message: `Codigo Erroneo. Queda 1 intento`, success: false}
+      if (forgotPasswordUser.count === 5) {
+        await this.dataSource.manager.delete(ForgotPasswordCode, {id:forgotPasswordUser.id})
+        return {message: `Codigo Erroneo. No podrá seguir intentando`, success: false}
+      }
+      return {message: `Codigo Erroneo. Quedan ${5-forgotPasswordUser.count} intentos`, success: false}
+    }
+    forgotPasswordUser.is_verified=true;
+    await this.dataSource.manager.save(forgotPasswordUser)
+    return {message: 'Codigo Correcto', success: true}
+  }
+
+  async forgotPasswordChange (email:string, password:string): Promise<{token: string}> {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) throw new NotFoundException('Usuario no encontrado')
+    
+    const forgotPasswordUser = await this.dataSource.manager.findOne(ForgotPasswordCode, {where: {user_id: user.id, is_verified:true}});
+    if (!forgotPasswordUser) throw new ConflictException('Solicitu inexistente')
+    if (forgotPasswordUser.expires_at <= new Date()) throw new BadRequestException ('La solicitud ya expiró')
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    const userSave = await this.dataSource.manager.save(User, user)
+
+    return this.createToken(userSave);
   }
 
   async createWalletAndCart(

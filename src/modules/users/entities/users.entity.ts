@@ -69,8 +69,8 @@ export class User {
   @Column({ type: 'text', nullable: true })
   address: string | null;
 
-  @Column({ type: 'numeric', nullable: true })
-  phone: number | null;
+  @Column({ type: 'varchar', nullable: true })
+  phone: string | null;
 
   @Column({ type: 'text', nullable: true })
   country: string | null;
