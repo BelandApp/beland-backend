@@ -6,7 +6,6 @@ import {
   CreateDateColumn,
   OneToOne,
   JoinColumn,
-  ManyToOne,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';

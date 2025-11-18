@@ -1,0 +1,18 @@
+[
+    {
+      "oauth_provider": "google-oauth2",
+      "email": "mindmusic.ec@gmail.com",
+      "username": "Mind.Music",
+      "full_name": "Frank Lopez",
+      "profile_picture_url": "https://lh3.googleusercontent.com/a/ACg8ocLhsrkSTWFEbIXdY7PN38meXipUyEz1ZwFs-2R7ktL6sVfOGeY=s96-c",
+      "role_name": "COMMERCE",
+      "role_id": "fc85d07f-0561-4264-87c8-0de1f1d884fb",
+      "auth0_id": "google-oauth2|101358256682794479540",
+      "address": null,
+      "phone": null,
+      "country": null,
+      "city": null,
+      "isBlocked": false,
+      "password": "$2b$10$BxC5MFtGes7aBz8d/XGLveRABzxQAvvpA/IOc3rmJr/AZ/Yx9Hhhi"
+    }
+]

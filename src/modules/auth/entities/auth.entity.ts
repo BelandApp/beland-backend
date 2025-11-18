@@ -86,7 +86,7 @@ export class ForgotPasswordCode {
   code: string; // Código de verificación de 6 dígitos
 
   @Column('int' , {default:0} )
-  count: number; // Código de verificación de 6 dígitos
+  count: number; // cant de intentos
 
   // Nuevas propiedades para la verificación
   @Column({ type: 'boolean', default: false })
