@@ -3,6 +3,7 @@ import { UserEventPassRepository } from './user-event-pass.repository';
 import { UserEventPass } from './entities/user-event-pass.entity';
 import { UserEventPassFiltersDto } from './dto/user-eventpass-filters.dto';
 import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { PurchaseWhitRechargeDto } from './dto/purchaseWhitRecarge.dto';
 
 @Injectable()
 export class UserEventPassService {
@@ -47,6 +48,19 @@ export class UserEventPassService {
       holder_instagram_tiktok,
       holder_phone,
       holder_email,
+    );
+  }
+
+  /**
+   * 🎟️ Comprar/Adquirir un EventPass
+   */
+  async purchaseEventPassWhitRecharge(
+    user_id: string,
+    dto: PurchaseWhitRechargeDto,
+  ): Promise<UserEventPass> {
+    return this.repository.purchaseEventPassWhitRecharge(
+      user_id,
+      dto,
     );
   }
 
