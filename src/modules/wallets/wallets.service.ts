@@ -545,11 +545,7 @@ export class WalletsService {
   async purchaseRecarge (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
     
     const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
-    if (priceOneBecoin !== 0.05) {
-      throw new InternalServerErrorException(
-        'El precio de BeCoin no es válido',
-      );
-    }
+
     const walletRecharge = await this.recharge(
       user_id,
       {

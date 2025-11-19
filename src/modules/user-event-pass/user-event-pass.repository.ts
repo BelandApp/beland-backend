@@ -12,6 +12,8 @@ import { TransactionType } from '../transaction-type/entities/transaction-type.e
 import { StatusCode } from '../transaction-state/enum/status.enum';
 import { TransactionCode } from '../transactions/enum/transaction-code';
 import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { PurchaseWhitRechargeDto } from './dto/purchaseWhitRecarge.dto';
+import { WalletsService } from '../wallets/wallets.service';
 
 @Injectable()
 export class UserEventPassRepository {
@@ -21,6 +23,8 @@ export class UserEventPassRepository {
 
     @InjectDataSource()
     private readonly dataSource: DataSource,
+
+    private readonly walletService : WalletsService,
 
     private readonly notificationsGateway: NotificationsGateway,
   ) {}
@@ -174,6 +178,35 @@ async findAll(
 
       return savedPass;
     });
+  }
+
+  //PURCHASE EVENT PASS — Atomic transactional
+  async purchaseEventPassWhitRecharge(
+    user_id: string,
+    dto: PurchaseWhitRechargeDto,
+  ): Promise<UserEventPass> {
+    const recharge = await this.walletService.recharge(user_id, {
+      amountUsd: dto.amountUsd,
+      payphone_transactionId: dto.payphone_transactionId,
+      clientTransactionId: dto.clientTransactionId,
+      referenceCode: dto.referenceCode
+    })
+
+    if (!recharge) throw new ConflictException("Fallo la recarga de Becoin")
+    
+    const purchaseEventPass = await this.purchaseEventPass(
+      user_id, 
+      dto.event_pass_id, 
+      dto.holder_name,
+      dto.holder_instagram_tiktok,
+      dto.holder_phone,
+      dto.holder_email
+    )
+    
+    if (!purchaseEventPass) throw new ConflictException("Recarga exitosa. Pero fallo la compra de la entrada. pruebe comprar con los Becoin en su cuenta")
+    
+    return purchaseEventPass;
+  
   }
 
     // 🔄 DEVOLUTION EVENT PASS — refund process
