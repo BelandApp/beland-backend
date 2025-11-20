@@ -23,11 +23,11 @@ export class CreateProductDto {
   @IsOptional()
   weight: number;
 
-  @ApiProperty({ description: 'Costo del producto en monedas internas' })
+  @ApiProperty({ description: 'Costo del producto en USD' })
   @IsNumber()
   cost: number;
 
-  @ApiProperty({ description: 'Precio del producto en monedas internas' })
+  @ApiProperty({ description: 'Precio del producto en USD' })
   @IsNumber()
   price: number;
 

@@ -6,6 +6,7 @@ import { RoleEnum } from '../roles/enum/role-validate.enum';
 @Injectable()
 export class SuperadminConfigService implements OnModuleInit {
   private superadminWalletId: string;
+  private superadminId: string;
   private readonly priceOneBecoin = 0.05;
   private readonly priceDelivery = 2.5;
   public readonly recicled_becoin = 2;
@@ -20,11 +21,16 @@ export class SuperadminConfigService implements OnModuleInit {
          });
      if (superadminWallet) {
        this.superadminWalletId = superadminWallet.id;
+       this.superadminId = superadminWallet.user_id
      }
   }
 
   getWalletId(): string {
     return this.superadminWalletId;
+  }
+
+  getSuperadminId(): string {
+    return this.superadminId;
   }
 
   getPriceOneBecoin(): number {
