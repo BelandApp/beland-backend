@@ -17,6 +17,7 @@ import { ConfigService } from '@nestjs/config';
 import { UsersRepository } from 'src/modules/users/users.repository';
 import { RespSocketDto } from './dto/respSocket.dto';
 import { RespSocketEventpassDto } from './dto/respSocketEventpass.dto';
+import { RespSocketOrdersDto } from './dto/respSocketOrders.dto';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -185,8 +186,13 @@ export class NotificationsGateway
     this.server.to(`user_${userId}`).emit('payment-success', payload);
   }
 
-  // Método para notificar a un usuario (mantengo tu tipo respSocket)
+  // Método para notificar en consumo de entrasdas de eventos
   notifyUserEventPass(userId: string, payload: RespSocketEventpassDto) {
+    this.server.to(`user_${userId}`).emit('payment-success', payload);
+  }
+
+  // Método para notificar Cuando se genera una orden
+  notifyOrders(userId: string, payload: RespSocketOrdersDto) {
     this.server.to(`user_${userId}`).emit('payment-success', payload);
   }
 }

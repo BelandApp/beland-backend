@@ -71,9 +71,8 @@ export class ProductsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   // Requerimos autenticación, rol ADMIN/SUPERADMIN y el permiso granular 'content_permission'.
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard)
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('content_permission') // <-- Usando 'content_permission'
   @ApiOperation({
     summary:
       'Crear un nuevo producto (solo Admin/Superadmin con permiso de contenido).',

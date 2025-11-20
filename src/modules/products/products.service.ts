@@ -10,12 +10,15 @@ import { ProductRepository } from './products.repository';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { OrderDto } from 'src/common/dto/order.dto';
 import { Product } from './entities/product.entity';
+import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
-  constructor(private readonly repo: ProductRepository) {}
+  constructor(private readonly repo: ProductRepository,
+    private readonly superadminConfig: SuperadminConfigService,
+  ) {}
 
   async create(dto: CreateProductDto) {
     const exists = await this.repo.findByName(dto.name);
@@ -23,7 +26,7 @@ export class ProductsService {
       throw new ConflictException(`El producto "${dto.name}" ya existe.`);
     }
 
-    const newProduct = await this.repo.create(dto);
+    const newProduct = this.repo.create({...dto, price_becoin: +dto.price/ +this.superadminConfig.getPriceOneBecoin()});
     return await this.repo.save(newProduct);
   }
 
