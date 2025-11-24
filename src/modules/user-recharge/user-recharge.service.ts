@@ -11,7 +11,7 @@ import { StatusCode } from '../transaction-state/enum/status.enum';
 import { DataSource } from 'typeorm';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { TransactionType } from '../transaction-type/entities/transaction-type.entity';
-import { TransactionCode } from '../transactions/enum/transaction-code';
+import { TransactionCode } from '../transaction-type/enum/transaction-code';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 

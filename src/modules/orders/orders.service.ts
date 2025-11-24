@@ -19,7 +19,7 @@ import { TransactionState } from 'src/modules/transaction-state/entities/transac
 import { Transaction } from 'src/modules/transactions/entities/transaction.entity';
 import { Payment } from 'src/modules/payments/entities/payment.entity';
 import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
-import { TransactionCode } from 'src/modules/transactions/enum/transaction-code';
+import { TransactionCode } from 'src/modules/transaction-type/enum/transaction-code';
 import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
 import { StatusCode } from 'src/modules/transaction-state/enum/status.enum';
 import { PaymentTypeCode } from 'src/modules/payment-types/enum/payment-type.enum';

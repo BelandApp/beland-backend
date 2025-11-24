@@ -4,7 +4,7 @@ import { DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { TransactionState } from 'src/modules/transaction-state/entities/transaction-state.entity';
 import { StatusCode } from '../transaction-state/enum/status.enum';
-import { TransactionCode } from './enum/transaction-code';
+import { TransactionCode } from '../transaction-type/enum/transaction-code';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { User } from '../users/entities/users.entity';
 import { RecentRecipientDto } from './dto/recentRecipient.resp.dto';
