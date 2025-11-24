@@ -31,7 +31,7 @@ import { Request } from 'express';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
 import { WithdrawDto, WithdrawResponseDto } from './dto/withdraw.dto';
-import { TransactionCode } from 'src/modules/transactions/enum/transaction-code';
+import { TransactionCode } from 'src/modules/transaction-type/enum/transaction-code';
 import { RespCobroDto } from './dto/resp-cobro.dto';
 import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
 import {
