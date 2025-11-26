@@ -6,10 +6,12 @@ import {
   CreateDateColumn,
   OneToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';
 
+@Index('wallet_alias_idx', ['alias'])
 @Entity('wallets')
 export class Wallet {
   @PrimaryGeneratedColumn('uuid')
