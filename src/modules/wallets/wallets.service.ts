@@ -15,7 +15,7 @@ import { TransferDto } from './dto/transfer.dto';
 import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
 import { TransactionState } from 'src/modules/transaction-state/entities/transaction-state.entity';
 import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
-import { TransactionCode } from 'src/modules/transactions/enum/transaction-code';
+import { TransactionCode } from 'src/modules/transaction-type/enum/transaction-code';
 import { User } from 'src/modules/users/entities/users.entity';
 import { AmountToPayment } from 'src/modules/amount-to-payment/entities/amount-to-payment.entity';
 import { RespCobroDto } from './dto/resp-cobro.dto';
@@ -545,11 +545,7 @@ export class WalletsService {
   async purchaseRecarge (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
     
     const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
-    if (priceOneBecoin !== 0.05) {
-      throw new InternalServerErrorException(
-        'El precio de BeCoin no es válido',
-      );
-    }
+
     const walletRecharge = await this.recharge(
       user_id,
       {

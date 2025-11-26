@@ -301,7 +301,8 @@ export class AuthService {
     } finally {
       await queryRunner.release();
     }
-  }
+  } 
+  
 
   async signupRegister(
     code: string,
@@ -525,11 +526,15 @@ export class AuthService {
         100000 + Math.random() * 900000,
       ).toString();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    
+
+    await queryRunner.manager.delete(ForgotPasswordCode, { user_id: user.id });
+
     const forgotPassCode = await queryRunner.manager.save(ForgotPasswordCode, {
       user_id: user.id,
       code: await bcrypt.hash(verificationCode, 10),
       expires_at: expiresAt,
+      is_verified: false,
+      count: 0,
     })
     if (!forgotPassCode) {
       this.logger.warn(
@@ -540,9 +545,7 @@ export class AuthService {
       );
     }
 
-    this.logger.log(
-      `forgotPassword(): Email enviado con codigo de recuperacion : ${verificationCode}.`,
-    );
+    await queryRunner.commitTransaction();
 
     //envio de email 
 
@@ -557,7 +560,9 @@ export class AuthService {
         text: `Tu código de verificación para Cambio de clave es: ${verificationCode}. Este código expira en 1 hora.`, // Añadido campo 'text'
       });
 
-    await queryRunner.commitTransaction();
+          this.logger.log(
+      `forgotPassword(): Email enviado con codigo de recuperacion : ${verificationCode}.`,
+    );
 
     return {message: "Codigo enviado por correo", success: true}
 
@@ -631,7 +636,6 @@ export class AuthService {
       // 1. Crear la nueva Wallet sin el QR ni el alias
       const newWallet = queryRunner.manager.create(Wallet, {
         user: user,
-        balance: 0,
       });
 
       // 2. Guardar la Wallet para que se le asigne un ID de la base de datos

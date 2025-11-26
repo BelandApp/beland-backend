@@ -487,8 +487,7 @@ export class UsersService {
       const savedUser = await queryRunner.manager.save(User, newUser);
 
       const newWallet = queryRunner.manager.create(Wallet, {
-        user: savedUser,
-        balance: 0,
+        user_id: savedUser.id,
       });
       await queryRunner.manager.save(Wallet, newWallet);
 

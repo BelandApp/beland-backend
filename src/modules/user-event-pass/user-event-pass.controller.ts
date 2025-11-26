@@ -20,6 +20,7 @@ import { CreateUserEventPassDto } from './dto/create-user-event-pass.dto';
 import { FlexibleAuthGuard } from '../auth/guards/flexible-auth.guard';
 import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
 import { EventPass } from '../event-pass/entities/event-pass.entity';
+import { PurchaseWhitRechargeDto } from './dto/purchaseWhitRecarge.dto';
 
 @ApiTags('user-event-passes')
 @ApiBearerAuth('JWT-auth')
@@ -105,6 +106,22 @@ export class UserEventPassController {
       createDto.holder_instagram_tiktok,
       createDto.holder_phone,
       createDto.holder_email,
+    );
+  }
+
+  @Post('purchase-recharge')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Comprar un EventPass con recarga de saldo payphone' })
+  @ApiResponse({ status: 201, description: 'Compra realizada correctamente' })
+  async purchaseEventPassRecharge(
+    @Body() dto: PurchaseWhitRechargeDto,
+    @Req() req: Request,
+  ): Promise<UserEventPass> {
+    const user_id = (req.user as any).id;
+
+    return this.service.purchaseEventPassWhitRecharge(
+      user_id,
+      dto,
     );
   }
 

@@ -19,12 +19,13 @@ import { TransactionState } from 'src/modules/transaction-state/entities/transac
 import { Transaction } from 'src/modules/transactions/entities/transaction.entity';
 import { Payment } from 'src/modules/payments/entities/payment.entity';
 import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
-import { TransactionCode } from 'src/modules/transactions/enum/transaction-code';
+import { TransactionCode } from 'src/modules/transaction-type/enum/transaction-code';
 import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
 import { StatusCode } from 'src/modules/transaction-state/enum/status.enum';
 import { PaymentTypeCode } from 'src/modules/payment-types/enum/payment-type.enum';
 import { DeliveryStatus } from '../delivery-status/entities/delivery-status.entity';
 import { DeliveryStatusCode } from '../delivery-status/enums/delivery-status.enum';
+import { NotificationsGateway } from '../notification-socket/notification-socket.gateway';
 
 @Injectable()
 export class OrdersService {
@@ -46,7 +47,8 @@ export class OrdersService {
   constructor(
     private readonly repository: OrdersRepository,
     private readonly superadminService: SuperadminConfigService,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly notificationsGateway: NotificationsGateway,
 
   ) {}
 
@@ -338,6 +340,14 @@ export class OrdersService {
 
       // 12) Confirmar transacción
       await queryRunner.commitTransaction();
+
+      // 12Bis) Emiten un mensaje al Superadmin por socket
+      const superadminId = this.superadminService.getSuperadminId();
+      this.notificationsGateway.notifyOrders(superadminId, {
+            order_id: savedOrder.id,
+            total_becoin: savedOrder.total_becoin,
+            items: +savedOrder.items,
+          });
 
       // 13) Devolver la orden creada (podés cargar relaciones si querés)
       return savedOrder;

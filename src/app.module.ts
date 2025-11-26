@@ -8,6 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 // } from '@nestjs/throttler';
 // Comentado para inhabilitar el guard de Throttler
 // import { APP_GUARD } from '@nestjs/core';
+
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
@@ -67,6 +68,7 @@ import { AdminBecoinModule } from './modules/admin-becoin/admin-becoin.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { EventPassModule } from './modules/event-pass/event-pass.module';
 import { UserEventPassModule } from './modules/user-event-pass/user-event-pass.module';
+import { TopupModule } from './modules/topup/topup.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -170,6 +172,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     CloudinaryModule, 
     EventPassModule,
     UserEventPassModule,
+    TopupModule,
   ],
   controllers: [],
   providers: [

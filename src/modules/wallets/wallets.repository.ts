@@ -36,9 +36,10 @@ export class WalletsRepository {
   }
 
   async findByAlias(alias: string): Promise<Wallet> {
-    return this.repository.findOne({
-      where: { alias },
-    });
+    return this.repository
+      .createQueryBuilder('wallet')
+      .where('LOWER(wallet.alias) = LOWER(:alias)', { alias })
+      .getOne();
   }
 
   async findSuperadminWallet(): Promise<Wallet> {
