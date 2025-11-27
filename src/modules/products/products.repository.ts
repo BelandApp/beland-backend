@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DataSource, Repository, In } from 'typeorm';
+import { DataSource, Repository, In, ILike } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { OrderDto } from 'src/common/dto/order.dto';
@@ -49,55 +49,66 @@ export class ProductRepository extends Repository<Product> {
       })}`,
     );
 
-    // Base query
-    const query = this.createQueryBuilder('product');
-
-    // Filtro por categoría (si viene ID)
-    if (category_id) {
-      this.logger.log(
-        `[ProductRepository] Filtrando por categoría ID: ${category_id}`,
-      );
-      query
-        .innerJoin('product.category', 'category') // JOIN solo si filtro
-        .andWhere('category.id = :categoryId', {
-          categoryId: category_id,
-        })
-        .addSelect(['category.id', 'category.name']); // Solo traigo lo necesario de category
-    }
-
-    // Filtro por nombre
-    if (name) {
-      this.logger.log(`[ProductRepository] Filtrando por nombre: ${name}`);
-      query.andWhere('product.name ILIKE :name', {
-        name: `%${name}%`,
-      });
-    }
-
-    // Validar y setear columna de orden
+    // Validar columnas ordenables
     const validSortColumns = ['created_at', 'name', 'price', 'cost'];
     const sortColumn = validSortColumns.includes(sortBy)
       ? sortBy
       : 'created_at';
 
-    // Orden + paginación
-    query.orderBy(
-      `product.${sortColumn}`,
-      orderDir.toUpperCase() as 'ASC' | 'DESC',
+    this.logger.log(
+      `[ProductRepository] Ordenando por: ${sortColumn} ${orderDir.toUpperCase()}`,
     );
-    query.skip((page - 1) * limit).take(limit);
 
-    // Debug query
-    this.logger.log(`[ProductRepository] Query SQL: ${query.getSql()}`);
+    // Construcción del where dinámico
+    const where: any = {};
 
-    // Ejecución
-    const [products, total] = await query.getManyAndCount();
+    if (name) {
+      this.logger.log(
+        `[ProductRepository] Filtro aplicado: name ILIKE %${name}%`,
+      );
+      where.name = ILike(`%${name}%`);
+    }
+
+    if (category_id) {
+      this.logger.log(
+        `[ProductRepository] Filtro aplicado: category.id = ${category_id}`,
+      );
+      where.category = { id: category_id };
+    }
 
     this.logger.log(
-      `[ProductRepository] Resultados: total=${total}, productos=${products.length}`,
+      `[ProductRepository] WHERE final: ${JSON.stringify(where)}`,
     );
 
-    return { products, total, page, limit };
+    this.logger.log(
+      `[ProductRepository] Paginación: page=${page}, limit=${limit}, skip=${(page - 1) * limit}`,
+    );
+
+    // Ejecución con findAndCount
+    const [products, total] = await this.findAndCount({
+      where,
+      relations: {
+        category: true, // ← incluye la relación
+      },
+      order: {
+        [sortColumn]: orderDir.toUpperCase() as 'ASC' | 'DESC',
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    this.logger.log(
+      `[ProductRepository] Resultados obtenidos: total=${total}, productos=${products.length}`,
+    );
+
+    return {
+      products,
+      total,
+      page,
+      limit,
+    };
   }
+
 
   async addGroupTypesToProduct(
     productId: string,
