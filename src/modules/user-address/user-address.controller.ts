@@ -21,7 +21,6 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { AuthenticationGuard } from 'src/modules/auth/guards/auth.guard';
 import { Request } from 'express';
 import { UserAddress } from './entities/user-address.entity';
 import { UserAddressService } from './user-address.service';
@@ -72,6 +71,20 @@ export class UserAddressController {
   @ApiResponse({ status: 500, description: 'No se pudo crear la dirección' })
   async create(@Body() body: CreateUserAddressDto, @Req() req: Request): Promise<UserAddress> {
     return await this.service.create({...body, user_id: req.user.id});
+  }
+
+  @Put('default-address/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar una dirección poniendola como Default' })
+  @ApiParam({ name: 'id', description: 'UUID de la dirección' })
+  @ApiResponse({ status: 200, description: 'Dirección actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró la dirección a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar la dirección' })
+  async updateAdressDefault(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request,
+  ) {
+    return this.service.updateAdressDefault(id, req.user.id);
   }
 
   @Put(':id')

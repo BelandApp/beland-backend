@@ -29,6 +29,7 @@ import { AuthService } from '../auth/auth.service'; // Importar AuthService
 const QRCode = require('qrcode'); // Importar qrcode aquí para que esté disponible en el contexto
 import { UserEventBeland } from './entities/users-event-beland.entity';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 // Constantes para los nombres de roles
 const ROLE_USER = 'USER';
@@ -393,6 +394,45 @@ export class UsersService {
   }
 
   // MÉTODOS DE CREACIÓN/ACTUALIZACIÓN/ELIMINACIÓN
+
+    async changePassword(userId: string, dto: ChangePasswordDto) {
+    this.logger.debug(`Solicitud de cambio de contraseña para usuario: ${userId}`);
+
+    const { currentPassword, newPassword, confirmPassword } = dto;
+
+    // 1. Validar confirmación de contraseña
+    if (newPassword !== confirmPassword) {
+      this.logger.warn(`La nueva contraseña y su confirmación no coinciden para usuario ${userId}`);
+      throw new BadRequestException('La nueva contraseña y la confirmación no coinciden');
+    }
+    
+    // 2. Buscar usuario
+    const user = await this.usersRepository.findById(userId);
+    if (!user) {
+      this.logger.warn(`Usuario ${userId} no encontrado`);
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    // 3. Validar contraseña actual
+    const passwordMatches = await bcrypt.compare(currentPassword, user.password);
+    if (!passwordMatches) {
+      this.logger.warn(`Contraseña actual incorrecta para usuario ${userId}`);
+      throw new BadRequestException('La contraseña actual es incorrecta');
+    }
+
+    // 4. Hashear nueva clave
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // 5. Actualizar contraseña
+    await this.usersRepository.update(userId, {password: hashedPassword});
+
+    this.logger.log(`Contraseña actualizada correctamente para usuario: ${userId}`);
+
+    return {
+      message: 'La contraseña ha sido cambiada exitosamente',
+      success: true,
+    };
+  }
 
   async uploadImgProfileService(id: string, file: Express.Multer.File): Promise<User> {
     try {
