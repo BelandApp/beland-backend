@@ -22,6 +22,13 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({
+    type: 'bigint',
+    generated: 'increment',   // ← esto crea autoincremental en el schema
+    unique: true
+  })
+  order_number: number;
+
   @Column({ type: 'integer', nullable:true})
   code: number;
 
