@@ -24,6 +24,7 @@ import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
 import { Request } from 'express';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
+import { OrderFilterDto } from './dto/order-filter.dto';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -35,17 +36,12 @@ export class OrdersController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listar ordenes con paginación y filtrado '})
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
   @ApiResponse({ status: 200, description: 'Listado de ordenes retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findAll(
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
+    @Query() filters: OrderFilterDto
   ): Promise<[Order[], number]> {
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(pageNumber, limitNumber);
+    return await this.service.findAll(filters);
   }
 
   @Get('pending')

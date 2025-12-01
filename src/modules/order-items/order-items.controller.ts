@@ -36,19 +36,13 @@ export class OrderItemsController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listar items de Ordenes con paginación y filtrado por orden' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
-  @ApiQuery({ name: 'order_id', required: false, type: String, description: 'Filtrar items de ordenes por ID de orden, si no se envia retorna todos los items' })
+  @ApiQuery({ name: 'order_id', required: true, type: String, description: 'Filtrar items de ordenes por ID de orden, si no se envia retorna todos los items' })
   @ApiResponse({ status: 200, description: 'Listado de items de Orden retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findAll(
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
-    @Query('order_id') order_id = '',
+    @Query('order_id') order_id,
   ): Promise<[OrderItem[], number]> {
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(order_id, pageNumber, limitNumber);
+    return await this.service.findAll(order_id);
   }
 
   @Get(':id')

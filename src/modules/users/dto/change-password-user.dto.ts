@@ -7,7 +7,7 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 
-export class ChangePasswordDto {
+export class ChangePasswordUserDto {
   
   @ApiProperty({
     description: 'Contraseña actual del usuario',
