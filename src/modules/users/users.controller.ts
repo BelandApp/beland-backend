@@ -59,6 +59,7 @@ import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.e
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { UserEventBeland } from './entities/users-event-beland.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 // DTO para la ruta de bloqueo/desbloqueo (puede vivir aquí o en un archivo separado)
 class BlockUserDto extends PickType(UpdateUserDto, ['isBlocked'] as const) {
@@ -442,21 +443,12 @@ export class UsersController {
   @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación. La lógica de autorización es interna.
   @ApiOperation({
     summary: 'Obtener un usuario por ID (Propietario o Admin/Superadmin).',
-    description:
-      'Recupera los detalles de un usuario específico. Solo el **propietario** o un **Admin/Superadmin** puede acceder. Un Admin/Superadmin también puede incluir perfiles desactivados.',
+    description:'Recupera los detalles de un usuario específico. Solo el **propietario** o un **Admin/Superadmin** puede acceder. Un Admin/Superadmin también puede incluir perfiles desactivados.',
   })
   @ApiParam({ name: 'id', description: 'ID del usuario', type: String })
-  @ApiResponse({
-    status: 200,
-    description: 'Usuario encontrado.',
-    type: UserDto,
-  })
+  @ApiResponse({status: 200,description: 'Usuario encontrado.',type: UserDto,})
   @ApiResponse({ status: 401, description: 'No autenticado.' })
-  @ApiResponse({
-    status: 403,
-    description:
-      'No autorizado (no es el propietario o rol/permiso insuficiente).',
-  })
+  @ApiResponse({status: 403, description:'No autorizado (no es el propietario o rol/permiso insuficiente).'})
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
@@ -572,6 +564,16 @@ export class UsersController {
       await this.usersService.updateRolToSuperadmin(req.user.id, role_name),
     );
   }
+
+  @ApiBearerAuth()
+  @Patch('change-password')
+  @ApiOperation({ summary: 'Cambiar la contraseña del usuario autenticado' })
+  async changePassword(
+  @Req() req,
+  @Body() dto: ChangePasswordDto
+  ) {
+    return this.usersService.changePassword(req.user.id, dto);
+  } 
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
