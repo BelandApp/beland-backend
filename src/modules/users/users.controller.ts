@@ -59,7 +59,7 @@ import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.e
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { UserEventBeland } from './entities/users-event-beland.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ChangePasswordDto } from './dto/change-password.dto';
+import { ChangePasswordUserDto } from './dto/change-password-user.dto';
 
 // DTO para la ruta de bloqueo/desbloqueo (puede vivir aquí o en un archivo separado)
 class BlockUserDto extends PickType(UpdateUserDto, ['isBlocked'] as const) {
@@ -570,7 +570,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Cambiar la contraseña del usuario autenticado' })
   async changePassword(
   @Req() req,
-  @Body() dto: ChangePasswordDto
+  @Body() dto: ChangePasswordUserDto
   ) {
     return this.usersService.changePassword(req.user.id, dto);
   } 

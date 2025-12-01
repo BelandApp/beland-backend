@@ -26,8 +26,8 @@ import { CreatePrizeDto } from './dto/create-prize.dto';
 import { UpdatePrizeDto } from './dto/update-prize.dto';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 
-@ApiTags('orders')
-@Controller('orders')
+@ApiTags('prizes')
+@Controller('prizes')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(FlexibleAuthGuard)
 export class PrizesController {

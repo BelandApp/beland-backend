@@ -27,9 +27,8 @@ import { ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { AuthService } from '../auth/auth.service'; // Importar AuthService
 const QRCode = require('qrcode'); // Importar qrcode aquí para que esté disponible en el contexto
-import { UserEventBeland } from './entities/users-event-beland.entity';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
-import { ChangePasswordDto } from './dto/change-password.dto';
+import { ChangePasswordUserDto } from './dto/change-password-user.dto';
 
 // Constantes para los nombres de roles
 const ROLE_USER = 'USER';
@@ -395,7 +394,7 @@ export class UsersService {
 
   // MÉTODOS DE CREACIÓN/ACTUALIZACIÓN/ELIMINACIÓN
 
-    async changePassword(userId: string, dto: ChangePasswordDto) {
+    async changePassword(userId: string, dto: ChangePasswordUserDto) {
     this.logger.debug(`Solicitud de cambio de contraseña para usuario: ${userId}`);
 
     const { currentPassword, newPassword, confirmPassword } = dto;

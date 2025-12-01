@@ -26,6 +26,7 @@ import { PaymentTypeCode } from 'src/modules/payment-types/enum/payment-type.enu
 import { DeliveryStatus } from '../delivery-status/entities/delivery-status.entity';
 import { DeliveryStatusCode } from '../delivery-status/enums/delivery-status.enum';
 import { NotificationsGateway } from '../notification-socket/notification-socket.gateway';
+import { OrderFilterDto } from './dto/order-filter.dto';
 
 @Injectable()
 export class OrdersService {
@@ -66,18 +67,11 @@ export class OrdersService {
     return code;
   }
 
-   async findAll(
-    pageNumber: number,
-    limitNumber: number,
-  ): Promise<[Order[], number]> {
+  async findAll(filters: OrderFilterDto): Promise<[Order[], number]> {
     try {
-      const response = await this.repository.findAll(
-        pageNumber,
-        limitNumber,
-      );
-      return response;
+      return await this.repository.findAll(filters);
     } catch (error) {
-      throw new InternalServerErrorException(error);
+      throw new InternalServerErrorException('Error al obtener las órdenes');
     }
   }
 
