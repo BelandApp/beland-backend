@@ -84,7 +84,7 @@ export class CartItemsService {
         );
       return res;
     } catch (error) {
-      throw new ConflictException(`No se puede eliminar ${this.completeMessage}`);
+      throw new ConflictException(`No se puede eliminar ${this.completeMessage}: ${JSON.stringify(error)}`);
     }
   }
 }

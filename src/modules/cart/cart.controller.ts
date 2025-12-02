@@ -119,7 +119,6 @@ export class CartsController {
   @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
   async updateCleanCart(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('payment_type_id', ParseUUIDPipe) payment_type_id: string,
   ) {
     return this.service.updateCleanCart(id);
   }

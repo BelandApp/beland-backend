@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { Cart } from './entities/cart.entity';
-import { NotFoundError } from 'rxjs';
 import { NotFoundException } from '@zxing/library';
 import { CartItem } from 'src/modules/cart-items/entities/cart-item.entity';
 
@@ -34,8 +33,7 @@ export class CartsRepository {
 
   async updateCleanCart(id: string): Promise<Cart> {
     const cart = await this.repository.findOne({
-      where: {id},
-      relations: {items:true},
+      where: {id}
     })
 
     if (!cart) throw new NotFoundException ("Carrito no encontrado")
@@ -48,9 +46,9 @@ export class CartsRepository {
     cart.total_becoin = 0;
     cart.total_weight = 0;
 
-    await this.dataSource.manager.delete(CartItem, {cart_id : cart.id})
-
     const cartClean = await this.repository.save(cart)
+
+    await this.dataSource.manager.delete(CartItem, {cart_id : cart.id})
     
     return cartClean;
   }
