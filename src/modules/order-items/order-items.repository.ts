@@ -24,7 +24,7 @@ export class OrderItemsRepository {
   async findOne(id: string): Promise<OrderItem> {
     return this.repository.findOne({
       where: { id },
-      relations: ['order', 'product', 'consumed_by_user'],
+      relations: ['product'],
     });
   }
 

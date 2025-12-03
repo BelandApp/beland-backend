@@ -56,22 +56,39 @@ export class CartItemsService {
 
   async update(id: string, body: Partial<CartItem>) {
     try {
-      let updateItem = body;
-      if (body.quantity) {
-        const itemCart = await this.findOne(id);
-        const total_price = +itemCart.unit_price * +body.quantity;
-        const total_becoin = +itemCart.unit_becoin * +body.quantity;
-        const total_weight = +itemCart.unit_weight * +body.quantity;
-        updateItem = {...updateItem, total_price, total_becoin, total_weight};
+      // Obtener el item actual
+      const item = await this.repository.findOne( id );
+
+      if (!item) {
+        throw new NotFoundException(`No se encontró el item del carrito`);
       }
-      const res = await this.repository.update(id, updateItem);
-      if (res.affected === 0)
-        throw new NotFoundException(
-          `No se encontró ${this.completeMessage}`,
-        );
-      return res;
+
+      // Si la cantidad viene en la petición...
+      if (body.quantity !== undefined) {
+        const newQuantity = Number(body.quantity);
+
+        // Si la cantidad es 0 → eliminar el ítem
+        if (newQuantity === 0) {
+          await this.repository.remove(id);
+          return { message: 'Item eliminado porque la cantidad es 0' };
+        }
+
+        // Si la cantidad es mayor a 0 → recalcular totales
+        body.total_price = Number(item.unit_price) * newQuantity;
+        body.total_becoin = Number(item.unit_becoin) * newQuantity;
+        body.total_weight = Number(item.unit_weight) * newQuantity;
+      }
+
+      // Merge y guardar (dispara los hooks si los tuvieras)
+      const updated = await this.repository.save({
+        ...item,
+        ...body,
+      });
+
+      return updated;
+
     } catch (error) {
-      throw new InternalServerErrorException(error);
+      throw new InternalServerErrorException(JSON.stringify(error));
     }
   }
 

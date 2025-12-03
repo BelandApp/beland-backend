@@ -95,7 +95,7 @@ export class OrdersRepository {
   async findOne(id: string): Promise<Order> {
     return this.repository.findOne({
       where: { id },
-      relations: {status: true, payment_type:true, address:true, items:true, user:true},
+      relations: {status: true, payment_type:true, address:true, items: {product:true}, user:true},
     });
   }
 
