@@ -56,6 +56,10 @@ export class CartItemsRepository {
     return await this.repository.save(item);
   }
 
+  async save(body: Partial<CartItem>): Promise<CartItem> {
+    return await this.repository.save(body);
+  }  
+
   async update(id: string, body: Partial<CartItem>): Promise<UpdateResult> {
     return await this.repository.update(id, body);
   }

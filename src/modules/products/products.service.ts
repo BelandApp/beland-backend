@@ -23,10 +23,10 @@ export class ProductsService {
   async create(dto: CreateProductDto) {
     const exists = await this.repo.findByName(dto.name);
     if (exists) {
-      throw new ConflictException(`El producto "${dto.name}" ya existe.`);
+      throw new ConflictException(`Ya existe un producto con el nombre "${dto.name}".`);
     }
 
-    const newProduct = this.repo.create({...dto, price_becoin: +dto.price/ +this.superadminConfig.getPriceOneBecoin()});
+    const newProduct = this.repo.create({...dto, price_becoin: +dto.price / +this.superadminConfig.getPriceOneBecoin()});
     return await this.repo.save(newProduct);
   }
 

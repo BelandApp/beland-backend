@@ -41,15 +41,4 @@ export class CreateCartItemDto {
   @Type(() => Number)
   unit_price: number;
 
-  @ApiPropertyOptional({
-    description: 'Precio unitario del producto en Becoin',
-    example: 399,
-    type: Number,
-    format: 'float',
-  })
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @IsPositive()
-  @IsOptional()
-  @Type(() => Number)
-  unit_becoin?: number;
 }
