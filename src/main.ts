@@ -150,7 +150,7 @@ async function bootstrap() {
       'https://admin.beland.app',
       'https://beland.land',
       'https://beland.work',
-      'https://beland-project.netlify.app',
+      'https://beland-develop.netlify.app',
       'https://belandlanding.vercel.app',
       'https://beland-backend-266662044893.us-east1.run.app',
       'https://beland-backend-45tnbek6ya-uk.a.run.app',
