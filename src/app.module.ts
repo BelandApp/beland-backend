@@ -69,6 +69,7 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { EventPassModule } from './modules/event-pass/event-pass.module';
 import { UserEventPassModule } from './modules/user-event-pass/user-event-pass.module';
 import { TopupModule } from './modules/topup/topup.module';
+import { DeliveryModule } from './modules/delivery/delivery.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -173,6 +174,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     EventPassModule,
     UserEventPassModule,
     TopupModule,
+    DeliveryModule,
   ],
   controllers: [],
   providers: [
