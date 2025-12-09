@@ -53,6 +53,15 @@ export class Cart {
   @Column({ type: 'int', default: 0 })
   total_items: number;
 
+  @Column({ type: 'numeric', precision: 7, scale: 2, default: 0, nullable:true })
+  delivery_cost: number
+
+  @Column({ type: 'numeric', precision: 7, scale: 2, default: 0, nullable:true })
+  distance_km: number
+
+  @Column({ type: 'numeric', precision: 7, scale: 2, default: 0, nullable:true })
+  duration_min: number
+
   @OneToMany(() => CartItem, (cartItem) => cartItem.cart, {
     cascade: true,
     eager: true,

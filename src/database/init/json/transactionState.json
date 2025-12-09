@@ -13,5 +13,10 @@
     "code": "FAILED",
     "name": "Fallida",
     "description": "La transacción no pudo ser procesada por un error"
+  },
+  {
+    "code": "CANCELLED",
+    "name": "Cancelada",
+    "description": "La transacción fue cancelada"
   }
 ]
