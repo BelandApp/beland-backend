@@ -6,10 +6,6 @@ export class CreateOrderDto {
   @IsUUID()
   group_id: string;
 
-  @ApiProperty({ description: 'ID del líder que inició la orden' })
-  @IsUUID()
-  leader_id: string;
-
   @ApiProperty({
     description: 'UUID Estado de la orden',
     required: false,
