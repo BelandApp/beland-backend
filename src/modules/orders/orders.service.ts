@@ -442,33 +442,40 @@ export class OrdersService {
       order.delivered_at = new Date();
       const savedOrder = await queryRunner.manager.save(order)
 
-      // 4) Busco la solicitud de pago para confirmar su estado a COMPLETED
-      const payment = await queryRunner.manager.findOne (Payment, {
-        where: {order_id: order.id}
-      })
       // 4 BIS) Busco el estado COMPLETED para poder actualizar el payment y la transaction
       const statusPayment = await queryRunner.manager.findOne(TransactionState, {
         where: {code: StatusCode.COMPLETED}
       })
 
-      payment.status_id = statusPayment.id;
-      await queryRunner.manager.save(payment);
-
-      // 5) Busco la wallet del usuario para descontar el saldo bloqueado definitivamente
-      const wallet = await queryRunner.manager.findOne (Wallet, {
-        where: {user_id: payment.user_id}
+      // 4) Busco la solicitud de pago para confirmar su estado a COMPLETED
+      const payments = await queryRunner.manager.find (Payment, {
+        where: {order_id: order.id}
       })
-      if (!wallet) throw new NotFoundException('Billetera de usuario no encotrada')
+      
+      payments.forEach (async (payment) => {
+        payment.status_id = statusPayment.id;
+        await queryRunner.manager.save(payment);
 
-      wallet.locked_balance = +wallet.locked_balance - +payment.amount_paid;
-      queryRunner.manager.save(wallet)
+        // 5) Busco la wallet del usuario para descontar el saldo bloqueado definitivamente
+        const wallet = await queryRunner.manager.findOne (Wallet, {
+          where: {user_id: payment.user_id}
+        })
+        if (!wallet) throw new NotFoundException('Billetera de usuario no encotrada')
 
-      // 6) Actualizo el estado de la transaccion a completada
-      const transaction = await queryRunner.manager.findOne(Transaction, {
-        where: {id: payment.transaction_id}
+        wallet.locked_balance = +wallet.locked_balance - +payment.amount_paid;
+        queryRunner.manager.save(wallet)
+
+        // 6) Actualizo el estado de la transaccion a completada
+        const transaction = await queryRunner.manager.findOne(Transaction, {
+          where: {id: payment.transaction_id}
+        })
+        transaction.status_id = statusPayment.id;
+        queryRunner.manager.save(transaction);
+
       })
-      transaction.status_id = statusPayment.id;
-      queryRunner.manager.save(transaction);
+      
+      
+
 
       // 7) Buscar la wallet del superAdmin y acreditar el saldo.
       const walletAdmin = await queryRunner.manager.findOne(Wallet, {
