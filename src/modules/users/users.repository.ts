@@ -1,8 +1,11 @@
-import { Repository, Not, IsNull, DeleteResult } from 'typeorm';
-import { Injectable, Logger } from '@nestjs/common';
+import { Repository, Not, IsNull, DeleteResult, QueryRunner, DataSource } from 'typeorm';
+import { ConflictException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/users.entity';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
+import { Cart } from '../cart/entities/cart.entity';
+import { Wallet } from '../wallets/entities/wallet.entity';
+import * as QRCode from 'qrcode';
 
 // Definición de tipo para todos los roles válidos (debe coincidir con UsersService)
 type ValidRoleNames =
@@ -20,6 +23,7 @@ export class UsersRepository {
   constructor(
     @InjectRepository(User)
     private readonly userORMRepository: Repository<User>,
+    private readonly dataSource: DataSource,
   ) {}
 
   private createQueryBuilder(alias = 'user') {
@@ -60,12 +64,11 @@ export class UsersRepository {
    * @param auth0Id El ID de Auth0 del usuario.
    * @returns La entidad User o null si no se encuentra.
    */
-  async findByAuth0Id(auth0Id: string): Promise<User | null> {
-    return this.createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
-      .leftJoinAndSelect('user.admin', 'admin')
-      .where('user.auth0_id = :auth0Id', { auth0Id })
-      .getOne();
+  async findByAuth0Id(auth0_id: string): Promise<User | null> {
+    return this.userORMRepository.findOne({
+      where: {auth0_id},
+      relations: {role:true, wallet:true, cart:true}
+    });
   }
 
   /**
@@ -106,14 +109,6 @@ export class UsersRepository {
       .getOne();
   }
 
-  /**
-   * Crea una nueva instancia de la entidad User.
-   * @param userPartial Datos parciales para crear el usuario.
-   * @returns La nueva entidad User.
-   */
-  create(userPartial: Partial<User>): User {
-    return this.userORMRepository.create(userPartial);
-  }
 
   /**
    * Busca todos los usuarios con paginación, ordenación y filtros opcionales.
@@ -230,13 +225,87 @@ export class UsersRepository {
       .getMany();
   }
 
-  /**
-   * Guarda una entidad User en la base de datos.
-   * @param user La entidad User a guardar.
-   * @returns La entidad User guardada.
-   */
+  async create(user: Partial<User>): Promise<User> {
+    return this.userORMRepository.create(user)
+  }
+
   async save(user: User): Promise<User> {
+    return await this.userORMRepository.save(user)
+  }
+
+  async saveUser(user: Partial<User>): Promise<User> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const userCreated = await queryRunner.manager.save(User, user)
+      if (!userCreated) throw new ConflictException ('No se pudo crear el usuario')
+      
+      this.createWalletAndCart(queryRunner, userCreated);
+
+      await queryRunner.commitTransaction();
+
+    } catch (error) {
+      // ❌ Deshacer todo si algo falla
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Cerrar el queryRunner
+      await queryRunner.release();
+    }
     return this.userORMRepository.save(user);
+  }
+
+  async createWalletAndCart(queryRunner: QueryRunner, user: User ): Promise<void> {
+      this.logger.debug(
+        `createWalletAndCart(): Creando Wallet y Cart para el usuario ID: ${user.id}`,
+      );
+      try {
+        // 1. Crear la nueva Wallet sin el QR ni el alias
+        const newWallet = queryRunner.manager.create(Wallet, {
+          user: user,
+        });
+  
+        // 2. Guardar la Wallet para que se le asigne un ID de la base de datos
+        await queryRunner.manager.save(newWallet);
+        this.logger.debug(
+          `createWalletAndCart(): Wallet creada con ID: ${newWallet.id} para el usuario ID: ${user.id}`,
+        );
+  
+        // 3. Generar el QR y el alias usando el ID recién creado
+        // Ahora el ID de la wallet existe y es seguro usarlo.
+        const qr = await QRCode.toDataURL(newWallet.id);
+        const nombre = user.email.split('@')[0];
+        const random = Math.floor(100 + Math.random() * 900);
+        const alias = `${nombre}${random}`;
+  
+        // 4. Asignar el QR y el alias a la entidad
+        newWallet.alias = alias;
+        newWallet.qr = qr;
+  
+        // 5. Volver a guardar la Wallet para persistir el QR y el alias
+        await queryRunner.manager.save(newWallet);
+        this.logger.debug(
+          `createWalletAndCart(): Wallet con ID: ${newWallet.id} actualizada con QR y alias.`,
+        );
+  
+        // 6. Crear y guardar el Cart
+        const newCart = queryRunner.manager.create(Cart, { user: user });
+        await queryRunner.manager.save(newCart);
+        this.logger.debug(
+          `createWalletAndCart(): Cart creado para el usuario ID: ${user.id}`,
+        );
+      } catch (error: unknown) {
+        this.logger.error(
+          `createWalletAndCart(): Error al crear Wallet/Cart para el usuario ID: ${
+            user.id
+          }: ${(error as Error).message}`,
+          (error as Error).stack,
+        );
+        throw new InternalServerErrorException(
+          'Fallo al crear la cartera o el carrito del usuario.',
+        );
+      }
   }
 
   /**

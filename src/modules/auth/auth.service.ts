@@ -1,3 +1,5 @@
+//auth.service.ts
+
 import {
   BadRequestException,
   ConflictException,
@@ -16,7 +18,6 @@ import { User } from 'src/modules/users/entities/users.entity';
 import { UsersRepository } from 'src/modules/users/users.repository';
 import { JwtService } from '@nestjs/jwt';
 import { RolesRepository } from 'src/modules/roles/roles.repository';
-import { Role } from 'src/modules/roles/entities/role.entity';
 import * as bcrypt from 'bcrypt';
 import * as QRCode from 'qrcode';
 import { DataSource, QueryRunner, Repository } from 'typeorm';
@@ -29,7 +30,8 @@ import { ForgotPasswordCodeEmailTemplate, verificationEmailTemplate } from 'src/
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtStrategy } from './jwt.strategy';
 import { Request } from 'express';
-import { use } from 'passport';
+import { Role } from '../roles/entities/role.entity';
+import { RoleEnum } from '../roles/enum/role-validate.enum';
 
 @Injectable()
 export class AuthService {
@@ -42,7 +44,6 @@ export class AuthService {
     private readonly rolesRepository: RolesRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
     private readonly emailService: EmailService,
     public dataSource: DataSource,
     @Inject(forwardRef(() => JwtStrategy))
@@ -62,7 +63,8 @@ export class AuthService {
       sub: userPayload.id, // Subject del token, generalmente el ID del usuario
       email: userPayload.email,
       role_name: userPayload.role_name,
-      full_name: userPayload.full_name,
+      wallet_id: userPayload.wallet?.id,
+      cart_id: userPayload.cart.id,
       auth0_id: userPayload.auth0_id || undefined, // Incluir auth0_id si existe
     };
     const secret = this.configService.get<string>('JWT_SECRET');
@@ -76,7 +78,7 @@ export class AuthService {
     }
     const token = this.jwtService.sign(payload, {
       secret: secret,
-      expiresIn: '12h',
+      expiresIn: '7d',
     });
     this.logger.log(
       `createToken(): Token JWT local generado para el usuario ID: ${userPayload.id}`,
@@ -102,6 +104,7 @@ export class AuthService {
     return this.createToken(user);
 
   }
+
 
   async login(loginAuthDto: LoginAuthDto): Promise<{ token: string }> {
     const { email, password } = loginAuthDto;
@@ -159,6 +162,53 @@ export class AuthService {
       `login(): Inicio de sesión exitoso para el usuario ID: ${user.id}.`,
     );
     return this.createToken(user);
+  }
+
+  // Login con auth0. toma el token de auth0 y lo convierte a token interno.
+  async loginWithAuth0(auth0Payload: any) {
+    const { sub, email, full_name, profile_picture_url, oauth_provider } = auth0Payload;
+
+    if (!sub) {
+      throw new UnauthorizedException('Token de Auth0 inválido');
+    }
+
+    // Buscar usuario local
+    let user = await this.userRepository.findByEmail(email);
+
+    // Crear usuario si no existe
+    if (!user) {
+      const role = await this.dataSource.manager.findOne(Role, {
+        where: {name: RoleEnum.USER}
+      })
+      if (!role) throw new NotFoundException('No se encuentra el rol ', RoleEnum.USER)
+
+      const userSave = await this.userRepository.saveUser({
+        auth0_id: sub,
+        email,
+        full_name,
+        profile_picture_url,
+        oauth_provider,
+        role_name: role.name,
+        role_id: role.role_id,
+        isBlocked: false,
+        deleted_at: null,
+      });
+
+      user = await this.userRepository.findByEmail(email);
+    }
+
+    if (!user.auth0_id ) {
+      user.auth0_id= sub;
+      await this.userRepository.save(user)
+    }
+
+    // Emitir token interno
+    const token = this.createToken(user);
+
+    return {
+      token,
+      user,
+    };
   }
 
   /**
@@ -303,7 +353,6 @@ export class AuthService {
     }
   } 
   
-
   async signupRegister(
     code: string,
     email: string,
@@ -680,7 +729,7 @@ export class AuthService {
     }
   }
 
-  async exchangeAuth0TokenForLocalToken(
+  async convertTokenAuth0ToLocal(
     auth0Token: string,
   ): Promise<{ token: string }> {
     this.logger.debug(

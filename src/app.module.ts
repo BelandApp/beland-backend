@@ -112,9 +112,14 @@ const isTs = process.env.NODE_ENV !== 'production';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         logging: false,
-        ssl: isTs ? false : {rejectUnauthorized: false},
+        ssl: isTs ? false : { rejectUnauthorized: false },
+
+        extra: {
+          max: 5, 
+        },
       }),
     }),
+
     //  hola agragar algo
     ScheduleModule.forRoot(),
 

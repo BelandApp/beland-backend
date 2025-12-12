@@ -31,6 +31,7 @@ import { Request } from 'express';
 import { FlexibleAuthGuard } from './guards/flexible-auth.guard';
 import { Auth0ExchangeTokenDto } from './dto/auth0-exchange-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -325,8 +326,16 @@ export class AuthController {
     );
     // Llama al método del servicio que usará JwtStrategy para validar el token de Auth0,
     // creará/actualizará el usuario y luego generará el token local.
-    return this.authService.exchangeAuth0TokenForLocalToken(
+    return this.authService.convertTokenAuth0ToLocal(
       auth0ExchangeTokenDto.auth0Token,
     );
   }
+
+  @UseGuards(AuthGuard('auth0'))
+  @Post('auth0-login')
+  async auth0Login(@Req() req: Request) {
+    const auth0Payload = req.user; // viene desde la strategy
+    return this.authService.loginWithAuth0(auth0Payload);
+  }
+  
 }
