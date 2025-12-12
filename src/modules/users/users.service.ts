@@ -159,7 +159,7 @@ export class UsersService {
         await queryRunner.manager.save(User, user);
 
         // Asegurarse de que las relaciones necesarias (ej. rol) estén cargadas para los guards.
-        user = await this.usersRepository.findOne(user.id);
+        user = await this.usersRepository.findById(user.id);
         const { token } = await this.authService.createToken(user); // Generar JWT local
         await queryRunner.commitTransaction(); // Confirma la transacción para usuario existente
         return { user, token };
@@ -211,7 +211,7 @@ export class UsersService {
       await queryRunner.commitTransaction(); // Confirma la transacción para el nuevo usuario
 
       // Retornar el usuario recién creado, asegurando que las relaciones estén cargadas
-      user = await this.usersRepository.findOne(savedUser.id);
+      user = await this.usersRepository.findById(savedUser.id);
       const { token } = await this.authService.createToken(user); // Generar JWT local
       return { user, token };
     } catch (error) {
