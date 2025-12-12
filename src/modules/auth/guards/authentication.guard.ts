@@ -26,13 +26,11 @@ interface LocalJwtPayload {
 }
 
 @Injectable()
-export class AuthenticationGuard implements CanActivate {
-  private readonly logger = new Logger(AuthenticationGuard.name);
+export class AuthenticationGuardRoutes implements CanActivate {
+  private readonly logger = new Logger(AuthenticationGuardRoutes.name);
 
   constructor(
     private readonly jwtService: JwtService,
-    @Inject(forwardRef(() => UsersService))
-    private readonly usersService: UsersService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -68,25 +66,11 @@ export class AuthenticationGuard implements CanActivate {
         });
       }
 
-      // Usar el método correcto del UsersService para obtener la entidad User
-      const user = await this.usersService.findUserEntityById(userId);
-
-      if (!user) {
-        this.logger.warn(
-          `AuthenticationGuard: Usuario ID: ${userId} no encontrado en la base de datos o inactivo.`,
-        );
-        throw new UnauthorizedException({
-          statusCode: HttpStatus.UNAUTHORIZED,
-          message: 'No autorizado. Usuario no encontrado o inactivo.',
-          error: 'Unauthorized',
-        });
-      }
-
       // Adjuntar el objeto User completo a la request
-      request.user = user;
+      request.user = {...payload, id: payload.sub};
 
       this.logger.debug(
-        `AuthenticationGuard: Token local verificado y usuario completo ID: ${user.id} adjuntado a la request.`,
+        `AuthenticationGuard: Token local verificado y usuario completo adjuntado a la request.`,
       );
       return true;
     } catch (error) {
