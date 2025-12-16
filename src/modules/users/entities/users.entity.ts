@@ -29,8 +29,9 @@ import { UserCard } from '../../user-cards/entities/user-card.entity';
 import { GroupInvitation } from '../../group-invitations/entities/group-invitation.entity';
 import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';
 import { Testimony } from '../../testimonies/entities/testimony.entity';
-import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
+import { RoleEnum, ValidRoleNames } from '../../roles/enum/role-validate.enum';
 import { CouponUsage } from '../../coupons/entities/coupon-usage.entity';
+import { UserProfile } from './profile-user.entity';
 
 @Entity('users')
 export class User {
@@ -175,4 +176,7 @@ export class User {
   // 🔹 Un usuario puede tener varias cuentas de retiro
   @OneToMany(() => WithdrawAccount, (withdrawAccount) => withdrawAccount.user)
   withdraw_accounts: WithdrawAccount[];
+
+  @OneToMany(() => UserProfile, (userProfile) => userProfile.user)
+  profiles: UserProfile[];
 }

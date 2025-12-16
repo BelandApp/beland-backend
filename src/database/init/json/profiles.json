@@ -1,0 +1,27 @@
+[
+  {
+    "name": "DELIVERY_DRIVER",
+    "description": "Usuario encargado de realizar la entrega de pedidos a los clientes",
+    "is_active": true
+  },
+  {
+    "name": "WAREHOUSE",
+    "description": "Usuario encargado de almacenar productos, gestionar el inventario y despachar pedidos a los repartidores",
+    "is_active": true
+  },
+  {
+    "name": "COMMERCE",
+    "description": "Comercio o negocio que provee productos disponibles para la venta en la plataforma",
+    "is_active": true
+  },
+  {
+    "name": "FUNDATION",
+    "description": "Fundación u organización responsable de actividades sociales o solidarias",
+    "is_active": true
+  },
+  {
+    "name": "BASE_RECYCLER",
+    "description": "Usuario encargado de recibir los residuos reciclables, gestionarlos y darles tratamiento adecuado",
+    "is_active": true
+  }
+]

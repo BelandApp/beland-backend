@@ -12,7 +12,6 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { User } from 'src/modules/users/entities/users.entity';
 import { UsersRepository } from 'src/modules/users/users.repository';
@@ -32,6 +31,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { Request } from 'express';
 import { Role } from '../roles/entities/role.entity';
 import { RoleEnum } from '../roles/enum/role-validate.enum';
+import { UserProfile } from '../users/entities/profile-user.entity';
 
 @Injectable()
 export class AuthService {
@@ -51,13 +51,20 @@ export class AuthService {
   ) {}
 
   async createToken(userPayload: User): Promise<{ token: string }> {
+    const profilesUser = await this.dataSource.manager.find(
+      UserProfile, {
+        where: {user_id: userPayload.id, profile: {is_active:true}},
+        relations: {profile: true}
+      })
+    const profiles = profilesUser.map ((p) => p.profile.name)
     const payload = {
       sub: userPayload.id, // Subject del token, generalmente el ID del usuario
       id: userPayload.id,
       email: userPayload.email,
       role_name: userPayload.role_name,
       wallet_id: userPayload.wallet?.id,
-      cart_id: userPayload.cart.id,
+      cart_id: userPayload.cart?.id,
+      profiles,
       auth0_id: userPayload.auth0_id || undefined, // Incluir auth0_id si existe
     };
     const secret = this.configService.get<string>('JWT_SECRET');
@@ -148,9 +155,18 @@ export class AuthService {
 
   // Login con auth0. toma el token de auth0 y lo convierte a token interno.
   async loginWithAuth0(auth0Payload: any) {
-    const { sub, email, full_name, profile_picture_url, oauth_provider } = auth0Payload;
+    const email = auth0Payload[`${process.env.AUTH0_NAMESPACE}email`] ?? null;
 
-    if (!sub) {
+    const full_name = auth0Payload[`${process.env.AUTH0_NAMESPACE}name`] ?? null;
+
+    const profile_picture_url = auth0Payload[`${process.env.AUTH0_NAMESPACE}picture`] ?? null;
+
+    const auth0_id = auth0Payload.sub;
+
+    // Provider viene del "sub"
+    const oauth_provider = auth0_id?.split('|')[0]; // google-oauth2
+    
+    if (!auth0_id) {
       throw new UnauthorizedException('Token de Auth0 inválido');
     }
 
@@ -164,8 +180,8 @@ export class AuthService {
       })
       if (!role) throw new NotFoundException('No se encuentra el rol ', RoleEnum.USER)
 
-      const userSave = await this.userRepository.saveUser({
-        auth0_id: sub,
+      await this.userRepository.saveUser({
+        auth0_id: auth0_id,
         email,
         full_name,
         profile_picture_url,
@@ -180,7 +196,7 @@ export class AuthService {
     }
 
     if (!user.auth0_id ) {
-      user.auth0_id= sub;
+      user.auth0_id= auth0_id;
       await this.userRepository.save(user)
     }
 

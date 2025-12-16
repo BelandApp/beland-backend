@@ -17,6 +17,7 @@ import preloadResource from './json/resource.json'
 import preloadResourceSuperAdmin from './json/resourceSuperadmin.json'
 import preloadDelivery from './json/deliveryStatus.json'
 import preloadTypeEvent from './json/eventType.json'
+import preloadProfiles from './json/profiles.json'
 
 // Entidades
 import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
@@ -30,11 +31,10 @@ import { WithdrawAccountType } from 'src/modules/withdraw-account-type/entities/
 import { Resource } from 'src/modules/resources/entities/resource.entity';
 import { User } from 'src/modules/users/entities/users.entity';
 import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
-import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
-import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
+import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
 import { DeliveryStatus } from 'src/modules/delivery-status/entities/delivery-status.entity';
 import { EventPassType } from 'src/modules/event-pass/entities/event-pass-type.entity';
-import { Cart } from 'src/modules/cart/entities/cart.entity';
+import { Profile } from 'src/modules/users/entities/profile.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -195,7 +195,12 @@ export class DatabaseInitService {
         'code',
         'Estados de Transacciones',
       );
-
+      await this.preload<Profile>(
+        preloadProfiles,
+        Profile,
+        'name',
+        'Perfiles de Usuario',
+      );
       await this.preloadProd();
       await this.preload<PaymentType>(
         preloadPaymentType,
