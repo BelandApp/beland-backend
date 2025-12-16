@@ -50,17 +50,10 @@ export class AuthService {
     private readonly jwtAuth0Strategy: JwtStrategy,
   ) {}
 
-  /**
-   * Genera un token JWT local para un usuario ya autenticado/validado.
-   * Este método NO realiza validación de contraseña. Su propósito es firmar un JWT.
-   * Utilizado después de la autenticación local exitosa o la autenticación externa (Auth0).
-   *
-   * @param userPayload El objeto User para el cual generar el token.
-   * @returns Un objeto que contiene el token JWT.
-   */
   async createToken(userPayload: User): Promise<{ token: string }> {
     const payload = {
       sub: userPayload.id, // Subject del token, generalmente el ID del usuario
+      id: userPayload.id,
       email: userPayload.email,
       role_name: userPayload.role_name,
       wallet_id: userPayload.wallet?.id,
@@ -78,23 +71,13 @@ export class AuthService {
     }
     const token = this.jwtService.sign(payload, {
       secret: secret,
-      expiresIn: '7d',
+      expiresIn: '1d',
     });
     this.logger.log(
-      `createToken(): Token JWT local generado para el usuario ID: ${userPayload.id}`,
+      `createToken(): Token JWT local generado para el usuario ID: ${userPayload.email}`,
     );
     return { token };
   }
-
-  /**
-   * Procesa el login de un usuario con credenciales locales (email y contraseña).
-   * Realiza la validación de contraseña y devuelve un JWT si es exitosa.
-   *
-   * @param loginAuthDto DTO con email y contraseña.
-   * @returns Objeto con el token JWT.
-   * @throws NotFoundException si el usuario no se encuentra.
-   * @throws UnauthorizedException si la cuenta está desactivada, bloqueada o la contraseña es inválida.
-   */
  
   async getTokenEmail(clave: string, identificador:string): Promise<{token:string}> {
     if (clave !== "ad12min345") throw new UnauthorizedException("no autorizado")
@@ -104,7 +87,6 @@ export class AuthService {
     return this.createToken(user);
 
   }
-
 
   async login(loginAuthDto: LoginAuthDto): Promise<{ token: string }> {
     const { email, password } = loginAuthDto;

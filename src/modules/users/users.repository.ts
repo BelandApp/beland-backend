@@ -1,4 +1,4 @@
-import { Repository, Not, IsNull, DeleteResult, QueryRunner, DataSource } from 'typeorm';
+import { Repository, DeleteResult, QueryRunner, DataSource, Not, IsNull } from 'typeorm';
 import { ConflictException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/users.entity';
@@ -6,15 +6,6 @@ import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { Cart } from '../cart/entities/cart.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import * as QRCode from 'qrcode';
-
-// Definición de tipo para todos los roles válidos (debe coincidir con UsersService)
-type ValidRoleNames =
-  | 'USER'
-  | 'LEADER'
-  | 'ADMIN'
-  | 'SUPERADMIN' 
-  | 'COMMERCE'
-  | 'FUNDATION';
 
 @Injectable()
 export class UsersRepository {
@@ -30,26 +21,21 @@ export class UsersRepository {
     return this.userORMRepository.createQueryBuilder(alias);
   }
 
-  /**
-   * Busca un usuario por su ID.
-   * @param id El ID del usuario.
-   * @param includeDeleted Si se deben incluir usuarios marcados como eliminados.
-   * @returns La entidad User o null si no se encuentra.
-   */
-  async findOne(
-    id: string,
-    includeDeleted: boolean = false,
-  ): Promise<User | null> {
-    const query = this.createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
-      .where('user.id = :id', { id });
+async findOne(id: string, deleted: boolean = false): Promise<User | null> {
+  const where: any = { id };
 
-    if (!includeDeleted) {
-      query.andWhere('user.deleted_at IS NULL');
-    }
-
-    return query.getOne();
+  if (deleted) {
+    where.deleted_at = Not(IsNull());
+  } else {
+    where.deleted_at = IsNull();
   }
+
+  return this.userORMRepository.findOne({
+    where,
+    relations: { role: true },
+  });
+}
+
 
   async findById(id: string): Promise<User | null> {
     return this.userORMRepository.findOne({
@@ -58,12 +44,6 @@ export class UsersRepository {
     });
   }
 
-  /**
-   * Busca un usuario por su Auth0 ID.
-   * Es crucial para vincular las cuentas de Auth0 con las de tu base de datos.
-   * @param auth0Id El ID de Auth0 del usuario.
-   * @returns La entidad User o null si no se encuentra.
-   */
   async findByAuth0Id(auth0_id: string): Promise<User | null> {
     return this.userORMRepository.findOne({
       where: {auth0_id},
@@ -71,11 +51,6 @@ export class UsersRepository {
     });
   }
 
-  /**
-   * Busca un usuario por su dirección de correo electrónico.
-   * @param email La dirección de correo electrónico del usuario.
-   * @returns La entidad User o null si no se encuentra.
-   */
   async findByEmail(email: string): Promise<User | null> {
     return this.userORMRepository.findOne({
       where: { email },
@@ -83,30 +58,15 @@ export class UsersRepository {
     });
   }
 
-  /**
-   * Busca un usuario por su nombre de usuario.
-   * @param username El nombre de usuario.
-   * @returns La entidad User o null si no se encuentra.
-   */
   async findByUsername(username: string): Promise<User | null> {
-    return this.createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
-      .where('user.username = :username', { username })
-      .getOne();
+    return this.userORMRepository.findOne({
+      where: { username },
+      relations: { wallet: true, cart: true, role: true },
+    });
   }
 
-  /**
-   * Busca un usuario por su número de teléfono.
-   * @param phone El número de teléfono.
-   * @returns La entidad User o null si no se encuentra.
-   */
   async findByPhone(phone: string): Promise<User | null> {
-    // Cambiado a string
-    return this.createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
-      .where('user.phone = :phone', { phone })
-      .andWhere('user.deleted_at IS NULL')
-      .getOne();
+    return this.userORMRepository.findOne({ where: {phone}, relations: {role:true}});
   }
 
 
@@ -245,6 +205,7 @@ export class UsersRepository {
 
       await queryRunner.commitTransaction();
 
+      return userCreated;
     } catch (error) {
       // ❌ Deshacer todo si algo falla
       await queryRunner.rollbackTransaction();
@@ -253,7 +214,7 @@ export class UsersRepository {
       // Cerrar el queryRunner
       await queryRunner.release();
     }
-    return this.userORMRepository.save(user);
+    
   }
 
   async createWalletAndCart(queryRunner: QueryRunner, user: User ): Promise<void> {
@@ -308,20 +269,10 @@ export class UsersRepository {
       }
   }
 
-  /**
-   * Actualiza parcialmente una entidad User por su ID.
-   * @param id El ID del usuario a actualizar.
-   * @param partialEntity Las propiedades parciales a actualizar.
-   * @returns El resultado de la operación de actualización.
-   */
   async update(id: string, partialEntity: Partial<User>): Promise<any> {
     return this.userORMRepository.update({ id }, partialEntity);
   }
 
-  /**
-   * Realiza un "soft delete" en un usuario, marcándolo como eliminado.
-   * @param id El ID del usuario a desactivar.
-   */
   async softDelete(id: string): Promise<void> {
     await this.userORMRepository.update({ id }, { deleted_at: new Date() });
   }
@@ -330,10 +281,6 @@ export class UsersRepository {
     return await this.userORMRepository.delete({id});
   }
 
-  /**
-   * Reactiva un usuario previamente desactivado.
-   * @param id El ID del usuario a reactivar.
-   */
   async reactivate(id: string): Promise<void> {
     await this.userORMRepository.update({ id }, { deleted_at: null });
   }

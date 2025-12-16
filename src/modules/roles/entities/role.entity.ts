@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity'; // Importar la entidad User
+import { ValidRoleNames } from '../enum/role-validate.enum';
 
 @Entity('roles')
 export class Role {
@@ -14,7 +15,7 @@ export class Role {
   role_id: string;
 
   @Column({ type: 'text', unique: true })
-  name: 'USER' | 'LEADER' | 'ADMIN' | 'SUPERADMIN' | 'COMMERCE' | 'FUNDATION';
+  name: ValidRoleNames;
 
   @Column({ type: 'text', nullable: true })
   description: string | null; // Cambiado a string | null para coincidir con nullable: true

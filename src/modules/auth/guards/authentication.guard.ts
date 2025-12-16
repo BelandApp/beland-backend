@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
-import { UsersService } from 'src/modules/users/users.service';
 
 // Interfaz para el payload de tu token JWT local
 // Esto asegura que TypeScript reconozca la propiedad 'sub'
@@ -26,8 +25,8 @@ interface LocalJwtPayload {
 }
 
 @Injectable()
-export class AuthenticationGuardRoutes implements CanActivate {
-  private readonly logger = new Logger(AuthenticationGuardRoutes.name);
+export class AuthenticationRoutesGuard implements CanActivate {
+  private readonly logger = new Logger(AuthenticationRoutesGuard.name);
 
   constructor(
     private readonly jwtService: JwtService,

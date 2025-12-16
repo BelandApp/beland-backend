@@ -45,15 +45,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Obtener perfil del usuario autenticado',
-    description:
-      'Retorna datos del usuario logueado. Requiere token JWT válido.',
-  })
+    description:'Retorna datos del usuario logueado. Requiere token JWT válido.',})
   @ApiBearerAuth('JWT-auth')
-  @ApiResponse({
-    status: 200,
-    description: 'Perfil del usuario obtenido exitosamente.',
-    type: User,
-  })
+  @ApiResponse({status: 200, description: 'Perfil del usuario obtenido exitosamente.', type: User})
   @ApiResponse({ status: 401, description: 'No autenticado.' })
   @ApiResponse({ status: 403, description: 'No autorizado.' })
   async getProfile(@Req() req: Request): Promise<User> {
@@ -67,11 +61,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Inicia sesión de usuario con email y contraseña' })
-  @ApiResponse({
-    status: 200,
-    description: 'Inicio de sesión exitoso.',
-    type: String, // Debería ser { token: string }
-  })
+  @ApiResponse({status: 200,description: 'Inicio de sesión exitoso.'})
   @ApiResponse({ status: 401, description: 'Credenciales inválidas.' })
   @ApiBody({ type: LoginAuthDto })
   async login(@Body() loginAuthDto: LoginAuthDto): Promise<{ token: string }> {
@@ -84,58 +74,11 @@ export class AuthController {
 
   @Post('signup-verification')
   @ApiOperation({
-    summary:
-      'Inicia el proceso de registro de un nuevo usuario con verificación por email',
-    description:
-      'Registra un nuevo usuario con los detalles proporcionados y envía un código de verificación por email. Email y contraseña son obligatorios, el resto de campos son opcionales.',
+    summary: 'Inicia el proceso de registro de un nuevo usuario con verificación por email',
+    description: 'Registra un nuevo usuario con los detalles proporcionados y envía un código de verificación por email. Email y contraseña son obligatorios, el resto de campos son opcionales.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Verificación de registro iniciada. Email enviado.',
-    schema: {
-      type: 'object',
-      properties: {
-        message: {
-          type: 'string',
-          example: 'Código de verificación enviado a su email.',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Datos de entrada inválidos o email ya registrado.',
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', format: 'email', example: 'test@example.com' },
-        password: { type: 'string', example: 'StrongPassword123!' },
-        confirmPassword: { type: 'string', example: 'StrongPassword123!' },
-        username: { type: 'string', example: 'johndoe', nullable: true }, // Ahora opcional
-        address: { type: 'string', example: '123 Main St', nullable: true }, // Ahora opcional
-        phone: { type: 'number', example: 123456789, nullable: true }, // Ahora opcional
-        country: { type: 'string', example: 'USA', nullable: true }, // Ahora opcional
-        city: { type: 'string', example: 'New York', nullable: true }, // Ahora opcional
-        full_name: {
-          type: 'string',
-          example: 'John Doe',
-          description: 'Nombre completo del usuario (opcional)',
-          nullable: true,
-        },
-        profile_picture_url: {
-          type: 'string',
-          format: 'url',
-          example: 'https://example.com/photo.jpg',
-          description: 'URL de la imagen de perfil (opcional)',
-          nullable: true,
-        },
-      },
-      // Solo email, password y confirmPassword son requeridos para este endpoint
-      required: ['email', 'password', 'confirmPassword'],
-    },
-  })
+  @ApiResponse({status: 200,description: 'Verificación de registro iniciada. Email enviado.'})
+  @ApiResponse({status: 400, description: 'Datos de entrada inválidos o email ya registrado.'})
   async signupVerification(
     @Body() user: RegisterAuthDto,
   ): Promise<{ message: string, success: boolean }> {
