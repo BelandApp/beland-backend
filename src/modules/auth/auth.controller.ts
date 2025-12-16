@@ -274,6 +274,7 @@ export class AuthController {
     );
   }
 
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('auth0'))
   @Post('auth0-login')
   async auth0Login(@Req() req: Request) {
