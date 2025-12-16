@@ -185,10 +185,10 @@ export class AuthService {
     }
 
     // Emitir token interno
-    const token = this.createToken(user);
+    const tokenCreated = await this.createToken(user);
 
     return {
-      token,
+      token : tokenCreated.token,
       user,
     };
   }
