@@ -11,7 +11,6 @@ export class Auth0Strategy extends PassportStrategy(Strategy, 'auth0') {
   ) {
     const auth0Domain = configService.get<string>('AUTH0_DOMAIN');
     const auth0Audience = configService.get<string>('AUTH0_AUDIENCE');
-    const auth0Namespace = configService.get<string>('AUTH0_NAMESPACE');
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       audience: [
