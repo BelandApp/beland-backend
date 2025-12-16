@@ -23,7 +23,7 @@ import * as bcrypt from 'bcrypt';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
 import { Cart } from 'src/modules/cart/entities/cart.entity';
-import { ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
+import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { AuthService } from '../auth/auth.service'; // Importar AuthService
 const QRCode = require('qrcode'); // Importar qrcode aquí para que esté disponible en el contexto
@@ -31,22 +31,6 @@ import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { ChangePasswordUserDto } from './dto/change-password-user.dto';
 
 // Constantes para los nombres de roles
-const ROLE_USER = 'USER';
-const ROLE_LEADER = 'LEADER';
-const ROLE_ADMIN = 'ADMIN';
-const ROLE_SUPERADMIN = 'SUPERADMIN';
-const ROLE_COMMERCE = 'COMMERCE';
-const ROLE_FUNDATION = 'FUNDATION';
-
-// // Definición de tipo para todos los roles válidos
-// type ValidRoleNames =
-//   | 'USER'
-//   | 'LEADER'
-//   | 'ADMIN'
-//   | 'SUPERADMIN'
-//   | 'COMMERCE'
-//   | 'FUNDATION';
-
 
 @Injectable()
 export class UsersService {
@@ -170,15 +154,15 @@ export class UsersService {
         `findOrCreateAuth0User(): Creando nuevo usuario para email: ${auth0LoginDto.email}`,
       );
 
-      let defaultRole = await this.rolesRepository.findByName(ROLE_USER);
+      let defaultRole = await this.rolesRepository.findByName(RoleEnum.USER);
       if (!defaultRole) {
         defaultRole = await queryRunner.manager.save(Role, {
-          name: ROLE_USER,
+          name: RoleEnum.USER,
           description: 'Usuario básico del sistema',
           is_active: true,
         });
         this.logger.warn(
-          `findOrCreateAuth0User(): El rol '${ROLE_USER}' no existía, fue creado.`,
+          `findOrCreateAuth0User(): El rol '${RoleEnum.USER}' no existía, fue creado.`,
         );
       }
 
@@ -376,7 +360,7 @@ export class UsersService {
   async isAdmin(userId: string): Promise<boolean> {
     const user = await this.usersRepository.findOne(userId);
     return (
-      user?.role_name === ROLE_ADMIN || user?.role_name === ROLE_SUPERADMIN
+      user?.role_name === RoleEnum.ADMIN || user?.role_name === RoleEnum.SUPERADMIN
     );
   }
 
@@ -503,11 +487,11 @@ export class UsersService {
     await queryRunner.startTransaction();
 
     try {
-      let userRole = await this.rolesRepository.findByName(ROLE_USER);
+      let userRole = await this.rolesRepository.findByName(RoleEnum.USER);
 
       if (!userRole) {
         userRole = await queryRunner.manager.save(Role, {
-          name: ROLE_USER,
+          name: RoleEnum.USER,
           description: 'Usuario básico del sistema',
           is_active: true,
         });
@@ -667,8 +651,8 @@ export class UsersService {
 
     if (updateUserDto.role) {
       if (
-        userToUpdate.role_name === ROLE_SUPERADMIN &&
-        updateUserDto.role !== ROLE_SUPERADMIN
+        userToUpdate.role_name === RoleEnum.SUPERADMIN &&
+        updateUserDto.role !== RoleEnum.SUPERADMIN
       ) {
         throw new BadRequestException(
           'No se puede cambiar el rol de un SUPERADMIN.',
@@ -709,7 +693,7 @@ export class UsersService {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
 
-    if (user.role_name === ROLE_SUPERADMIN) {
+    if (user.role_name === RoleEnum.SUPERADMIN) {
       throw new BadRequestException(
         'No se puede bloquear o desbloquear a un SUPERADMIN.',
       );
@@ -740,7 +724,7 @@ export class UsersService {
         `El usuario con ID "${id}" ya está desactivado.`,
       );
     }
-    if (user.role_name === ROLE_SUPERADMIN) {
+    if (user.role_name === RoleEnum.SUPERADMIN) {
       throw new BadRequestException('No se puede desactivar a un SUPERADMIN.');
     }
 
@@ -788,7 +772,7 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
-    if (user.role_name === ROLE_SUPERADMIN) {
+    if (user.role_name === RoleEnum.SUPERADMIN) {
       throw new BadRequestException(
         'No se puede eliminar a un SUPERADMIN permanentemente.',
       );

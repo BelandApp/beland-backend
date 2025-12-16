@@ -29,7 +29,7 @@ import { UserCard } from '../../user-cards/entities/user-card.entity';
 import { GroupInvitation } from '../../group-invitations/entities/group-invitation.entity';
 import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';
 import { Testimony } from '../../testimonies/entities/testimony.entity';
-import { ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
+import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
 import { CouponUsage } from '../../coupons/entities/coupon-usage.entity';
 
 @Entity('users')
@@ -61,7 +61,7 @@ export class User {
   // Actualizado para usar los roles que me indicaste
   @Column({
     type: 'enum',
-    enum: ['USER', 'LEADER', 'ADMIN', 'SUPERADMIN', 'COMMERCE', 'FUNDATION'],
+    enum: RoleEnum,
     default: 'USER',
   })
   role_name: ValidRoleNames; // Nombre del rol (ej. 'USER', 'ADMIN')

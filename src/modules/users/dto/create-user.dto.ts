@@ -14,6 +14,7 @@ import {
   IsDate,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -163,8 +164,8 @@ export class CreateUserDto {
     required: false,
   })
   @IsOptional()
-  @IsEnum(['USER', 'LEADER', 'ADMIN', 'SUPERADMIN', 'COMMERCE', 'FUNDATION'])
-  role_name?: 'USER' | 'LEADER' | 'ADMIN' | 'SUPERADMIN' | 'COMMERCE' | 'FUNDATION' = 'USER';
+  @IsEnum(RoleEnum)
+  role_name?: ValidRoleNames = 'USER';
 
   @ApiProperty({
     description: 'Si el usuario está bloqueado. Por defecto, false.',

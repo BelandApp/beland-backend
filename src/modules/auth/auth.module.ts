@@ -28,6 +28,7 @@ import { EmailService } from 'src/modules/email/email.service';
 import { AuthController } from './auth.controller';
 import { WalletsModule } from 'src/modules/wallets/wallets.module';
 import { CartModule } from 'src/modules/cart/cart.module';
+import { Auth0Strategy } from './strategy/auth0.strategy';
 
 @Global()
 @Module({
@@ -62,6 +63,7 @@ import { CartModule } from 'src/modules/cart/cart.module';
     JwtAuthGuard, // Tu guardia de autenticación de Auth0
     FlexibleAuthGuard, // Tu guardia que combina ambos
     EmailService,
+    Auth0Strategy,
   ],
   exports: [
     AuthService,
