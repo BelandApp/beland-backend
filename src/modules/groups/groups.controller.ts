@@ -25,7 +25,6 @@ import {
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
-import { GroupDto } from './dto/group.dto';
 // Importar los DTOs públicos
 import { PublicGroupDto } from './dto/public-group.dto';
 
@@ -54,6 +53,7 @@ import { UsersService } from 'src/modules/users/users.service';
 import { CreateGroupMemberDto } from 'src/modules/group-members/dto/create-group-member.dto'; // Importar CreateGroupMemberDto
 import { plainToInstance } from 'class-transformer'; // Importar plainToInstance aquí
 import { GroupInvitationDto } from 'src/modules/group-invitations/dto/group-invitation.dto'; // IMPORTACIÓN AÑADIDA/VERIFICADA
+import { Group } from './entities/group.entity';
 
 @ApiTags('groups') // Etiqueta para la documentación de Swagger
 @Controller('groups')
@@ -221,7 +221,7 @@ export class GroupsController {
     status: 200,
     description:
       'Lista de grupos a los que pertenece el usuario, con información completa.',
-    type: [GroupDto], // Retorna GroupDto para información completa
+    type: [Group], // Retorna GroupDto para información completa
   })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @ApiResponse({
@@ -229,7 +229,7 @@ export class GroupsController {
     description: 'Prohibido (ID de usuario no encontrado).',
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
-  async getMyGroups(@Req() req: Request): Promise<GroupDto[]> {
+  async getMyGroups(@Req() req: Request): Promise<Group[]> {
     const userId = this.getUserId(req);
     this.logger.log(
       `🚧 [BACKEND] Ruta /groups/my-groups - Obteniendo grupos para el usuario ${userId}.`,
@@ -245,8 +245,7 @@ export class GroupsController {
   // --- RUTAS PROTEGIDAS (REQUIEREN AUTENTICACIÓN, Y ALGUNAS ROL/PERMISO ESPECÍFICO) ---
 
   @Post()
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard) // Aplicar guards de autenticación, rol y permisos
-  @Roles('USER', 'LEADER', 'ADMIN', 'SUPERADMIN', 'EMPRESA') // Todos los usuarios autenticados pueden crear un grupo
+  @UseGuards(FlexibleAuthGuard) 
   @ApiOperation({
     summary: 'Crear un nuevo grupo',
     description:
@@ -256,33 +255,25 @@ export class GroupsController {
   @ApiResponse({
     status: 201,
     description: 'Grupo creado exitosamente.',
-    type: GroupDto,
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
-  @ApiResponse({
-    status: 403,
-    description: 'Prohibido (ID de usuario no encontrado o rol insuficiente).',
-  })
+  @ApiResponse({status: 403,description: 'Prohibido (ID de usuario no encontrado o rol insuficiente).'})
   @ApiResponse({ status: 404, description: 'Líder de usuario no encontrado.' })
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() createGroupDto: CreateGroupDto,
     @Req() req: Request,
-  ): Promise<GroupDto> {
+  ): Promise<Group> {
     const userId = this.getUserId(req); // Obtener el ID del usuario autenticado
     this.logger.log(
       `🚧 [BACKEND] Ruta /groups - Creando grupo por el usuario ID: ${userId}`,
     );
-    try {
-      const newGroup = await this.groupsService.createGroup(
+    return await this.groupsService.createGroup(
         createGroupDto,
         userId,
       );
-      return newGroup;
-    } catch (error) {
-      this.handleError(error, 'crear grupo');
-    }
+
   }
 
   @Get(':groupId')
@@ -302,7 +293,7 @@ export class GroupsController {
   @ApiResponse({
     status: 200,
     description: 'Grupo encontrado exitosamente.',
-    type: GroupDto,
+    type: Group,
   })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @ApiResponse({
@@ -313,7 +304,7 @@ export class GroupsController {
   async findOne(
     @Param('groupId', ParseUUIDPipe) groupId: string, // Asegura que el ID es un UUID
     @Req() req: Request,
-  ): Promise<GroupDto> {
+  ): Promise<Group> {
     const userId = this.getUserId(req); // Obtener el ID del usuario autenticado
     this.logger.log(
       `🚧 [BACKEND] Ruta /groups/:groupId - Obteniendo grupo con ID: ${groupId} para el usuario ${userId}`,
@@ -321,7 +312,7 @@ export class GroupsController {
     try {
       const group = await this.groupsService.findGroupById(groupId);
 
-      const isCurrentUserLeader = group.leader?.id === userId;
+      const isCurrentUserLeader = group.user?.id === userId;
       const isCurrentUserMember = group.members?.some(
         (member) => member.user?.id === userId, // Usar encadenamiento opcional para seguridad
       );
@@ -363,7 +354,7 @@ export class GroupsController {
   @ApiResponse({
     status: 200,
     description: 'Grupo actualizado exitosamente.',
-    type: GroupDto,
+    type: Group,
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
@@ -377,7 +368,7 @@ export class GroupsController {
     @Param('groupId', ParseUUIDPipe) groupId: string, // Asegura que el ID es un UUID
     @Body() updateGroupDto: UpdateGroupDto,
     @Req() req: Request,
-  ): Promise<GroupDto> {
+  ): Promise<Group> {
     const userId = this.getUserId(req); // Obtener el ID del usuario autenticado // CORREGIDO: Usar 'userId' consistentemente
     this.logger.log(
       `🚧 [BACKEND] Ruta /groups/:groupId - Actualizando grupo con ID: ${groupId} por el usuario ${userId}`,
@@ -385,7 +376,7 @@ export class GroupsController {
     try {
       const group = await this.groupsService.findGroupById(groupId);
 
-      const isCurrentUserLeader = group.leader?.id === userId; // CORREGIDO: Usar 'userId'
+      const isCurrentUserLeader = group.user?.id === userId; // CORREGIDO: Usar 'userId'
       const currentUserRole = (req.user as User)?.role_name;
       const isCurrentUserAdminOrSuperAdmin =
         currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN';
@@ -444,7 +435,7 @@ export class GroupsController {
     try {
       const group = await this.groupsService.findGroupById(groupId); // Obtener el grupo para verificar el líder
 
-      const isCurrentUserLeader = group.leader?.id === userId;
+      const isCurrentUserLeader = group.user?.id === userId;
       const currentUserRole = (req.user as User)?.role_name;
       const isCurrentUserAdminOrSuperAdmin =
         currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN';
@@ -512,7 +503,7 @@ export class GroupsController {
     try {
       const group = await this.groupsService.findGroupById(groupId);
 
-      const isCurrentUserLeader = group.leader?.id === currentUserId;
+      const isCurrentUserLeader = group.user?.id === currentUserId;
       const currentUserRole = (req.user as User)?.role_name;
       const isCurrentUserAdminOrSuperAdmin =
         currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN';
@@ -591,7 +582,7 @@ export class GroupsController {
     try {
       const group = await this.groupsService.findGroupById(groupId);
 
-      const isCurrentUserLeader = group.leader?.id === userId;
+      const isCurrentUserLeader = group.user?.id === userId;
       const isCurrentUserMember = group.members?.some(
         (member) => member.user?.id === userId,
       );
@@ -660,7 +651,7 @@ export class GroupsController {
     try {
       const group = await this.groupsService.findGroupById(groupId);
 
-      const isCurrentUserLeader = group.leader?.id === currentUserId;
+      const isCurrentUserLeader = group.user?.id === currentUserId;
       const currentUserRole = (req.user as User)?.role_name;
       const isCurrentUserAdminOrSuperAdmin =
         currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN';
@@ -727,7 +718,7 @@ export class GroupsController {
     try {
       const group = await this.groupsService.findGroupById(groupId);
 
-      const isCurrentUserLeader = group.leader?.id === currentUserId;
+      const isCurrentUserLeader = group.user?.id === currentUserId;
       const currentUserRole = (req.user as User)?.role_name;
       const isCurrentUserAdminOrSuperAdmin =
         currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN';
