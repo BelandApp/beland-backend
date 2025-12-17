@@ -8,8 +8,6 @@ import {
   NotFoundException,
   UnauthorizedException,
   Logger,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -27,11 +25,11 @@ import { AuthVerification, ForgotPasswordCode } from './entities/auth.entity';
 import { EmailService } from 'src/modules/email/email.service';
 import { ForgotPasswordCodeEmailTemplate, verificationEmailTemplate } from 'src/modules/email/plantilla/htmlVerificacion';
 import { InjectRepository } from '@nestjs/typeorm';
-import { JwtStrategy } from './jwt.strategy';
-import { Request } from 'express';
 import { Role } from '../roles/entities/role.entity';
 import { RoleEnum } from '../roles/enum/role-validate.enum';
 import { UserProfile } from '../users/entities/profile-user.entity';
+import { Payload } from './dto/payload.dto';
+import { ValidProfileNames } from '../users/enums/profiles.enum';
 
 @Injectable()
 export class AuthService {
@@ -46,9 +44,11 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
     public dataSource: DataSource,
-    @Inject(forwardRef(() => JwtStrategy))
-    private readonly jwtAuth0Strategy: JwtStrategy,
   ) {}
+
+  async getProfile (user_id: string): Promise<User> {
+    return await this.userRepository.findById(user_id)
+  }
 
   async createToken(userPayload: User): Promise<{ token: string }> {
     const profilesUser = await this.dataSource.manager.find(
@@ -56,16 +56,15 @@ export class AuthService {
         where: {user_id: userPayload.id, profile: {is_active:true}},
         relations: {profile: true}
       })
-    const profiles = profilesUser.map ((p) => p.profile.name)
-    const payload = {
+    const profiles = profilesUser.map ((p) => p.profile.name) as ValidProfileNames[]
+    const payload: Payload = {
       sub: userPayload.id, // Subject del token, generalmente el ID del usuario
       id: userPayload.id,
       email: userPayload.email,
       role_name: userPayload.role_name,
       wallet_id: userPayload.wallet?.id,
       cart_id: userPayload.cart?.id,
-      profiles,
-      auth0_id: userPayload.auth0_id || undefined, // Incluir auth0_id si existe
+      profiles
     };
     const secret = this.configService.get<string>('JWT_SECRET');
     if (!secret) {
@@ -642,6 +641,7 @@ export class AuthService {
       await this.dataSource.manager.delete(ForgotPasswordCode, {id:forgotPasswordUser.id})
       throw new BadRequestException ('La solicitud ya expiró')
     }
+    console.log(`Este es el code que llega: ${code}, este es el hash guardado `)
     const isCodeValid = await bcrypt.compare(code, forgotPasswordUser.code);
     if (!isCodeValid) {
       forgotPasswordUser.count += 1;
@@ -727,74 +727,4 @@ export class AuthService {
     }
   }
 
-  async convertTokenAuth0ToLocal(
-    auth0Token: string,
-  ): Promise<{ token: string }> {
-    this.logger.debug(
-      'exchangeAuth0TokenForLocalToken(): Iniciando intercambio de token de Auth0 por token local.',
-    );
-
-    try {
-      const decodedPayload = this.jwtService.decode(auth0Token);
-
-      if (!decodedPayload) {
-        this.logger.warn(
-          'exchangeAuth0TokenForLocalToken(): No se pudo decodificar el token de Auth0. Posiblemente inválido o mal formado.',
-        );
-        throw new UnauthorizedException(
-          'Token de Auth0 inválido o mal formado.',
-        );
-      }
-      this.logger.debug(
-        `exchangeAuth0TokenForLocalToken(): Payload decodificado del token de Auth0: ${JSON.stringify(
-          decodedPayload,
-        )}`,
-      );
-
-      const mockRequest: Partial<Request> = {
-        headers: {
-          authorization: `Bearer ${auth0Token}`,
-        } as Record<string, string>,
-      };
-
-      const user = await this.jwtAuth0Strategy.validate(
-        mockRequest as Request,
-        decodedPayload as any,
-      );
-
-      if (!user) {
-        this.logger.error(
-          'exchangeAuth0TokenForLocalToken(): JwtStrategy no devolvió un usuario válido después de la validación del token de Auth0.',
-        );
-        throw new InternalServerErrorException(
-          'Fallo al obtener la información del usuario de Auth0.',
-        );
-      }
-
-      this.logger.log(
-        `exchangeAuth0TokenForLocalToken(): Usuario Auth0 ${user.email} (ID: ${user.id}) autenticado/registrado exitosamente. Generando token local.`,
-      );
-
-      // Usar createToken para generar el JWT local
-      return this.createToken(user);
-    } catch (error: unknown) {
-      this.logger.error(
-        `exchangeAuth0TokenForLocalToken(): Error durante el intercambio de token de Auth0: ${
-          (error as Error).message
-        }`,
-        (error as Error).stack,
-      );
-      if (
-        error instanceof UnauthorizedException ||
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'Fallo al intercambiar el token de Auth0 debido a un error interno.',
-      );
-    }
-  }
 }

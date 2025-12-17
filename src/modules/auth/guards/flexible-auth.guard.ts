@@ -5,15 +5,70 @@ import {
   ExecutionContext,
   UnauthorizedException,
   Logger,
+  HttpStatus,
 } from '@nestjs/common';
-import { AuthenticationGuard } from './auth.guard';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { Request } from 'express';
+import { Payload } from '../dto/payload.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class FlexibleAuthGuard implements CanActivate {
   private readonly logger = new Logger(FlexibleAuthGuard.name);
 
   constructor(
+      private readonly jwtService: JwtService,
+    ) {}
+  
+    async canActivate(context: ExecutionContext): Promise<boolean> {
+      const request = context.switchToHttp().getRequest<Request>();
+      const token = this.extractToken(request);
+  
+      if (!token) {
+        this.logger.warn(
+          'AuthenticationGuard: Acceso denegado. Token no proporcionado.',
+        );
+        throw new UnauthorizedException({
+          statusCode: HttpStatus.UNAUTHORIZED,
+          message: 'No autorizado. Token no proporcionado.',
+          error: 'Unauthorized',
+        });
+      }
+  
+      try {
+        // Usar la nueva interfaz LocalJwtPayload para tipar el payload decodificado
+        const payload: Payload = this.jwtService.verify(token, {
+          secret: process.env.JWT_SECRET,
+        });
+  
+        // Adjuntar el objeto User completo a la request
+        request.user = payload;
+  
+        this.logger.debug(
+          `AuthenticationGuard: Token local verificado y usuario completo adjuntado a la request.`,
+        );
+        return true;
+      } catch (error) {
+        this.logger.warn(
+          `AuthenticationGuard: Token local inválido o expirado. Error: ${
+            (error as Error).message
+          }`,
+        );
+        throw new UnauthorizedException({
+          statusCode: HttpStatus.UNAUTHORIZED,
+          message: 'No autorizado. Token inválido o expirado.',
+          error: 'Unauthorized',
+        });
+      }
+    }
+  
+    private extractToken(request: Request): string | null {
+      const authHeader = request.headers['authorization'];
+      if (authHeader?.startsWith('Bearer ')) {
+        return authHeader.split(' ')[1];
+      }
+      return null;
+    }
+  /*constructor(
     private readonly localAuthGuard: AuthenticationGuard,
     private readonly jwtAuthGuard: JwtAuthGuard,
   ) {}
@@ -72,5 +127,5 @@ export class FlexibleAuthGuard implements CanActivate {
     throw new UnauthorizedException(
       'Fallo en la autenticación: No se encontró un token válido.',
     );
-  }
+  }*/
 }

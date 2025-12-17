@@ -55,7 +55,7 @@ export class AuthController {
     this.logger.log(
       `GET /auth/me: Solicitud de perfil para usuario ID: ${user.id}`,
     );
-    return user;
+    return await this.authService.getProfile(user.id);
   }
 
   @Post('login')
@@ -148,12 +148,6 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'identificado exitoso.',
-    schema: {
-      type: 'object',
-      properties: {
-        token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI...' },
-      },
-    },
   })
   @ApiResponse({
     status: 400,
@@ -179,21 +173,7 @@ export class AuthController {
     name: 'email',
     description: 'Email del usuario para restablecer la contraseña',
   })
-  @ApiResponse({
-    status: 200,
-    description:
-      'Codigo para restablecer contraseña enviado si el email existe.',
-    schema: {
-      type: 'object',
-      properties: {
-        message: {
-          type: 'string',
-          example:
-            'Si el email está registrado, se ha enviado un codigo para restablecer la contraseña.',
-        },
-      },
-    },
-  })
+  @ApiResponse({status: 200, description:'Codigo para restablecer contraseña enviado si el email existe.'})
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   async forgotPasswordCode(
     @Param('email') email: string,
@@ -222,56 +202,14 @@ export class AuthController {
   }
 
   @Post('forgot-password-change')
-  @ApiOperation({
-    summary: 'Verifica que el codigo sea correcto para proceder al cambio de clave',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Responde con {token: string} si se cambio correctamente la clave.',
-  })
+  @ApiOperation({summary: 'Verifica que el codigo sea correcto para proceder al cambio de clave'})
+  @ApiResponse({status: 200,description: 'Responde con {token: string} si se cambio correctamente la clave.'})
   async forgotPasswordChange(
     @Body() changePass: ChangePasswordDto,
   ): Promise<{token:string}> {
     if (changePass.password !== changePass.confirmPassword)
       throw new BadRequestException('Las clave y su confirmacion son diferentes')
      return await this.authService.forgotPasswordChange(changePass.email, changePass.password);
-  }
-
-  @Post('exchange-auth0-token')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary:
-      'Intercambia un token de Auth0 por un token JWT local del backend.',
-  })
-  @ApiBody({
-    description: 'Token de acceso JWT de Auth0.',
-    type: Auth0ExchangeTokenDto,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Intercambio exitoso. Token JWT local generado.',
-    schema: {
-      type: 'object',
-      properties: {
-        token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI...' },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Token de Auth0 inválido o no autorizado.',
-  })
-  async exchangeAuth0Token(
-    @Body() auth0ExchangeTokenDto: Auth0ExchangeTokenDto,
-  ): Promise<{ token: string }> {
-    this.logger.log(
-      'POST /auth/exchange-auth0-token: Solicitud de intercambio de token de Auth0 por token local.',
-    );
-    // Llama al método del servicio que usará JwtStrategy para validar el token de Auth0,
-    // creará/actualizará el usuario y luego generará el token local.
-    return this.authService.convertTokenAuth0ToLocal(
-      auth0ExchangeTokenDto.auth0Token,
-    );
   }
 
   @ApiBearerAuth('JWT-auth')

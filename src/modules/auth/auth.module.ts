@@ -16,10 +16,6 @@ import { AuthService } from './auth.service';
 import { UsersRepository } from 'src/modules/users/users.repository';
 import { RolesRepository } from 'src/modules/roles/roles.repository';
 import { WalletsRepository } from 'src/modules/wallets/wallets.repository';
-
-import { JwtStrategy } from './jwt.strategy';
-import { AuthenticationGuard } from './guards/auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { FlexibleAuthGuard } from './guards/flexible-auth.guard';
 
 import { UsersModule } from 'src/modules/users/users.module'; // Asegúrate de que UsersModule esté importado
@@ -55,20 +51,16 @@ import { Auth0Strategy } from './strategy/auth0.strategy';
   controllers: [AuthController],
   providers: [
     AuthService,
-    JwtStrategy,
+    //JwtStrategy,
     UsersRepository,
     RolesRepository,
     WalletsRepository,
-    AuthenticationGuard, // Tu guardia de autenticación local
-    JwtAuthGuard, // Tu guardia de autenticación de Auth0
     FlexibleAuthGuard, // Tu guardia que combina ambos
     EmailService,
     Auth0Strategy,
   ],
   exports: [
     AuthService,
-    AuthenticationGuard,
-    JwtAuthGuard,
     FlexibleAuthGuard,
     JwtModule,
   ],

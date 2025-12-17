@@ -6,39 +6,58 @@ import {
   ManyToOne,
   JoinColumn,
   OneToOne,
+  UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { Wallet } from '../../wallets/entities/wallet.entity';
 import { WithdrawAccountType } from '../../withdraw-account-type/entities/withdraw-account-type.entity';
+import { CountryEnum, Currency, HolderDocumentType } from '../enums/withdraw-account.enum';
 
 @Entity('withdraw_accounts')
 export class WithdrawAccount {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'text' })
-  owner_name: string;
+  // Pais
+  @Column({ type: 'enum', enum: CountryEnum })
+  country: CountryEnum;
 
-  // 🔹 Relación con tipos de cuenta (BANK / WALLET)
+  @Column({ type: 'enum', enum: Currency })
+  currency: Currency;
+
+  //Banco
+  @Column({ length: 50 })
+  bankCode: string;
+
+  @Column({ length: 150 })
+  bankName: string;
+
   @ManyToOne(() => WithdrawAccountType, { eager: true })
   @JoinColumn({ name: 'withdraw_account_type_id' })
   withdraw_account_type: WithdrawAccountType;
   @Column('uuid')
   withdraw_account_type_id: string;
 
-  // 🔹 Solo si es cuenta bancaria
-  @Column({ type: 'varchar', nullable: true })
-  cbu?: string;
+  // Ecuador / Colombia
+  @Column({ nullable: true, length: 34 })
+  accountNumber: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
-  alias?: string;
+  // Argentina
+  @Column({ nullable: true, length: 22 })
+  cbu: string | null;
 
-  // 🔹 Solo si es billetera virtual
-  @Column({ type: 'varchar', nullable: true })
-  provider?: string; // Ej: 'MercadoPago', 'Payphone', 'Produbanco', 'Pichincha Bank'
+  @Column({ nullable: true, length: 50 })
+  alias: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
-  phone?: string; // Número de teléfono de la billetera virtual
+  // Datos del titular
+  @Column({ length: 150 })
+  holderName: string;
+
+  @Column({ length: 30 })
+  holderDocument: string;
+
+  @Column({ type: 'enum', enum: HolderDocumentType })
+  holderDocumentType: HolderDocumentType;
 
   @ManyToOne(() => User, (user) => user.withdraw_accounts, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
@@ -54,4 +73,7 @@ export class WithdrawAccount {
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
 }
