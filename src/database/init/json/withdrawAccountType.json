@@ -1,10 +1,10 @@
 [
   {
-    "code": "BANK",
-    "name": "Cuenta Bancaria"
+    "code": "AHORRO",
+    "name": "Cuenta De Ahorro"
   },
   {
-    "code": "WALLET",
-    "name": "Billetera Virtual"
+    "code": "CORRIENTE",
+    "name": "Cuenta Corriente"
   }
 ]

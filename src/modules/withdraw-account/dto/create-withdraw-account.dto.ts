@@ -1,61 +1,137 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  ValidateIf,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  CountryEnum,
+  Currency,
+  HolderDocumentType,
+} from '../enums/withdraw-account.enum';
 
 export class CreateWithdrawAccountDto {
-  @ApiProperty({
-    description: 'Nombre del propietario de la cuenta',
-    example: 'Juan Pérez',
-  })
-  @IsNotEmpty({ message: 'El nombre del propietario es obligatorio' })
-  @IsString({ message: 'El nombre debe ser un texto' })
-  owner_name: string;
+  /* =============================
+   * País y moneda
+   * ============================= */
 
   @ApiProperty({
-    description: 'ID del tipo de cuenta (BANK / WALLET)',
-    example: 'uuid-del-tipo-de-cuenta',
+    description: 'País donde está registrada la cuenta bancaria',
+    enum: CountryEnum,
+    example: CountryEnum.AR,
   })
-  @IsNotEmpty({ message: 'El tipo de cuenta es obligatorio' })
-  @IsUUID('4', { message: 'Debe ser un UUID válido' })
+  @IsEnum(CountryEnum)
+  country: CountryEnum;
+
+  @ApiProperty({
+    description: 'Moneda de la cuenta bancaria',
+    enum: Currency,
+    example: Currency.ARS,
+  })
+  @IsEnum(Currency)
+  currency: Currency;
+
+  /* =============================
+   * Banco
+   * ============================= */
+
+  @ApiProperty({
+    description: 'Código interno o del sistema bancario',
+    example: '072',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 50)
+  bankCode: string;
+
+  @ApiProperty({
+    description: 'Nombre del banco',
+    example: 'Banco Santander Río',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 150)
+  bankName: string;
+
+  /* =============================
+   * Tipo de cuenta
+   * ============================= */
+
+  @ApiProperty({
+    description: 'ID del tipo de cuenta de retiro (ahorros / corriente)',
+    example: '8c1f2f42-9c8a-4c5b-a0e2-3b9a9b3c0f91',
+  })
+  @IsUUID()
   withdraw_account_type_id: string;
 
-  @ApiProperty({
-    description: 'CBU de la cuenta bancaria (solo si es tipo BANK)',
-    example: '00000031000987654321',
-    required: false,
+  /* =============================
+   * Identificadores bancarios
+   * ============================= */
+
+  @ApiPropertyOptional({
+    description:
+      'Número de cuenta bancaria (obligatorio para Ecuador y Colombia)',
+    example: '210012345678',
   })
-  @IsOptional()
-  @IsString({ message: 'El CBU debe ser un texto' })
-  @MaxLength(22, { message: 'El CBU no puede superar 22 caracteres' })
+  @ValidateIf(
+    (o) => o.country === CountryEnum.EC || o.country === CountryEnum.CO,
+  )
+  @IsString()
+  @IsNotEmpty()
+  @Length(4, 34)
+  accountNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'CBU (22 dígitos) - obligatorio para Argentina',
+    example: '0720123488000001234567',
+  })
+  @ValidateIf((o) => o.country === CountryEnum.AR)
+  @IsString()
+  @IsNotEmpty()
+  @Length(22, 22)
   cbu?: string;
 
-  @ApiProperty({
-    description: 'Alias de la cuenta bancaria (solo si es tipo BANK)',
-    example: 'juan.banco.mp',
-    required: false,
+  @ApiPropertyOptional({
+    description: 'Alias CBU (solo Argentina)',
+    example: 'mi.cuenta.banco',
   })
   @IsOptional()
-  @IsString({ message: 'El alias debe ser un texto' })
-  @MaxLength(50, { message: 'El alias no puede superar 50 caracteres' })
+  @IsString()
+  @Length(3, 50)
   alias?: string;
 
-  @ApiProperty({
-    description: 'Proveedor de billetera virtual (solo si es tipo WALLET)',
-    example: 'MercadoPago',
-    required: false,
-  })
-  @IsOptional()
-  @IsString({ message: 'El proveedor debe ser un texto' })
-  @MaxLength(50, { message: 'El proveedor no puede superar 50 caracteres' })
-  provider?: string;
+  /* =============================
+   * Datos del titular
+   * ============================= */
 
   @ApiProperty({
-    description: 'Número de teléfono de la billetera virtual (solo si es tipo WALLET)',
-    example: '+5491122334455',
-    required: false,
+    description: 'Nombre completo del titular de la cuenta',
+    example: 'Juan Pérez',
   })
-  @IsOptional()
-  @IsString({ message: 'El teléfono debe ser un texto' })
-  @MaxLength(20, { message: 'El teléfono no puede superar 20 caracteres' })
-  phone?: string;
+  @IsString()
+  @IsNotEmpty()
+  @Length(3, 150)
+  holderName: string;
+
+  @ApiProperty({
+    description: 'Documento del titular',
+    example: '20345678901',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Length(5, 30)
+  holderDocument: string;
+
+  @ApiProperty({
+    description: 'Tipo de documento del titular',
+    enum: HolderDocumentType,
+    example: HolderDocumentType.CUIT,
+  })
+  @IsEnum(HolderDocumentType)
+  holderDocumentType: HolderDocumentType;
 
 }

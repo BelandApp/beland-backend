@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';
+
 
 @Entity('withdraw_account_types')
 export class WithdrawAccountType {
@@ -11,7 +11,7 @@ export class WithdrawAccountType {
 
   @Column({ type: 'varchar' })
   name: string; // Ej: Cuenta Bancaria, Billetera Virtual
-
+  // agregar tipo de cuenta para ecuador: 
   /** Descripción opcional para la UI */
   @Column({ type: 'text', nullable: true })
   description?: string;
