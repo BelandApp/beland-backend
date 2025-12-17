@@ -14,12 +14,9 @@ import { GroupMembersRepository } from '../group-members/group-members.repositor
 import { UsersService } from '../users/users.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
-import { GroupDto } from './dto/group.dto';
 import { Group } from './entities/group.entity';
 import { GroupMember } from '../group-members/entities/group-member.entity';
 import { plainToInstance } from 'class-transformer';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { OrderDto } from 'src/common/dto/order.dto';
 import { DataSource } from 'typeorm';
 import { User } from 'src/modules/users/entities/users.entity';
 import { CreateGroupMemberDto } from 'src/modules/group-members/dto/create-group-member.dto';
@@ -44,21 +41,12 @@ export class GroupsService {
     private readonly groupInvitationsService: GroupInvitationsService,
   ) {}
 
-  /**
-   * Crea un nuevo grupo y asigna al usuario que lo crea como líder y miembro.
-   *
-   * @param createGroupDto Los datos para crear el nuevo grupo.
-   * @param leaderId El ID del usuario que será el líder del grupo.
-   * @returns Una promesa que resuelve al grupo creado como un GroupDto.
-   * @throws NotFoundException si el usuario líder no es encontrado.
-   * @throws InternalServerErrorException si la transacción falla debido a un error interno.
-   */
   async createGroup(
     createGroupDto: CreateGroupDto,
-    leaderId: string,
-  ): Promise<GroupDto> {
+    user_id: string,
+  ): Promise<Group> {
     this.logger.debug(
-      `createGroup(): Intentando crear grupo para el líder ID: ${leaderId}`,
+      `createGroup(): Intentando crear grupo para el líder ID: ${user_id}`,
     );
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -66,16 +54,6 @@ export class GroupsService {
     await queryRunner.startTransaction();
 
     try {
-      // Encontrar al usuario que será el líder
-      const leaderUserEntity: User = await queryRunner.manager.findOne(User, {
-        where: { id: leaderId },
-      });
-      if (!leaderUserEntity) {
-        throw new NotFoundException(
-          `Usuario líder con ID "${leaderId}" no encontrado.`,
-        );
-      }
-
       // Verificar si ya existe un grupo con el mismo nombre (insensible a mayúsculas/minúsculas)
       const existingGroup = await this.groupsRepository.findOneByName(
         createGroupDto.name,
@@ -86,37 +64,30 @@ export class GroupsService {
         );
       }
 
-      // Crear la nueva entidad de grupo
-      const newGroup = this.groupsRepository.create({
+      // Guardar la nueva entidad de grupo
+      const savedGroup = await queryRunner.manager.save(Group, {
         ...createGroupDto,
-        leader: leaderUserEntity, // Asignar la entidad del líder directamente
+        user_id
       });
 
-      // Guardar el grupo dentro de la transacción
-      const savedGroup = await queryRunner.manager.save(Group, newGroup);
-
-      // Crear la membresía del grupo para el líder
-      const leaderMembership = this.groupMembersRepository.create({
+      // Guardar la membresía del grupo para el líder
+      const leaderMembership = await queryRunner.manager.save(GroupMember, {
         group: savedGroup, // Asociar con el grupo recién creado
-        user: leaderUserEntity, // Asociar con el usuario líder
+        user_id, // Asociar con el usuario líder
         role: 'LEADER', // Establecer el rol como LÍDER
       });
 
-      // Guardar la membresía del líder dentro de la transacción.
-      await queryRunner.manager.save(GroupMember, leaderMembership);
-
       await queryRunner.commitTransaction();
+
       this.logger.log(
-        `createGroup(): Grupo "${savedGroup.name}" (ID: ${savedGroup.id}) creado exitosamente por el líder ${leaderId}.`,
+        `createGroup(): Grupo "${savedGroup.name}" (ID: ${savedGroup.id}) creado exitosamente por el líder ${user_id}.`,
       );
 
-      // Volver a buscar el grupo con todas las relaciones para el DTO completo
-      const fullGroup = await this.groupsRepository.findOneById(savedGroup.id);
-      return plainToInstance(GroupDto, fullGroup);
+      return savedGroup;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error(
-        `createGroup(): Error durante la transacción de creación de grupo para el líder ID ${leaderId}:`,
+        `createGroup(): Error durante la transacción de creación de grupo para el líder ID ${user_id}:`,
         error,
       );
       if (
@@ -134,15 +105,9 @@ export class GroupsService {
     }
   }
 
-  /**
-   * Recupera una lista paginada de todos los grupos, con opciones de filtrado y ordenación.
-   * @param queryDto DTO que contiene los criterios de paginación, ordenación y filtro.
-   * @returns Una promesa que resuelve a un objeto que contiene un array de GroupDto y el conteo total.
-   * @throws InternalServerErrorException para errores inesperados.
-   */
   async findAllGroups(
     queryDto: GetGroupsQueryDto,
-  ): Promise<{ groups: GroupDto[]; total: number }> {
+  ): Promise<{ groups: Group[]; total: number }> {
     this.logger.debug(
       `findAllGroups(): Obteniendo todos los grupos con consulta: ${JSON.stringify(
         queryDto,
@@ -160,7 +125,7 @@ export class GroupsService {
         },
       );
       // Transformar entidades a DTOs para la respuesta
-      const groupsDto = plainToInstance(GroupDto, groups);
+      const groupsDto = plainToInstance(Group, groups);
       return { groups: groupsDto, total };
     } catch (error) {
       this.logger.error(
@@ -175,13 +140,7 @@ export class GroupsService {
     }
   }
 
-  /**
-   * Encuentra un solo grupo por su ID, incluyendo su líder y miembros.
-   * @param groupId El ID del grupo a encontrar.
-   * @returns La entidad GroupDto o lanza NotFoundException si no es encontrado.
-   * @throws NotFoundException si el grupo no es encontrado.
-   */
-  async findGroupById(groupId: string): Promise<GroupDto> {
+  async findGroupById(groupId: string): Promise<Group> {
     this.logger.debug(`findGroupById(): Buscando grupo con ID: ${groupId}`);
     const group = await this.groupsRepository.findOneById(groupId);
     if (!group) {
@@ -191,20 +150,13 @@ export class GroupsService {
       throw new NotFoundException(`Grupo con ID "${groupId}" no encontrado.`);
     }
     // Transformar entidad a DTO para la respuesta
-    return plainToInstance(GroupDto, group);
+    return plainToInstance(Group, group);
   }
 
-  /**
-   * Actualiza un grupo existente. Solo el líder del grupo o un ADMIN/SUPERADMIN puede actualizar.
-   * @param groupId El ID del grupo a actualizar.
-   * @param updateGroupDto Los datos parciales para actualizar el grupo.
-   * @returns El grupo actualizado como un GroupDto.
-   * @throws NotFoundException si el grupo no es encontrado.
-   */
   async updateGroup(
     groupId: string,
     updateGroupDto: UpdateGroupDto,
-  ): Promise<GroupDto> {
+  ): Promise<Group> {
     this.logger.debug(`updateGroup(): Actualizando grupo con ID: ${groupId}`);
     const existingGroup = await this.groupsRepository.findOneById(groupId);
     if (!existingGroup) {
@@ -217,14 +169,9 @@ export class GroupsService {
     this.logger.log(
       `updateGroup(): Grupo ${groupId} actualizado exitosamente.`,
     );
-    return plainToInstance(GroupDto, updatedGroup);
+    return plainToInstance(Group, updatedGroup);
   }
 
-  /**
-   * Elimina un grupo permanentemente. Solo el líder del grupo o un ADMIN/SUPERADMIN puede eliminar.
-   * @param groupId El ID del grupo a eliminar.
-   * @throws NotFoundException si el grupo no es encontrado.
-   */
   async hardDeleteGroup(groupId: string): Promise<void> {
     this.logger.debug(`hardDeleteGroup(): Eliminando grupo con ID: ${groupId}`);
     const group = await this.groupsRepository.findOneById(groupId, true); // Incluir soft-deleted para verificar existencia
@@ -243,16 +190,6 @@ export class GroupsService {
     }
   }
 
-  /**
-   * Añade un usuario como miembro a un grupo basándose en un CreateGroupMemberDto.
-   * Este método es llamado por el controlador después de resolver el usuario de un InviteUserDto.
-   *
-   * @param createGroupMemberDto El DTO que contiene group_id, user_id y rol opcional.
-   * @returns El GroupMemberDto creado.
-   * @throws NotFoundException si el grupo o el usuario invitado no son encontrados.
-   * @throws BadRequestException si el usuario ya es miembro del grupo.
-   * @throws InternalServerErrorException si la transacción falla.
-   */
   async addGroupMember(
     createGroupMemberDto: CreateGroupMemberDto,
   ): Promise<GroupMemberDto> {
@@ -302,8 +239,8 @@ export class GroupsService {
       // Para promover a un miembro a líder, usa updateGroupMemberRole
       if (
         createGroupMemberDto.role === 'LEADER' &&
-        group.leader !== null &&
-        group.leader.id !== invitedUser.id
+        group.user !== null &&
+        group.user.id !== invitedUser.id
       ) {
         throw new BadRequestException(
           'No se puede añadir directamente un nuevo líder a un grupo existente a través de este método. Usa el endpoint de actualización de rol de miembro para promover a un miembro existente.',
@@ -353,12 +290,6 @@ export class GroupsService {
     }
   }
 
-  /**
-   * Recupera todos los miembros de un grupo específico.
-   * @param groupId El ID del grupo cuyos miembros se van a recuperar.
-   * @returns Una promesa que resuelve a un array de GroupMemberDto.
-   * @throws NotFoundException si el grupo no es encontrado.
-   */
   async getGroupMembers(groupId: string): Promise<GroupMemberDto[]> {
     this.logger.debug(
       `getGroupMembers(): Obteniendo miembros para el grupo ID: ${groupId}`,
@@ -374,13 +305,7 @@ export class GroupsService {
     return plainToInstance(GroupMemberDto, members);
   }
 
-  /**
-   * Recupera todos los grupos de los que un usuario específico es miembro.
-   * @param userId El ID del usuario.
-   * @returns Una promesa que resuelve a un array de GroupDto.
-   * @throws NotFoundException si el usuario no es encontrado.
-   */
-  async getUserGroups(userId: string): Promise<GroupDto[]> {
+  async getUserGroups(userId: string): Promise<Group[]> {
     this.logger.debug(
       `getUserGroups(): Obteniendo grupos para el usuario ID: ${userId}`,
     );
@@ -393,20 +318,12 @@ export class GroupsService {
     const memberships = await this.groupMembersRepository.findByUserId(userId); // CORREGIDO: Usar findByUserId
     const groups = memberships.map((membership) => membership.group);
 
-    return plainToInstance(GroupDto, groups, {
+    return plainToInstance(Group, groups, {
       enableCircularCheck: true,
       excludeExtraneousValues: true,
     });
   }
 
-  /**
-   * Actualiza los detalles de un miembro de grupo existente (ej. rol).
-   * @param memberId El ID de la membresía de grupo a actualizar.
-   * @param updateGroupMemberDto Los datos parciales para actualizar la membresía.
-   * @returns Una promesa que resuelve a la GroupMemberDto actualizada.
-   * @throws NotFoundException si la membresía de grupo no es encontrada.
-   * @throws BadRequestException si se violan reglas de negocio (ej. intentar asignar múltiples líderes).
-   */
   async updateGroupMemberRole(
     memberId: string,
     updateGroupMemberDto: UpdateGroupMemberDto,
@@ -458,13 +375,6 @@ export class GroupsService {
     return plainToInstance(GroupMemberDto, updatedMembership);
   }
 
-  /**
-   * Elimina un miembro de un grupo.
-   * @param memberId El ID de la membresía del grupo a eliminar.
-   * @returns Una promesa que se resuelve cuando la membresía es eliminada.
-   * @throws NotFoundException si la membresía del grupo no es encontrada.
-   * @throws BadRequestException si reglas de negocio específicas impiden la eliminación (ej. último líder).
-   */
   async removeGroupMember(memberId: string): Promise<void> {
     this.logger.debug(
       `removeGroupMember(): Eliminando miembro del grupo con ID: ${memberId}`,
@@ -499,14 +409,6 @@ export class GroupsService {
     );
   }
 
-  /**
-   * Orquesta el proceso de invitar un usuario a un grupo.
-   * Delega la lógica real de creación/reutilización de invitación al GroupInvitationsService.
-   * @param groupId El ID del grupo.
-   * @param inviteUserDto DTO con el email, username o teléfono del usuario a invitar.
-   * @param currentUserId El ID del usuario que envía la invitación.
-   * @returns El GroupInvitationDto creado o actualizado.
-   */
   async inviteUserToGroup(
     groupId: string,
     inviteUserDto: InviteUserDto,
