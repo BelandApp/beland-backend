@@ -45,7 +45,7 @@ export class GroupMembersController {
   // NOTE: Creation of group members is primarily handled by GroupsController (create group, invite user).
   // This controller focuses on managing existing individual memberships.
 
-  @Get(':id')
+ /* @Get(':id')
   @Roles('USER', 'LEADER', 'ADMIN', 'SUPERADMIN', 'EMPRESA') // Accessible by any group member or admin roles
   @ApiOperation({
     summary: 'Get a group membership by ID',
@@ -97,7 +97,7 @@ export class GroupMembersController {
     return membership;
   }
 
-  @Patch(':id')
+  /*@Patch(':id')
   @Roles('LEADER', 'ADMIN', 'SUPERADMIN') // Only leader, admin or superadmin can update a membership
   @ApiOperation({
     summary: 'Update a group membership by ID',
@@ -142,7 +142,7 @@ export class GroupMembersController {
     );
 
     // Check if current user is the group leader or an Admin/Superadmin
-    const isCurrentUserLeader = group.leader.id === currentUser.id;
+    const isCurrentUserLeader = group.user.id === currentUser.id;
     const isCurrentUserAdminOrSuperAdmin =
       currentUser.role_name === 'ADMIN' ||
       currentUser.role_name === 'SUPERADMIN';
@@ -176,7 +176,7 @@ export class GroupMembersController {
     return this.groupMembersService.updateGroupMember(id, updateGroupMemberDto);
   }
 
-  @Delete(':id')
+ /* @Delete(':id')
   @Roles('LEADER', 'ADMIN', 'SUPERADMIN') // Only leader, admin or superadmin can delete a membership
   @ApiOperation({
     summary: 'Delete a group membership by ID',
@@ -216,7 +216,7 @@ export class GroupMembersController {
     );
 
     // Check if current user is the group leader or an Admin/Superadmin
-    const isCurrentUserLeader = group.leader.id === currentUser.id;
+    const isCurrentUserLeader = group.user.id === currentUser.id;
     const isCurrentUserAdminOrSuperAdmin =
       currentUser.role_name === 'ADMIN' ||
       currentUser.role_name === 'SUPERADMIN';
@@ -244,5 +244,5 @@ export class GroupMembersController {
 
     // CORRECCIÓN: Renombrado de 'remove' a 'deleteGroupMember'
     await this.groupMembersService.deleteGroupMember(id);
-  }
+  }*/
 }

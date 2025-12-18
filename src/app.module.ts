@@ -64,7 +64,6 @@ import { UserFeedbackModule } from './modules/user-feedback/user-feedback.module
 import { UserRechargeModule } from './modules/user-recharge/user-recharge.module';
 import { PaymentAccountModule } from './modules/payment-account/payment-account.module';
 import { DeliveryStatusModule } from './modules/delivery-status/delivery-status.module';
-import { AdminBecoinModule } from './modules/admin-becoin/admin-becoin.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { EventPassModule } from './modules/event-pass/event-pass.module';
 import { UserEventPassModule } from './modules/user-event-pass/user-event-pass.module';
@@ -173,7 +172,6 @@ const isTs = process.env.NODE_ENV !== 'production';
     UserResourcesModule,
     PaymentAccountModule,
     DeliveryStatusModule,
-    AdminBecoinModule,
     PaymentAccountModule,
     CloudinaryModule, 
     EventPassModule,

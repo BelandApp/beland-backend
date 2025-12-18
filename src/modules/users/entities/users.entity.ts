@@ -13,7 +13,6 @@ import { Wallet } from '../../wallets/entities/wallet.entity';
 import { Group } from '../../groups/entities/group.entity';
 import { GroupMember } from '../../group-members/entities/group-member.entity';
 import { Order } from '../../orders/entities/order.entity';
-// import { OrderItem } from '../../order-items/entities/order-item.entity'; // No utilizada actualmente
 import { Payment } from '../../payments/entities/payment.entity';
 import { Action } from '../../actions/entities/action.entity';
 import { RecycledItem } from '../../recycled-items/entities/recycled-item.entity';
@@ -116,7 +115,7 @@ export class User {
   @OneToOne(() => Wallet, (wallet) => wallet.user, { cascade: true })
   wallet: Wallet;
 
-  @OneToMany(() => Group, (group) => group.leader)
+  @OneToMany(() => Group, (group) => group.user)
   led_groups: Group[];
 
   @OneToMany(() => GroupMember, (member) => member.user)

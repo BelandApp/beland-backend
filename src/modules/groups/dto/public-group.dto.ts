@@ -23,13 +23,6 @@ export class PublicGroupDto {
   name: string;
 
   @Expose()
-  @ApiProperty({
-    description: 'URL de la imagen o logo del grupo.',
-    example: 'https://example.com/groups/nature_explorers.jpg',
-  })
-  image: string; // Asumo que tienes un campo 'image' en tu entidad Group para la foto del grupo
-
-  @Expose()
   @Type(() => PublicGroupMemberDto)
   @ApiProperty({
     type: [PublicGroupMemberDto],

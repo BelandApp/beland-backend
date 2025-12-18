@@ -1,7 +1,7 @@
 // src/group-members/dto/group-member.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { UserDto } from 'src/modules/users/dto/user.dto';
-import { GroupDto } from 'src/modules/groups/dto/group.dto'; // Import GroupDto
+//import { GroupDto } from 'src/modules/groups/dto/group.dto'; // Import GroupDto
 
 export class GroupMemberDto {
   @ApiProperty({ description: 'Unique group membership ID', example: 'uuid' })
@@ -24,6 +24,6 @@ export class GroupMemberDto {
   user: UserDto;
 
   // Added group information to the DTO for easier access in controllers/services
-  @ApiProperty({ description: 'Group information', type: () => GroupDto })
-  group: GroupDto;
+  // @ApiProperty({ description: 'Group information', type: () => GroupDto })
+  // group: GroupDto;
 }

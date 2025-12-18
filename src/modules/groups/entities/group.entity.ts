@@ -42,6 +42,9 @@ export class Group {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  is_delete: boolean;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
