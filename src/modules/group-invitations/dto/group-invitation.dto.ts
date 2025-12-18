@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { GroupInvitationStatus } from '../entities/group-invitation.entity';
-import { GroupDto } from 'src/modules/groups/dto/group.dto'; // Importa GroupDto
+//import { GroupDto } from 'src/modules/groups/dto/group.dto'; // Importa GroupDto
 import { UserDto } from 'src/modules/users/dto/user.dto'; // Importa UserDto
 
 export class GroupInvitationDto {
@@ -31,13 +31,13 @@ export class GroupInvitationDto {
   @IsUUID()
   group_id: string;
 
-  @ApiProperty({
-    description: 'Información del grupo asociado.',
-    type: () => GroupDto,
-  })
-  @Type(() => GroupDto)
-  @ValidateNested()
-  group: GroupDto;
+  // @ApiProperty({
+  //   description: 'Información del grupo asociado.',
+  //   type: () => GroupDto,
+  // })
+  // @Type(() => GroupDto)
+  // @ValidateNested()
+  // group: GroupDto;
 
   @ApiProperty({
     description: 'ID del usuario que envió la invitación.',

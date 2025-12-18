@@ -72,7 +72,7 @@ export class GroupInvitationsService {
       throw new NotFoundException(`Grupo con ID "${group_id}" no encontrado.`);
     }
 
-    const isSenderLeader = group.leader?.id === currentUserId;
+    const isSenderLeader = group.user?.id === currentUserId;
     const isSenderAdmin = await this.usersService.isAdmin(currentUserId);
 
     if (!isSenderLeader && !isSenderAdmin) {

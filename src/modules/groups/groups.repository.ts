@@ -4,8 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   Repository,
   DataSource,
-  FindOptionsWhere,
   DeleteResult,
+  UpdateResult,
 } from 'typeorm'; // Importar DeleteResult
 import { Group } from './entities/group.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
@@ -15,197 +15,93 @@ import { OrderDto } from 'src/common/dto/order.dto';
 type ValidGroupStatus = 'ACTIVE' | 'PENDING' | 'INACTIVE' | 'DELETE';
 
 @Injectable()
-export class GroupsRepository extends Repository<Group> {
+export class GroupsRepository {
   private readonly logger = new Logger(GroupsRepository.name);
 
   constructor(
     @InjectRepository(Group)
-    private readonly groupORMRepository: Repository<Group>,
+    private readonly repository: Repository<Group>,
     private dataSource: DataSource,
-  ) {
-    super(Group, dataSource.createEntityManager());
+  ) {}
+
+  async findOneById( id: string ): Promise<Group | null> {
+    return await this.repository.findOne({
+      where: {id},
+      relations: {group_type:true}
+    })
   }
 
-  /**
-   * Helper para crear un query builder con cargas ansiosas comunes para Group y sus relaciones.
-   * Esto asegura que cuando se busca un grupo, su líder y miembros (con sus detalles de usuario)
-   * también se carguen, evitando problemas de consulta N+1.
-   * @param alias El alias para la entidad Group en la consulta.
-   * @param includeDeleted Si se deben incluir los grupos marcados como eliminados (soft-deleted).
-   * @returns Una instancia de TypeORM QueryBuilder.
-   */
-  private createQueryBuilderWithRelations(
-    alias = 'group',
-    includeDeleted: boolean = false, // <-- Nuevo parámetro
-  ) {
-    const query = this.groupORMRepository
-      .createQueryBuilder(alias)
-      .leftJoinAndSelect('group.leader', 'leader') // Carga ansiosa de la entidad User del líder
-      .leftJoinAndSelect('group.members', 'members') // Carga ansiosa de todas las entidades GroupMember
-      .leftJoinAndSelect('members.user', 'memberUser'); // Carga ansiosa de los detalles del usuario miembro
-
-    if (!includeDeleted) {
-      // Por defecto, excluye grupos con deleted_at no nulo
-      query.andWhere(`${alias}.deleted_at IS NULL`);
-    }
-
-    return query;
+  async getGroupsByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {
+    return await this.repository.find({
+      where: {user_id, is_active},
+      relations: {group_type:true},
+    })
   }
 
-  /**
-   * Busca un grupo por su ID, con sus relaciones cargadas.
-   * @param id El ID del grupo.
-   * @param includeDeleted Si se debe incluir el grupo si está soft-deleted.
-   * @returns La entidad Group o null si no se encuentra.
-   */
-  async findOneById(
-    id: string,
-    includeDeleted: boolean = false,
-  ): Promise<Group | null> {
-    const query = this.createQueryBuilderWithRelations(
-      'group',
-      includeDeleted,
-    ).where('group.id = :id', { id });
-    return query.getOne();
-  }
-
-  /**
-   * Finds a single group by its name (case-insensitive).
-   * @param name The name of the group to find.
-   * @returns The Group entity or null if not found.
-   */
   async findOneByName(name: string): Promise<Group | null> {
-    return this.groupORMRepository.findOne({
+    return this.repository.findOne({
       where: { name: name },
-      relations: ['leader', 'members', 'members.user'], // Eager load relations for completeness
+      relations: ['user', 'members.user'], // Eager load relations for completeness
     });
   }
 
-  /**
-   * Busca todos los grupos con paginación, ordenación y filtros opcionales.
-   * @param paginationDto DTO para paginación (page, limit).
-   * @param orderDto DTO para ordenación (sortBy, order).
-   * @param filters Filtros adicionales (ej. name, status, leaderId).
-   * @returns Un objeto que contiene la lista de grupos y el total.
-   */
-  async findAllPaginated(
-    paginationDto: PaginationDto,
-    orderDto: OrderDto,
-    filters?: {
-      name?: string;
-      status?: 'ACTIVE' | 'PENDING' | 'INACTIVE' | 'DELETE';
-      leaderId?: string;
-      includeDeleted?: boolean; // Added for filtering by deleted_at
-    },
-  ): Promise<{ groups: Group[]; total: number }> {
-    const { page, limit } = paginationDto;
-    const { sortBy, order } = orderDto;
+async findAllPaginated(
+  paginationDto: PaginationDto,
+  orderDto: OrderDto,
+  filters?: {
+    name?: string;
+    is_active?: boolean;
+    user_id?: string;
+    is_delete?: boolean;
+  },
+): Promise<{ groups: Group[]; total: number }> {
+  const { page, limit } = paginationDto;
+  const { sortBy = 'created_at', order = 'DESC' } = orderDto;
 
-    const query = this.createQueryBuilderWithRelations(
-      'group',
-      filters?.includeDeleted, // Pass the includeDeleted filter to the query builder
-    );
+  const qb = this.repository
+    .createQueryBuilder('group')
+    .leftJoinAndSelect('group.user', 'user')
+    .leftJoinAndSelect('group.group_type', 'group_type')
+    .leftJoinAndSelect('group.user_address', 'user_address');
 
-    // Apply optional filters
-    if (filters?.name) {
-      query.andWhere('LOWER(group.name) LIKE LOWER(:name)', {
-        name: `%${filters.name}%`,
-      });
-    }
-    if (filters?.status) {
-      query.andWhere('group.status = :status', { status: filters.status });
-    }
-    if (filters?.leaderId) {
-      query.andWhere('group.leader.id = :leaderId', {
-        leaderId: filters.leaderId,
-      });
-    }
-    // The includeDeleted filter is already handled in createQueryBuilderWithRelations
+  if (filters?.name)
+    qb.andWhere('LOWER(group.name) LIKE LOWER(:name)', {
+      name: `%${filters.name}%`,
+    });
 
-    // Define valid sort columns
-    const validSortColumns = {
-      name: 'group.name',
-      status: 'group.status',
-      created_at: 'group.created_at',
-      date_time: 'group.date_time',
-      // Add other sortable columns here if needed, following your application's requirements
-    };
+  if (filters?.is_active !== undefined)
+    qb.andWhere('group.is_active = :is_active', {
+      is_active: filters.is_active,
+    });
 
-    const actualSortBy = validSortColumns[sortBy] || 'group.created_at'; // Default sort by creation date
+  if (filters?.user_id)
+    qb.andWhere('group.user_id = :user_id', {
+      user_id: filters.user_id,
+    });
 
-    query.orderBy(actualSortBy, order); // Apply ordering
+  if (!filters?.is_delete)
+    qb.andWhere('group.deleted_at IS NULL');
 
-    const [groups, total] = await query
-      .skip((page - 1) * limit) // Apply pagination offset
-      .take(limit) // Apply pagination limit
-      .getManyAndCount(); // Execute query and get results with total count
+  qb.orderBy(`group.${sortBy}`, order)
+    .skip((page - 1) * limit)
+    .take(limit);
 
-    return { groups, total };
+  const [groups, total] = await qb.getManyAndCount();
+
+  return { groups, total };
+}
+
+
+  async create(group: Group): Promise<Group> {
+    return await this.repository.save(group);
   }
 
-  /**
-   * Saves a Group entity to the database. This method can be used for both creating new groups
-   * and updating existing ones (if the entity has an ID).
-   * @param group The Group entity to save.
-   * @returns The saved Group entity (with updated properties like ID if newly created).
-   */
-  async saveGroup(group: Group): Promise<Group> {
-    return this.groupORMRepository.save(group);
+  async update (id:string, dto: Partial<Group>, user_id:string): Promise<UpdateResult> {
+    return await this.repository.update({id, user_id}, dto);
   }
 
-  /**
-   * Creates a new Group entity instance and saves it to the database.
-   * This method is typically used for initial creation of a group.
-   * @param groupPartial Partial Group entity data.
-   * @returns The created Group entity.
-   */
-  async createGroup(groupPartial: Partial<Group>): Promise<Group> {
-    const newGroup = this.groupORMRepository.create(groupPartial);
-    return this.groupORMRepository.save(newGroup);
+  async remove (id:string, user_id:string): Promise<DeleteResult> {
+    return await this.repository.delete({id, user_id})
   }
 
-  /**
-   * Realiza un "soft delete" en un grupo, marcándolo como eliminado lógicamente.
-   * Esto establece la columna `deleted_at` a la fecha y hora actuales,
-   * y también puede establecer el `status` a 'DELETE'.
-   * @param id El ID del grupo a desactivar.
-   */
-  async softDeleteGroup(id: string): Promise<void> {
-    await this.groupORMRepository.update(
-      { id },
-      { deleted_at: new Date(), status: 'DELETE' }, // Mark deleted_at and update status
-    );
-    this.logger.log(
-      `softDeleteGroup(): Group ${id} soft-deleted successfully.`,
-    );
-  }
-
-  /**
-   * Reactiva un grupo previamente soft-deleted.
-   * Esto establece `deleted_at` a NULL y puede restaurar el `status` a 'ACTIVE'.
-   * @param id El ID del grupo a reactivar.
-   */
-  async reactivateGroup(id: string): Promise<void> {
-    await this.groupORMRepository.update(
-      { id },
-      { deleted_at: null, status: 'ACTIVE' }, // Clear deleted_at and restore status
-    );
-    this.logger.log(`reactivateGroup(): Grupo ${id} reactivated successfully.`);
-  }
-
-  /**
-   * Elimina un grupo por su ID.
-   * NOTA: Esto realiza un borrado físico. Úsalo con precaución.
-   * La lógica de la API debe preferir softDeleteGroup.
-   * @param id El ID del grupo a eliminar.
-   * @returns DeleteResult indicando el resultado de la operación de eliminación.
-   */
-  async hardDeleteGroup(id: string): Promise<DeleteResult> {
-    // CORREGIDO: Retorna DeleteResult
-    const result = await this.groupORMRepository.delete(id);
-    this.logger.log(
-      `hardDeleteGroup(): Grupo ${id} physically deleted. Affected rows: ${result.affected}`,
-    );
-    return result;
-  }
 }

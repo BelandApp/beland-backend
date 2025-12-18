@@ -6,45 +6,23 @@ import {
   ConflictException,
   Logger,
   InternalServerErrorException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
 import { GroupsRepository } from './groups.repository';
-import { GroupMembersRepository } from '../group-members/group-members.repository';
-import { UsersService } from '../users/users.service';
-import { CreateGroupDto } from './dto/create-group.dto';
-import { UpdateGroupDto } from './dto/update-group.dto';
 import { Group } from './entities/group.entity';
 import { GroupMember } from '../group-members/entities/group-member.entity';
 import { plainToInstance } from 'class-transformer';
 import { DataSource } from 'typeorm';
-import { User } from 'src/modules/users/entities/users.entity';
-import { CreateGroupMemberDto } from 'src/modules/group-members/dto/create-group-member.dto';
-import { GroupMemberDto } from 'src/modules/group-members/dto/group-member.dto';
-import { UpdateGroupMemberDto } from 'src/modules/group-members/dto/update-group-member.dto';
 import { GetGroupsQueryDto } from './dto/get-groups-query.dto';
-import { GroupInvitationsService } from 'src/modules/group-invitations/group-invitations.service';
-import { InviteUserDto } from 'src/modules/group-members/dto/create-group-member.dto';
-import { GroupInvitationDto } from 'src/modules/group-invitations/dto/group-invitation.dto'; // Importar GroupInvitationDto
-import { CreateGroupInvitationDto } from 'src/modules/group-invitations/dto/create-group-invitation.dto'; // Importar CreateGroupInvitationDto para el tipo correcto
-
 @Injectable()
 export class GroupsService {
   private readonly logger = new Logger(GroupsService.name);
 
   constructor(
     private readonly groupsRepository: GroupsRepository,
-    private readonly groupMembersRepository: GroupMembersRepository,
-    private readonly usersService: UsersService,
     private readonly dataSource: DataSource,
-    @Inject(forwardRef(() => GroupInvitationsService))
-    private readonly groupInvitationsService: GroupInvitationsService,
   ) {}
 
-  async createGroup(
-    createGroupDto: CreateGroupDto,
-    user_id: string,
-  ): Promise<Group> {
+  async createGroup(createGroupDto: Partial<Group>,user_id: string): Promise<Group> {
     this.logger.debug(
       `createGroup(): Intentando crear grupo para el líder ID: ${user_id}`,
     );
@@ -105,9 +83,15 @@ export class GroupsService {
     }
   }
 
-  async findAllGroups(
-    queryDto: GetGroupsQueryDto,
-  ): Promise<{ groups: Group[]; total: number }> {
+  async getGroupsByUserId(user_id: string, is_active?:boolean): Promise<Group[]> {
+    try {
+    return await this.groupsRepository.getGroupsByUserId(user_id, is_active);
+    } catch (error) {
+      throw new InternalServerErrorException('Error interno: ', error)
+    }
+  }
+
+  async findAllGroups(queryDto: GetGroupsQueryDto): Promise<{ groups: Group[]; total: number }> {
     this.logger.debug(
       `findAllGroups(): Obteniendo todos los grupos con consulta: ${JSON.stringify(
         queryDto,
@@ -119,9 +103,9 @@ export class GroupsService {
         { sortBy: queryDto.sortBy, order: queryDto.order },
         {
           name: queryDto.name,
-          status: queryDto.status,
-          leaderId: queryDto.leaderId,
-          includeDeleted: queryDto.includeDeleted,
+          is_active: queryDto.is_active,
+          user_id: queryDto.user_id,
+          is_delete: queryDto.is_delete,
         },
       );
       // Transformar entidades a DTOs para la respuesta
@@ -141,56 +125,37 @@ export class GroupsService {
   }
 
   async findGroupById(groupId: string): Promise<Group> {
-    this.logger.debug(`findGroupById(): Buscando grupo con ID: ${groupId}`);
-    const group = await this.groupsRepository.findOneById(groupId);
-    if (!group) {
-      this.logger.warn(
-        `findGroupById(): Grupo con ID "${groupId}" no encontrado.`,
-      );
-      throw new NotFoundException(`Grupo con ID "${groupId}" no encontrado.`);
+    try {
+      const group = await this.groupsRepository.findOneById(groupId);
+      if (!group) throw new NotFoundException('Grupo no encontrado')
+      return group
+    } catch (error) {
+      throw new InternalServerErrorException('Error al Recuperar Grupo: ', error)
     }
-    // Transformar entidad a DTO para la respuesta
-    return plainToInstance(Group, group);
+    
   }
 
-  async updateGroup(
-    groupId: string,
-    updateGroupDto: UpdateGroupDto,
-  ): Promise<Group> {
-    this.logger.debug(`updateGroup(): Actualizando grupo con ID: ${groupId}`);
-    const existingGroup = await this.groupsRepository.findOneById(groupId);
-    if (!existingGroup) {
-      throw new NotFoundException(`Grupo con ID "${groupId}" no encontrado.`);
-    }
-
-    // Aplicar actualizaciones parciales a la entidad de grupo existente
-    Object.assign(existingGroup, updateGroupDto);
-    const updatedGroup = await this.groupsRepository.saveGroup(existingGroup);
-    this.logger.log(
-      `updateGroup(): Grupo ${groupId} actualizado exitosamente.`,
-    );
-    return plainToInstance(Group, updatedGroup);
-  }
-
-  async hardDeleteGroup(groupId: string): Promise<void> {
-    this.logger.debug(`hardDeleteGroup(): Eliminando grupo con ID: ${groupId}`);
-    const group = await this.groupsRepository.findOneById(groupId, true); // Incluir soft-deleted para verificar existencia
-    if (!group) {
-      throw new NotFoundException(`Grupo con ID "${groupId}" no encontrado.`);
-    }
-    const result = await this.groupsRepository.hardDeleteGroup(groupId); // Ahora devuelve DeleteResult
-    if (result.affected === 0) {
-      this.logger.warn(
-        `hardDeleteGroup(): No se eliminaron registros para el grupo con ID "${groupId}".`,
-      );
-    } else {
-      this.logger.log(
-        `hardDeleteGroup(): Grupo ${groupId} eliminado permanentemente.`,
-      );
+  async update(id: string,body: Partial<Group>, user_id:string): Promise<{success: boolean, message: string}> {
+    try{
+      const update = await this.groupsRepository.update(id, body, user_id)
+      if (update.affected === 0) throw new NotFoundException('El grupo no existe o Usted no es el creador.') 
+      return {success: true, message: 'Actualizacion Exitosa'}
+    } catch (error) {
+      throw new InternalServerErrorException('Error al Actualizar Grupo: ', error)
     }
   }
 
-  async addGroupMember(
+  async remove(id: string, user_id:string): Promise<{success: boolean, message: string}> {
+    try{
+      const remove = await this.groupsRepository.remove(id, user_id)
+      if (remove.affected === 0) throw new NotFoundException('El grupo no existe o Usted no es el creador.') 
+      return {success: true, message: 'Eliminación Exitosa'}
+    } catch (error) {
+      throw new InternalServerErrorException('Error al Eliminar Grupo: ', error)
+    }
+  }
+
+  /*async addGroupMember(
     createGroupMemberDto: CreateGroupMemberDto,
   ): Promise<GroupMemberDto> {
     this.logger.debug(
@@ -305,25 +270,6 @@ export class GroupsService {
     return plainToInstance(GroupMemberDto, members);
   }
 
-  async getUserGroups(userId: string): Promise<Group[]> {
-    this.logger.debug(
-      `getUserGroups(): Obteniendo grupos para el usuario ID: ${userId}`,
-    );
-
-    const user = await this.usersService.findUserEntityById(userId);
-    if (!user) {
-      throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
-    }
-
-    const memberships = await this.groupMembersRepository.findByUserId(userId); // CORREGIDO: Usar findByUserId
-    const groups = memberships.map((membership) => membership.group);
-
-    return plainToInstance(Group, groups, {
-      enableCircularCheck: true,
-      excludeExtraneousValues: true,
-    });
-  }
-
   async updateGroupMemberRole(
     memberId: string,
     updateGroupMemberDto: UpdateGroupMemberDto,
@@ -436,5 +382,5 @@ export class GroupsService {
       createInvitationDto,
       currentUserId,
     );
-  }
+  }*/
 }

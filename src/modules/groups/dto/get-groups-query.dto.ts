@@ -3,9 +3,7 @@ import { IsOptional, IsString, IsIn, IsBoolean, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { OrderDto } from '../../../common/dto/order.dto';
-
-// Define the type of valid group statuses for the enum
-type ValidGroupStatus = 'ACTIVE' | 'PENDING' | 'INACTIVE' | 'DELETE';
+import { Group } from '../entities/group.entity';
 
 export class GetGroupsQueryDto extends PaginationDto implements OrderDto {
   // 'page' and 'limit' properties are inherited from PaginationDto
@@ -18,7 +16,7 @@ export class GetGroupsQueryDto extends PaginationDto implements OrderDto {
   })
   @IsOptional()
   @IsString()
-  sortBy?: string = 'created_at'; // Columna por defecto para ordenar
+  sortBy?: keyof Group = 'created_at'; // Columna por defecto para ordenar
 
   @ApiPropertyOptional({
     description:
@@ -42,12 +40,11 @@ export class GetGroupsQueryDto extends PaginationDto implements OrderDto {
 
   @ApiPropertyOptional({
     description: 'Filtrar por el estado del grupo.',
-    enum: ['ACTIVE', 'PENDING', 'INACTIVE', 'DELETE'],
-    type: String,
+    default: true,
   })
   @IsOptional()
-  @IsIn(['ACTIVE', 'PENDING', 'INACTIVE', 'DELETE'])
-  status?: ValidGroupStatus;
+  @IsBoolean()
+  is_active?: boolean;
 
   @ApiPropertyOptional({
     description: 'Filtrar por ID del líder del grupo.',
@@ -56,7 +53,7 @@ export class GetGroupsQueryDto extends PaginationDto implements OrderDto {
   })
   @IsOptional()
   @IsUUID()
-  leaderId?: string; // Added leaderId filter
+  user_id?: string; // Added leaderId filter
 
   @ApiPropertyOptional({
     description:
@@ -67,5 +64,5 @@ export class GetGroupsQueryDto extends PaginationDto implements OrderDto {
   @IsOptional()
   @Type(() => Boolean) // Needed for boolean transformation from query string
   @IsBoolean()
-  includeDeleted?: boolean = false; // Added includeDeleted filter
+  is_delete?: boolean = false; // Added includeDeleted filter
 }
