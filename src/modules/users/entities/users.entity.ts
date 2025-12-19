@@ -25,7 +25,6 @@ import { Organization } from '../../organizations/entities/organization.entity';
 import { Cart } from '../../cart/entities/cart.entity';
 import { UserAddress } from '../../user-address/entities/user-address.entity';
 import { UserCard } from '../../user-cards/entities/user-card.entity';
-import { GroupInvitation } from '../../group-invitations/entities/group-invitation.entity';
 import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';
 import { Testimony } from '../../testimonies/entities/testimony.entity';
 import { RoleEnum, ValidRoleNames } from '../../roles/enum/role-validate.enum';
@@ -120,14 +119,6 @@ export class User {
 
   @OneToMany(() => GroupMember, (member) => member.user)
   group_memberships: GroupMember[];
-
-  // NEW: Invitations sent by this user
-  @OneToMany(() => GroupInvitation, (invitation) => invitation.sender)
-  sent_invitations: GroupInvitation[];
-
-  // NEW: Invitations received by this user
-  @OneToMany(() => GroupInvitation, (invitation) => invitation.invited_user)
-  received_invitations: GroupInvitation[];
 
   // NUEVO: Relación con Testimonios
   @OneToMany(() => Testimony, (testimony) => testimony.user)

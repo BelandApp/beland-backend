@@ -45,7 +45,6 @@ import { UserCardsModule } from './modules/user-cards/user-cards.module';
 import { UserAddressModule } from './modules/user-address/user-address.module';
 import { PaymentTypesModule } from './modules/payment-types/payment-types.module';
 import { CategoryModule } from './modules/category/category.module';
-import { GroupInvitationsModule } from './modules/group-invitations/group-invitations.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GroupTypeModule } from './modules/group-type/group-type.module';
 import { EmailModule } from './modules/email/email.module';
@@ -153,7 +152,6 @@ const isTs = process.env.NODE_ENV !== 'production';
     UserAddressModule,
     PaymentTypesModule,
     CategoryModule,
-    GroupInvitationsModule,
     GroupTypeModule,
     EmailModule,
     ResourcesModule,

@@ -12,7 +12,6 @@ import {
 import { GroupMember } from '../../group-members/entities/group-member.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { User } from '../../users/entities/users.entity';
-import { GroupInvitation } from '../../group-invitations/entities/group-invitation.entity';
 import { GroupType } from '../../group-type/entities/group-type.entity';
 import { UserAddress } from '../../user-address/entities/user-address.entity';
 
@@ -75,8 +74,4 @@ export class Group {
 
   @OneToMany(() => Order, (order) => order.group)
   orders: Order[];
-
-  // NEW: Invitations associated with this group
-  @OneToMany(() => GroupInvitation, (invitation) => invitation.group)
-  invitations: GroupInvitation[];
 }
