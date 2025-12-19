@@ -1,29 +1,29 @@
-// src/group-members/dto/group-member.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { UserDto } from 'src/modules/users/dto/user.dto';
-//import { GroupDto } from 'src/modules/groups/dto/group.dto'; // Import GroupDto
+import { IsEnum, IsUUID, IsNotEmpty, IsDate } from 'class-validator';
+import { Group } from 'src/modules/groups/entities/group.entity';
+import { User } from 'src/modules/users/entities/users.entity';
+import { RoleGoupEnum, RoleGroupNames } from '../enums/role-group.enum';
 
 export class GroupMemberDto {
-  @ApiProperty({ description: 'Unique group membership ID', example: 'uuid' })
-  id: string;
+    @ApiProperty({ description: 'ID de la membresía' })
+    @IsUUID()
+    id: string;
 
-  @ApiProperty({
-    description: 'Member role in the group',
-    example: 'MEMBER',
-    enum: ['LEADER', 'MEMBER'],
-  })
-  role: 'LEADER' | 'MEMBER';
+    @ApiProperty({ description: 'Rol del usuario en el grupo', enum: RoleGoupEnum })
+    @IsEnum(RoleGoupEnum)
+    role: RoleGroupNames;
 
-  @ApiProperty({
-    description: 'Date joined the group',
-    example: '2025-08-01T10:00:00Z',
-  })
-  joined_at: Date;
+    @ApiProperty({ description: 'Grupo al que pertenece' })
+    group: Group;
 
-  @ApiProperty({ description: 'Member user information', type: () => UserDto })
-  user: UserDto;
+    @ApiProperty({ description: 'Usuario miembro' })
+    user: User;
 
-  // Added group information to the DTO for easier access in controllers/services
-  // @ApiProperty({ description: 'Group information', type: () => GroupDto })
-  // group: GroupDto;
+    @ApiProperty({ description: 'Fecha de creación' })
+    @IsDate()
+    created_at: Date;
+
+    @ApiProperty({ description: 'Fecha de actualización' })
+    @IsDate()
+    updated_at: Date;
 }

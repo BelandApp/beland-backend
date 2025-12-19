@@ -7,24 +7,26 @@ import {
   ManyToOne,
   Unique,
   JoinColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Group } from '../../groups/entities/group.entity';
 import { User } from '../../users/entities/users.entity';
+import { RoleGroupNames } from '../enums/role-group.enum';
 
 @Entity('group_members')
-@Unique(['group', 'user']) // Ensures a user can only be a member of a group once
+@Unique(['group_id', 'user_id']) // Ensures a user can only be a member of a group once
 export class GroupMember {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // This 'role' column defines the user's role *within this specific group*
-  // It can be 'LEADER' (if they are the group's designated leader) or 'MEMBER'.
-  // This is distinct from the global 'role_name' in the User entity.
-  @Column({ type: 'text', default: 'MEMBER' })
-  role: 'LEADER' | 'MEMBER';
+  @Column({ type: 'enum', default: 'MEMBER' })
+  role: RoleGroupNames;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  joined_at: Date;
+  created_at: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updated_at: Date;
 
   // ManyToOne relationship with Group
   @ManyToOne(() => Group, (group) => group.members, { onDelete: 'CASCADE' })

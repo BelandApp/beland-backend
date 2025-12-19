@@ -2,7 +2,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GroupMembersService } from './group-members.service';
-import { GroupMembersController } from './group-members.controller';
+import { GroupMembersController } from '../group-type/entities/group-type.entity';
 import { GroupMember } from './entities/group-member.entity';
 import { GroupMembersRepository } from './group-members.repository';
 import { GroupsModule } from 'src/modules/groups/groups.module'; // Import GroupsModule for GroupsService dependency
@@ -26,4 +26,4 @@ import { GroupInvitationsModule } from 'src/modules/group-invitations/group-invi
   // Export services and repositories for use in other modules.
   exports: [GroupMembersService, GroupMembersRepository, TypeOrmModule],
 })
-export class GroupMembersModule {}
+export class GroupMembersModule { }

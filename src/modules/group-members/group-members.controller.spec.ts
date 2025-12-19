@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GroupMembersController } from './group-members.controller';
+import { GroupMembersController } from '../group-type/entities/group-type.entity';
 import { GroupMembersService } from './group-members.service';
 
 describe('GroupMembersController', () => {
