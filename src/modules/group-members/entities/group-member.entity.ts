@@ -11,16 +11,21 @@ import {
 } from 'typeorm';
 import { Group } from '../../groups/entities/group.entity';
 import { User } from '../../users/entities/users.entity';
-import { RoleGroupNames } from '../enums/role-group.enum';
+import { RoleGroupEnum } from '../enums/role-group.enum';
 
 @Entity('group_members')
-@Unique(['group_id', 'user_id']) // Ensures a user can only be a member of a group once
+@Unique(['group_id', 'user_id'])
 export class GroupMember {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'enum', default: 'MEMBER' })
-  role: RoleGroupNames;
+@Column({
+  type: 'enum',
+  enum: RoleGroupEnum,
+  enumName: 'group_member_role_enum',
+  default: RoleGroupEnum.MEMBER,
+})
+role: RoleGroupEnum;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

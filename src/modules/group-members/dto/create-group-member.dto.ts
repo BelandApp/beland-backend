@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
-import { RoleGoupEnum, RoleGroupNames } from '../enums/role-group.enum';
+import { IsUUID, IsNotEmpty } from 'class-validator';
 
 export class CreateGroupMemberDto {
   @ApiProperty({ description: 'ID del grupo' })
@@ -12,9 +11,4 @@ export class CreateGroupMemberDto {
   @IsUUID()
   @IsNotEmpty()
   user_id: string;
-
-  @ApiProperty({ description: 'Rol del usuario en el grupo', enum: RoleGoupEnum, required: false, default: RoleGoupEnum.MEMBER })
-  @IsOptional()
-  @IsEnum(RoleGoupEnum)
-  role?: RoleGroupNames;
 }

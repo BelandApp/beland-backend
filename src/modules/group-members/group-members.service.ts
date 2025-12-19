@@ -3,20 +3,16 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  BadRequestException,
   Logger,
   InternalServerErrorException,
   ForbiddenException,
 } from '@nestjs/common';
 import { GroupMembersRepository } from './group-members.repository';
-import { plainToInstance } from 'class-transformer';
 import { Group } from 'src/modules/groups/entities/group.entity';
 import { User } from 'src/modules/users/entities/users.entity';
 import { DataSource } from 'typeorm';
 import { GroupMember } from './entities/group-member.entity';
-import { RoleGoupEnum } from './enums/role-group.enum';
-import { GroupMemberDto } from './dto/group-member.dto';
-import { UpdateGroupMemberDto } from './dto/update-group-member.dto';
+import { RoleGroupEnum } from './enums/role-group.enum';
 
 import { CreateGroupMemberDto } from './dto/create-group-member.dto';
 import { async } from 'rxjs';
@@ -53,7 +49,7 @@ export class GroupMembersService {
       const member = this.repository.create({
         group_id,
         user_id,
-        role: RoleGoupEnum.MEMBER,
+        role: RoleGroupEnum.MEMBER,
       });
       return member;
     } catch (error: any) {

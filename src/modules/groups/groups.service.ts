@@ -13,6 +13,7 @@ import { GroupMember } from '../group-members/entities/group-member.entity';
 import { plainToInstance } from 'class-transformer';
 import { DataSource } from 'typeorm';
 import { GetGroupsQueryDto } from './dto/filters-groups.dto';
+import { RoleGroupEnum } from '../group-members/enums/role-group.enum';
 @Injectable()
 export class GroupsService {
   private readonly logger = new Logger(GroupsService.name);
@@ -52,7 +53,7 @@ export class GroupsService {
       const leaderMembership = await queryRunner.manager.save(GroupMember, {
         group: savedGroup, // Asociar con el grupo recién creado
         user_id, // Asociar con el usuario líder
-        role: 'LEADER', // Establecer el rol como LÍDER
+        role: RoleGroupEnum.LEADER, // Establecer el rol como LÍDER
       });
 
       await queryRunner.commitTransaction();

@@ -13,7 +13,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { GroupMembersService } from './group-members.service';
-import { GroupMemberDto } from './dto/group-member.dto';
+import { CreateGroupMemberDto } from './dto/create-group-member.dto'; 
 import {
   ApiTags,
   ApiOperation,
@@ -70,7 +70,7 @@ export class GroupMembersController {
     description: 'Recupera los detalles de una membresía de grupo específica. Accesible por cualquier miembro del grupo asociado con la membresía, o por un Admin/Superadmin.',
   })
   @ApiParam({ name: 'id', description: 'El ID único de la membresía de grupo a recuperar', type: String, })
-  @ApiResponse({ status: 200, description: 'Membresía encontrada.', type: GroupMemberDto, })
+  @ApiResponse({ status: 200, description: 'Membresía encontrada.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @ApiResponse({ status: 403, description: 'Prohibido (el usuario actual no es miembro del grupo y no es Admin/Superadmin).', })
   @ApiResponse({ status: 404, description: 'Membresía no encontrada.' })
@@ -81,7 +81,7 @@ export class GroupMembersController {
   @Post()
   @ApiOperation({ summary: 'Agregar un miembro a un grupo' })
   @ApiResponse({ status: 201, description: 'Miembro agregado exitosamente.' })
-  async create(@Body() createDto: any, @Req() req: Request): Promise<GroupMember> {
+  async create(@Body() createDto: CreateGroupMemberDto, @Req() req: Request): Promise<GroupMember> {
     // Assuming createDto is valid (CreateGroupMemberDto)
     return await this.service.createGroupMember(createDto, req.user as User)
   }
