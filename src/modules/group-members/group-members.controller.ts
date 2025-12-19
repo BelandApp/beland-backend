@@ -13,7 +13,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { GroupMembersService } from './group-members.service';
-import { CreateGroupMemberDto } from './dto/create-group-member.dto'; 
+import { CreateGroupMemberDto, CreateManyGroupMemberDto } from './dto/create-group-member.dto'; 
 import {
   ApiTags,
   ApiOperation,
@@ -83,14 +83,22 @@ export class GroupMembersController {
   @ApiResponse({ status: 201, description: 'Miembro agregado exitosamente.' })
   async create(@Body() createDto: CreateGroupMemberDto, @Req() req: Request): Promise<GroupMember> {
     // Assuming createDto is valid (CreateGroupMemberDto)
-    return await this.service.createGroupMember(createDto, req.user as User)
+    return await this.service.createGroupMember(createDto, req.user?.id)
+  }
+
+  @Post('many')
+  @ApiOperation({ summary: 'Agregar varios miembros a un grupo' })
+  @ApiResponse({ status: 201, description: 'Miembros agregados exitosamente.' })
+  async createMany(@Body() createDto: CreateManyGroupMemberDto, @Req() req: Request): Promise<{ message: string; success: true }> {
+    // Assuming createDto is valid (CreateGroupMemberDto)
+    return await this.service.createMany(createDto, req.user?.id)
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar un miembro del grupo por ID. Solo Creador o mismo miembro a eliminar pueden realizar esta acción.' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string, @Req() req: Request): Promise<{message: string, success: boolean}> {
-    return await this.service.deleteGroupMember(id, req.user as User);
+    return await this.service.deleteGroupMember(id, req.user?.id);
   }
 
   @Delete('group-and-user')
@@ -103,6 +111,6 @@ export class GroupMembersController {
     @Query('userId') userId: string,
     @Req() req: Request
   ): Promise<{message: string, success: boolean}> {
-    return await this.service.removeMemberByGroupAndUser(groupId, userId, req.user as User);
+    return await this.service.removeMemberByGroupAndUser(groupId, userId, req.user?.id);
   }
 }

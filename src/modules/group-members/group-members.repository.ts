@@ -1,12 +1,14 @@
 // src/group-members/group-members.repository.ts
-import { Repository, Not, IsNull, DeleteResult } from 'typeorm';
-import { Injectable, Logger } from '@nestjs/common';
+import { Repository, Not, IsNull, DeleteResult, DataSource } from 'typeorm';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GroupMember } from './entities/group-member.entity';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { OrderDto } from 'src/common/dto/order.dto';
-import { Group } from 'src/modules/groups/entities/group.entity'; // Importar Group entity
-import { User } from 'src/modules/users/entities/users.entity'; // Importar User entity
+import { CreateManyGroupMemberDto } from './dto/create-group-member.dto';
+import { Group } from '../groups/entities/group.entity';
+import { NotFoundException } from '@zxing/library';
+import { User } from '../users/entities/users.entity';
+import { RoleGroupEnum } from './enums/role-group.enum';
+
 
 @Injectable()
 export class GroupMembersRepository {
@@ -15,6 +17,7 @@ export class GroupMembersRepository {
   constructor(
     @InjectRepository(GroupMember)
     private readonly repository: Repository<GroupMember>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findOneById(id: string): Promise<GroupMember | null> {
