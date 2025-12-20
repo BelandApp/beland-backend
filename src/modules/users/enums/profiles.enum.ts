@@ -1,9 +1,10 @@
 export enum ProfileEnum {
-  DELIVERY_DRIVER = 'DELIVERY_DRIVER',
-  WAREHOUSE = 'WAREHOUSE',
-  COMMERCE = 'COMMERCE',
-  FUNDATION = 'FUNDATION',
+  DRIVER = 'DRIVER',          // repartidor
+  HUB = 'HUB',                // centro de acopio / warehouse
+  MERCHANT = 'MERCHANT',      // comercio
+  FOUNDATION = 'FOUNDATION',  // fundación
+  CREATOR = 'CREATOR',        // creador / promotor de eventos
+  RECYCLER_BASE = 'RECYCLER_BASE', // reciclador de base
 }
 
-// Definición de tipo para todos los perfiles válidos
 export type ValidProfileNames = `${ProfileEnum}`;

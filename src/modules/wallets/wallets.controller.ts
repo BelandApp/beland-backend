@@ -30,15 +30,9 @@ import { TransferDto } from './dto/transfer.dto';
 import { Request } from 'express';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
-import { WithdrawDto, WithdrawResponseDto } from './dto/withdraw.dto';
 import { TransactionCode } from 'src/modules/transaction-type/enum/transaction-code';
 import { RespCobroDto } from './dto/resp-cobro.dto';
 import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
-import {
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import { CreateUserResourceDto } from 'src/modules/user-resources/dto/create-user-resource.dto';
 
 @ApiTags('wallets')
 @Controller('wallets')
@@ -261,20 +255,6 @@ export class WalletsController {
     @Body() dto: TransferDto,
   ): Promise<{ wallet: Wallet }> {
     return await this.service.transfer(req.user?.id, dto);
-  }
-
-  @Post('purchase-resource')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary:
-      'Crear una nueva compra un recurso a una entidad con becoin',
-  })
-  @ApiResponse({ status: 201, description: 'Compra Exitosamente' })
-  async purchaseResourse(
-    @Req() req: Request,
-    @Body() dto: CreateUserResourceDto,
-  ): Promise<{ wallet: Wallet }> {
-    return await this.service.purchaseResource(req.user?.id, dto);
   }
 
   //COMPRAS DIRECTO CON TARJETA O PAYPHONE.

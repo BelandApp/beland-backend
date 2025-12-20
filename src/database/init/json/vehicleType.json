@@ -1,0 +1,26 @@
+[
+  {
+    "code": "BICYCLE",
+    "name": "Bicicleta",
+    "description": "Vehículo sin motor impulsado por pedales, ideal para entregas de corta distancia",
+    "is_active": true
+  },
+  {
+    "code": "MOTORCYCLE",
+    "name": "Motocicleta",
+    "description": "Vehículo motorizado de dos ruedas, rápido y eficiente para entregas urbanas",
+    "is_active": true
+  },
+  {
+    "code": "CAR",
+    "name": "Automóvil",
+    "description": "Vehículo de cuatro ruedas, apto para entregas de mayor volumen o distancia",
+    "is_active": true
+  },
+  {
+    "code": "ELECTRIC_SCOOTER",
+    "name": "Monopatín Eléctrico",
+    "description": "Vehículo eléctrico liviano, ideal para entregas rápidas en zonas urbanas",
+    "is_active": true
+  }
+]

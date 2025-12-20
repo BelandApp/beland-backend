@@ -11,7 +11,7 @@ import { TransactionState } from '../transaction-state/entities/transaction-stat
 import { TransactionType } from '../transaction-type/entities/transaction-type.entity';
 import { StatusCode } from '../transaction-state/enum/status.enum';
 import { TransactionCode } from '../transaction-type/enum/transaction-code';
-import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { PurchaseWhitRechargeDto } from './dto/purchaseWhitRecarge.dto';
 import { WalletsService } from '../wallets/wallets.service';
 

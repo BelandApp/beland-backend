@@ -1,0 +1,6 @@
+export enum VehicleType {
+  BICYCLE = 'BICYCLE',
+  MOTORCYCLE = 'MOTORCYCLE',
+  CAR = 'CAR',
+  ELECTRIC_SCOOTER = 'ELECTRIC_SCOOTER',
+}
