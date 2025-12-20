@@ -48,9 +48,6 @@ import { CategoryModule } from './modules/category/category.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GroupTypeModule } from './modules/group-type/group-type.module';
 import { EmailModule } from './modules/email/email.module';
-import { ResourcesModule } from './modules/resources/resources.module';
-import { ResourcesTypesModule } from './modules/resources-types/resources-types.module';
-import { UserResourcesModule } from './modules/user-resources/user-resources.module';
 import { SuperadminModule } from './modules/superadmin-config/superadmin-config.module';
 import { WithdrawAccountModule } from './modules/withdraw-account/withdraw-account.module';
 import { WithdrawAccountTypeModule } from './modules/withdraw-account-type/withdraw-account-type.module';
@@ -68,6 +65,8 @@ import { EventPassModule } from './modules/event-pass/event-pass.module';
 import { UserEventPassModule } from './modules/user-event-pass/user-event-pass.module';
 import { TopupModule } from './modules/topup/topup.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
+import { DriversModule } from './modules/profile-drivers/drivers.module';
+import { MerchantsModule } from './modules/profile-merchants/merchants.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -154,9 +153,6 @@ const isTs = process.env.NODE_ENV !== 'production';
     CategoryModule,
     GroupTypeModule,
     EmailModule,
-    ResourcesModule,
-    ResourcesTypesModule,
-    UserResourcesModule,
     WithdrawAccountModule,
     WithdrawAccountTypeModule,
     UserWithdrawModule,
@@ -167,7 +163,6 @@ const isTs = process.env.NODE_ENV !== 'production';
     SuperadminModule,
     UserFeedbackModule,
     UserRechargeModule,
-    UserResourcesModule,
     PaymentAccountModule,
     DeliveryStatusModule,
     PaymentAccountModule,
@@ -176,6 +171,8 @@ const isTs = process.env.NODE_ENV !== 'production';
     UserEventPassModule,
     TopupModule,
     DeliveryModule,
+    DriversModule,
+    MerchantsModule,
   ],
   controllers: [],
   providers: [

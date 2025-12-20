@@ -18,7 +18,7 @@ import { UserEventPassFiltersDto } from './dto/user-eventpass-filters.dto';
 import { Request } from 'express';
 import { CreateUserEventPassDto } from './dto/create-user-event-pass.dto';
 import { FlexibleAuthGuard } from '../auth/guards/flexible-auth.guard';
-import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { EventPass } from '../event-pass/entities/event-pass.entity';
 import { PurchaseWhitRechargeDto } from './dto/purchaseWhitRecarge.dto';
 

@@ -24,11 +24,4 @@ export class TransferDto {
   @IsUUID()
   amount_payment_id?: string;
 
-  @ApiPropertyOptional({
-    example: '8f03a1de-b71c-4a5a-a9ff-0d9a3a3c5b2a',
-    description: 'UUID recurso que el usuario compro en recursos Beland',
-  })
-  @IsOptional()
-  @IsUUID()
-  user_resource_id?: string;
 }

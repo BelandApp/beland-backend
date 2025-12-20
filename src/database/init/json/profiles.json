@@ -1,27 +1,32 @@
 [
   {
-    "name": "DELIVERY_DRIVER",
+    "name": "DRIVER",
     "description": "Usuario encargado de realizar la entrega de pedidos a los clientes",
     "is_active": true
   },
   {
-    "name": "WAREHOUSE",
-    "description": "Usuario encargado de almacenar productos, gestionar el inventario y despachar pedidos a los repartidores",
+    "name": "HUB",
+    "description": "Centro de acopio encargado de almacenar productos, gestionar inventario y despachar pedidos",
     "is_active": true
   },
   {
-    "name": "COMMERCE",
+    "name": "MERCHANT",
     "description": "Comercio o negocio que provee productos disponibles para la venta en la plataforma",
     "is_active": true
   },
   {
-    "name": "FUNDATION",
+    "name": "FOUNDATION",
     "description": "Fundación u organización responsable de actividades sociales o solidarias",
     "is_active": true
   },
   {
-    "name": "BASE_RECYCLER",
-    "description": "Usuario encargado de recibir los residuos reciclables, gestionarlos y darles tratamiento adecuado",
+    "name": "CREATOR",
+    "description": "Usuario creador y organizador de grupos, eventos o experiencias dentro de la plataforma",
+    "is_active": true
+  },
+  {
+    "name": "RECYCLER_BASE",
+    "description": "Reciclador de base encargado de recibir, clasificar y gestionar residuos reciclables",
     "is_active": true
   }
 ]

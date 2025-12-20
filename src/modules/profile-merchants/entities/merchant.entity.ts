@@ -11,8 +11,8 @@ import {
 import { User } from '../../users/entities/users.entity'; 
 import { UserAddress } from '../../user-address/entities/user-address.entity';
 
-@Entity('organizations')
-export class Organization {
+@Entity('merchants')
+export class Merchant {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -35,10 +35,10 @@ export class Organization {
   email?: string;
 
   @ManyToOne(() => UserAddress)
-  @JoinColumn({name:'user_address_id'})
-  user_address: UserAddress
-  @Column('uuid', {nullable:true})
-  user_address_id: string
+  @JoinColumn({name:'address_id'})
+  address: UserAddress
+  @Column('uuid')
+  address_id: string
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   website?: string;

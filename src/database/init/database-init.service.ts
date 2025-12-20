@@ -4,20 +4,17 @@ import { DataSource, Repository } from 'typeorm';
 // Seeders
 import { DefaultRolesSeeder } from './seeders/default-roles.seeder';
 import { SuperAdminUserSeeder } from './seeders/superadmin-user.seeder';
-import * as QRCode from 'qrcode';
 // JSON
 import preloadTT from './json/transactionsType.json';
 import preloadTS from './json/transactionState.json';
 import preloadProduct from './json/products.json';
 import preloadPaymentType from './json/paymentType.json';
 import preloadGroupType from './json/groupType.json';
-import preloadResourceType from './json/resourceType.json';
 import preloadWithdrawAccountType from './json/withdrawAccountType.json';
-import preloadResource from './json/resource.json'
-import preloadResourceSuperAdmin from './json/resourceSuperadmin.json'
 import preloadDelivery from './json/deliveryStatus.json'
 import preloadTypeEvent from './json/eventType.json'
 import preloadProfiles from './json/profiles.json'
+import preloadVehicleType from './json/vehicleType.json'
 
 // Entidades
 import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
@@ -26,15 +23,12 @@ import { Product } from 'src/modules/products/entities/product.entity';
 import { PaymentType } from 'src/modules/payment-types/entities/payment-type.entity';
 import { Category } from 'src/modules/category/entities/category.entity';
 import { GroupType } from 'src/modules/group-type/entities/group-type.entity';
-import { ResourcesType } from 'src/modules/resources-types/entities/resources-type.entity';
 import { WithdrawAccountType } from 'src/modules/withdraw-account-type/entities/withdraw-account-type.entity';
-import { Resource } from 'src/modules/resources/entities/resource.entity';
-import { User } from 'src/modules/users/entities/users.entity';
 import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
-import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
 import { DeliveryStatus } from 'src/modules/delivery-status/entities/delivery-status.entity';
 import { EventPassType } from 'src/modules/event-pass/entities/event-pass-type.entity';
 import { Profile } from 'src/modules/users/entities/profile.entity';
+import { Vehicle } from 'src/modules/profile-drivers/entities/vehicle.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -132,52 +126,6 @@ export class DatabaseInitService {
 
   }
 
-  async loadResourceByUser (email: string): Promise <void> {
-    const user = await this.dataSource.manager.findOne(User, {
-      where: {email},
-    })
-
-    if ((user.role_name === 'USER') || !user) return;
-
-    let count = 0;
-    const resourceRepo = this.dataSource.getRepository(Resource);
-    const typeRepo = this.dataSource.getRepository(ResourcesType);
-    const primerasTres = email.substring(0, 3).toUpperCase();
-    for (const resource of preloadResource) {
-      const codeResource = resource.code+primerasTres
-      const res = await resourceRepo.findOneBy({ code: codeResource });
-      if (!res) {
-        const resType = await typeRepo.findOneBy({ code: resource.type });
-        if (resType)
-          {const { type, code, ...save } = resource;
-          await resourceRepo.save({ ...save, code: codeResource, resource_type_id: resType.id, user_commerce_id: user.id });
-          count++;}
-      }
-    }
-    console.log(`Se agregaron ${count} Recursos para el usuario ${email}`);
-  }
-
-  async loadResourceSuperadmin (): Promise <void> {
-    const user = await this.dataSource.manager.findOne(User, {
-      where: {role_name: RoleEnum.SUPERADMIN},
-    })
-
-    let count = 0;
-    const resourceRepo = this.dataSource.getRepository(Resource);
-    const typeRepo = this.dataSource.getRepository(ResourcesType);
-    for (const resource of preloadResourceSuperAdmin) {
-      const res = await resourceRepo.findOneBy({ code: resource.code });
-      if (!res) {
-        const resType = await typeRepo.findOneBy({ code: resource.type });
-        if (resType)
-          {const { type, ...save } = resource;
-          await resourceRepo.save({ ...save, resource_type_id: resType.id, user_commerce_id: user.id });
-          count++;}
-      }
-    }
-    console.log(`Se agregaron ${count} Recursos para el usuario ${user.email}`);
-  }
-
   async dataInitEntryUpdate () {
     this.logger.log('🚀 Iniciando procesos de carga de datos...');
 
@@ -214,17 +162,17 @@ export class DatabaseInitService {
         'name',
         'Tipos de Grupos',
       );
+      await this.preload<Vehicle>(
+        preloadGroupType,
+        Vehicle,
+        'code',
+        'Tipos de Vehiculos',
+      );
       await this.preload<EventPassType>(
         preloadTypeEvent,
         EventPassType,
         'name',
         'Tipos de Eventos',
-      );
-      await this.preload<ResourcesType>(
-        preloadResourceType,
-        ResourcesType,
-        'code',
-        'Tipos de Recursos',
       );
       await this.preload<WithdrawAccountType>(
         preloadWithdrawAccountType,
