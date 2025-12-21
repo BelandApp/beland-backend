@@ -21,7 +21,6 @@ import { Coupon } from '../../coupons/entities/coupon.entity';
 import { Role } from '../../roles/entities/role.entity';
 import { Admin } from '../../admins/entities/admin.entity';
 import { Exclude } from 'class-transformer';
-import { Organization } from '../../organizations/entities/organization.entity';
 import { Cart } from '../../cart/entities/cart.entity';
 import { UserAddress } from '../../user-address/entities/user-address.entity';
 import { UserCard } from '../../user-cards/entities/user-card.entity';
@@ -153,9 +152,6 @@ export class User {
   coupon_usages: CouponUsage[];
 
   // **FIN CUPONES**
-
-  @OneToOne(() => Organization, (org) => org.user)
-  organization: Organization;
 
   @OneToMany(() => UserAddress, (address) => address.user, { cascade: true })
   addresses: UserAddress[];

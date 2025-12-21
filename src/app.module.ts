@@ -33,7 +33,6 @@ import { DataSourceOptions } from 'typeorm';
 import { RequestLoggerMiddleware } from './middlleware/request-logger.middleware'; // Asegúrate de que este archivo exista
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { RecyclePricesModule } from './modules/recycle_prices/recycle_prices.module';
-import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { TransactionTypeModule } from './modules/transaction-type/transaction-type.module';
 import { TransactionStateModule } from './modules/transaction-state/transaction-state.module';
 import { DatabaseInitModule } from './database/init/database-init.module';
@@ -65,8 +64,12 @@ import { EventPassModule } from './modules/event-pass/event-pass.module';
 import { UserEventPassModule } from './modules/user-event-pass/user-event-pass.module';
 import { TopupModule } from './modules/topup/topup.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
-import { DriversModule } from './modules/profile-drivers/drivers.module';
-import { MerchantsModule } from './modules/profile-merchants/merchants.module';
+import { DriversModule } from './modules/profiles/drivers/drivers.module';
+import { MerchantsModule } from './modules/profiles/merchants/merchants.module';
+import { HubsModule } from './modules/profiles/hubs/hubs.module';
+import { FoundationsModule } from './modules/profiles/foundations/foundations.module';
+import { RecyclersModule } from './modules/profiles/recyclers/recyclers.module';
+import { HubProductsModule } from './modules/hub-product/hub-product.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -141,7 +144,6 @@ const isTs = process.env.NODE_ENV !== 'production';
     CommonModule,
     TransactionsModule,
     RecyclePricesModule,
-    OrganizationsModule,
     TransactionTypeModule,
     TransactionStateModule,
     AdminsModule,
@@ -173,6 +175,10 @@ const isTs = process.env.NODE_ENV !== 'production';
     DeliveryModule,
     DriversModule,
     MerchantsModule,
+    HubsModule,
+    FoundationsModule,
+    RecyclersModule,
+    HubProductsModule,
   ],
   controllers: [],
   providers: [
