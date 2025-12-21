@@ -28,7 +28,7 @@ import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmi
 import { DeliveryStatus } from 'src/modules/delivery-status/entities/delivery-status.entity';
 import { EventPassType } from 'src/modules/event-pass/entities/event-pass-type.entity';
 import { Profile } from 'src/modules/users/entities/profile.entity';
-import { Vehicle } from 'src/modules/profile-drivers/entities/vehicle.entity';
+import { Vehicle } from 'src/modules/profiles/drivers/entities/vehicle.entity';
 
 @Injectable()
 export class DatabaseInitService {
