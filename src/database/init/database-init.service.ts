@@ -15,6 +15,8 @@ import preloadDelivery from './json/deliveryStatus.json'
 import preloadTypeEvent from './json/eventType.json'
 import preloadProfiles from './json/profiles.json'
 import preloadVehicleType from './json/vehicleType.json'
+import preloadSocialNetwork from './json/socialNetwork.json'
+import preloadContentCategoty from './json/contentCategories.json'
 
 // Entidades
 import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
@@ -29,6 +31,8 @@ import { DeliveryStatus } from 'src/modules/delivery-status/entities/delivery-st
 import { EventPassType } from 'src/modules/event-pass/entities/event-pass-type.entity';
 import { Profile } from 'src/modules/users/entities/profile.entity';
 import { Vehicle } from 'src/modules/profiles/drivers/entities/vehicle.entity';
+import { ContentCategory } from 'src/modules/profiles/creators/entities/content-category.entity';
+import { SocialNetwork } from 'src/modules/profiles/creators/entities/social-network.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -163,10 +167,22 @@ export class DatabaseInitService {
         'Tipos de Grupos',
       );
       await this.preload<Vehicle>(
-        preloadGroupType,
+        preloadVehicleType,
         Vehicle,
         'code',
         'Tipos de Vehiculos',
+      );
+      await this.preload<ContentCategory>(
+        preloadContentCategoty,
+        ContentCategory,
+        'code',
+        'Categorias de Contenido',
+      );
+      await this.preload<SocialNetwork>(
+        preloadSocialNetwork,
+        SocialNetwork,
+        'code',
+        'Redes Sociales',
       );
       await this.preload<EventPassType>(
         preloadTypeEvent,

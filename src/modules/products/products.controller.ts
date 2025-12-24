@@ -54,7 +54,7 @@ export class ProductsController {
 
   // Helper para obtener el ID del usuario de la request.
   private getUserId(req: Request): string {
-    const user = req.user as User;
+    const user = req.user;
     if (!user || !user.id) {
       this.logger.error(
         'getUserId(): ID de usuario no encontrado en la solicitud después de la autenticación.',

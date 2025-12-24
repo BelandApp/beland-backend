@@ -1,0 +1,32 @@
+[
+  {
+    "code": "INSTAGRAM",
+    "name": "Instagram",
+    "description": "Red social enfocada en contenido visual, historias y reels"
+  },
+  {
+    "code": "TIKTOK",
+    "name": "TikTok",
+    "description": "Plataforma de videos cortos con alto alcance orgánico"
+  },
+  {
+    "code": "YOUTUBE",
+    "name": "YouTube",
+    "description": "Plataforma de videos de formato largo y transmisiones en vivo"
+  },
+  {
+    "code": "FACEBOOK",
+    "name": "Facebook",
+    "description": "Red social para comunidades, páginas y contenido mixto"
+  },
+  {
+    "code": "TWITTER",
+    "name": "X",
+    "description": "Red social de microblogging y contenido informativo en tiempo real"
+  },
+  {
+    "code": "TWITCH",
+    "name": "Twitch",
+    "description": "Plataforma de streaming en vivo orientada a gaming y contenido interactivo"
+  }
+]

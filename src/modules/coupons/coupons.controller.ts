@@ -31,10 +31,6 @@ import { CreateCouponDto } from './dto/create-coupon.dto';
 import { ApplyCouponDto } from './dto/apply-coupon.dto';
 import { ApplyResult } from './interfaces/apply-result.interface';
 
-// Fix TS2430: Asegurar que el usuario tiene la estructura correcta
-interface AuthenticatedRequest extends Request {
-  user: User;
-}
 
 @ApiTags('coupons')
 @Controller('coupons')
@@ -64,7 +60,7 @@ export class CouponsController {
     description: 'Límite por página',
   })
   async findAll(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: Request,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
   ): Promise<[Coupon[], number]> {
@@ -134,7 +130,7 @@ export class CouponsController {
   })
   @ApiResponse({ status: 500, description: 'No se pudo crear el cupón' })
   async create(
-    @Req() req: AuthenticatedRequest, // Añadido Req para obtener el ID del creador
+    @Req() req: Request, // Añadido Req para obtener el ID del creador
     @Body() body: CreateCouponDto,
   ): Promise<Coupon> {
     // Seguridad: Inyectar el ID del usuario creador desde el token de autenticación
@@ -187,7 +183,7 @@ export class CouponsController {
       'Cupón expirado, ya redimido (límite alcanzado), o no válido para el comercio/monto',
   })
   async applyCoupon(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: Request,
     @Body() applyDto: ApplyCouponDto, // Usamos el DTO refactorizado
   ): Promise<ApplyResult> {
     const user_id = req.user.id; // Seguridad: ID del usuario desde el token

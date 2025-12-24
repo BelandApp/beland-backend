@@ -105,7 +105,7 @@ export class UsersController {
   // Helper para obtener el ID del usuario de la request.
   // Lanza ForbiddenException si el usuario no está correctamente autenticado o no tiene ID.
   private getUserId(req: Request): string {
-    const user = req.user as User;
+    const user = req.user;
     if (!user || !user.id) {
       this.logger.error(
         'getUserId(): ID de usuario no encontrado en la solicitud después de la autenticación.',
@@ -375,15 +375,11 @@ export class UsersController {
       `GET /users: Solicitud para listar usuarios por Admin ID: ${adminUserId}.`,
     );
     try {
-      const currentUser = req.user as User;
-      const isSuperAdminOrAdmin =
-        currentUser?.role_name === 'ADMIN' ||
-        currentUser?.role_name === 'SUPERADMIN';
 
       // Pasa el `query` y el `isSuperAdminOrAdmin` al servicio para que decida `includeDeleted`.
       const { users, total } = await this.usersService.findAll(
         query,
-        isSuperAdminOrAdmin,
+        true,
       );
 
       this.logger.log(
@@ -451,36 +447,17 @@ export class UsersController {
   @ApiResponse({status: 403, description:'No autorizado (no es el propietario o rol/permiso insuficiente).'})
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async findOne(
     @Param('id', ParseUUIDPipe) id: string, // Asegura que el ID es un UUID
     @Req() req: Request,
-    @Query() query: GetUserByIdQueryDto, // DTO para `includeDeleted`
   ): Promise<UserDto> {
     const currentUserId = this.getUserId(req); // ID del usuario autenticado
     this.logger.log(
       `GET /users/${id}: Solicitud para buscar usuario con ID: ${id} por el usuario ID: ${currentUserId}.`,
     );
     try {
-      const currentUser = req.user as User;
-      const isSuperAdminOrAdmin =
-        currentUser?.role_name === 'ADMIN' ||
-        currentUser?.role_name === 'SUPERADMIN';
 
-      // Lógica de autorización: Permitir acceso si es el propio usuario o si es Admin/Superadmin.
-      if (currentUserId !== id && !isSuperAdminOrAdmin) {
-        throw new ForbiddenException(
-          'No tienes autorización para ver este perfil de usuario.',
-        );
-      }
-
-      // La lógica de `bIncludeDeleted` se maneja en el servicio,
-      // aquí solo preparamos el valor que se le pasará.
-      const bIncludeDeleted = isSuperAdminOrAdmin
-        ? query.includeDeleted
-        : false;
-
-      const user = await this.usersService.findOneById(id, bIncludeDeleted);
+      const user = await this.usersService.findOneById(id, true);
       this.logger.log(`Usuario con ID ${id} encontrado exitosamente.`);
       return user;
     } catch (error) {

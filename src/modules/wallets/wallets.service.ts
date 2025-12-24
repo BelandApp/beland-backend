@@ -142,6 +142,19 @@ export class WalletsService {
     }
   }
 
+  async updateAlias(id: string, alias: string) {
+    try {
+      const wallet = await this.repository.findByAlias(alias);
+      if (wallet) throw new BadRequestException('El alias ya existe. Debe elegir otro');
+      const res = await this.repository.update(id, {alias});
+      if (res.affected === 0)
+        throw new NotFoundException(`No se encontró ${this.completeMessage}`);
+      return res;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
   async update(id: string, body: Partial<Wallet>) {
     try {
       const res = await this.repository.update(id, body);
