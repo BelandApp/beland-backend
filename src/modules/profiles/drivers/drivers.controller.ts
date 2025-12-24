@@ -18,7 +18,6 @@ import {
     ApiOperation,
     ApiResponse,
     ApiParam,
-    ApiQuery,
     ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Driver } from './entities/driver.entity';
@@ -86,9 +85,12 @@ export class DriversController {
         description: 'Datos inválidos para crear el conductor',
     })
     @ApiResponse({ status: 500, description: 'No se pudo crear el conductor' })
-    async create(@Body() body: CreateDriverDto): Promise<Driver> {
+    async create(
+        @Body() body: CreateDriverDto,
+        @Req() req: Request,
+    ): Promise<Driver> {
         // Cast to any or Partial<Driver> because DTO isn't exactly Entity but compatible enough for repository save
-        return await this.service.create(body as unknown as Partial<Driver>);
+        return await this.service.create({...body, user_id: req.user?.id});
     }
 
     @Put('disactive/:id')

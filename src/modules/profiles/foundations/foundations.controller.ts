@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,6 +26,7 @@ import { CreateFoundationDto } from './dto/create-foundation.dto';
 import { UpdateFoundationDto } from './dto/update-foundation.dto';
 import { FoundationQueryDto } from './dto/foundation-query.dto';
 import { RespGetArrayDto } from 'src/dto/resp-app.dto';
+import { Request } from 'express';
 
 @ApiTags('foundations')
 @ApiBearerAuth('JWT-auth')
@@ -76,8 +78,9 @@ export class FoundationsController {
   })
   async create(
     @Body() body: CreateFoundationDto,
+    @Req() req:Request,
   ): Promise<Foundation> {
-    return this.service.create(body);
+    return this.service.create({...body, user_id:req.user?.id});
   }
 
   @Put('activate/:id')
