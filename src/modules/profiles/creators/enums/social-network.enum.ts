@@ -1,0 +1,9 @@
+export enum SocialNetworkEnum {
+  INSTAGRAM = 'INSTAGRAM',
+  TIKTOK = 'TIKTOK',
+  YOUTUBE = 'YOUTUBE',
+  TWITTER = 'TWITTER',
+  FACEBOOK = 'FACEBOOK',
+  TWITCH = 'TWITCH',
+  OTHER = 'OTHER',
+}

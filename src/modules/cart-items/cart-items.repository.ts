@@ -7,6 +7,7 @@ import { NotFoundException } from '@zxing/library';
 
 @Injectable()
 export class CartItemsRepository {
+
   constructor(
     @InjectRepository(CartItem)
     private repository: Repository<CartItem>,
@@ -32,6 +33,13 @@ export class CartItemsRepository {
   async findOne(id: string): Promise<CartItem> {
     return this.repository.findOne({
       where: { id },
+      relations: {product:true},
+    });
+  }
+
+  findByProduct(product_id: string, cart_id: string): Promise<CartItem> {
+    return this.repository.findOne({
+      where: { cart_id, product_id },
       relations: {product:true},
     });
   }

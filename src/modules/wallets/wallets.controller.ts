@@ -172,6 +172,15 @@ export class WalletsController {
     return await this.service.generateAliasAndQr(req.user.id);
   }
 
+  @Put('alias/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualiza el alias por uno personalizado' })
+  @ApiParam({ name: 'id', description: 'UUID de la billetera' })
+  @ApiQuery({name: 'page',type: String,description: 'Nuevo Alias'})
+  async updateAlias (@Param('id', ParseUUIDPipe) id: string, @Query('alias') alias: string) {
+    return await this.service.updateAlias(id, alias);
+  }
+
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar una billetera existente' })

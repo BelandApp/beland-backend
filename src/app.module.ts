@@ -70,6 +70,7 @@ import { HubsModule } from './modules/profiles/hubs/hubs.module';
 import { FoundationsModule } from './modules/profiles/foundations/foundations.module';
 import { RecyclersModule } from './modules/profiles/recyclers/recyclers.module';
 import { HubProductsModule } from './modules/hub-product/hub-product.module';
+import { CreatorsModule } from './modules/profiles/creators/creators.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -179,6 +180,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     FoundationsModule,
     RecyclersModule,
     HubProductsModule,
+    CreatorsModule
   ],
   controllers: [],
   providers: [

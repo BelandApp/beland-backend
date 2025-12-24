@@ -40,7 +40,7 @@ async findOne(id: string, deleted: boolean = false): Promise<User | null> {
   async findById(id: string): Promise<User | null> {
     return this.userORMRepository.findOne({
       where: { id },
-      relations: { wallet: true, cart: true, role: true, profiles:true },
+      relations: { wallet: true, cart: true, role: true, profiles: {profile:true} },
     });
   }
 

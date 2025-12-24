@@ -9,6 +9,7 @@ import { CartItemsRepository } from './cart-items.repository';
 
 @Injectable()
 export class CartItemsService {
+
   private readonly completeMessage = 'el item del carrito';
 
   constructor(private readonly repository: CartItemsRepository) {}
@@ -54,6 +55,13 @@ export class CartItemsService {
     }
   }
 
+  async updateQuantityProduct(product_id: string, cart_id: string, quantity: number) {
+    const item = await this.repository.findByProduct( product_id, cart_id);
+    if (!item) throw new NotFoundException(`No se encontró el producto del carrito`);
+
+    return await this.update (item.id, {quantity})
+  }
+
   async update(id: string, body: Partial<CartItem>) {
     try {
       // Obtener el item actual
@@ -89,6 +97,21 @@ export class CartItemsService {
 
     } catch (error) {
       throw new InternalServerErrorException(JSON.stringify(error));
+    }
+  }
+
+  async removeProduct(product_id: string, cart_id:string) {
+    try {
+      const cartProduct = await this.repository.findByProduct(product_id, cart_id)
+      if (!cartProduct) throw new NotFoundException('Producto no encontrado')
+      const res = await this.repository.remove(cartProduct.id);
+      if (res.affected === 0)
+        throw new NotFoundException(
+          `No se encontró ${this.completeMessage}`,
+        );
+      return res;
+    } catch (error) {
+      throw new ConflictException(`No se puede eliminar ${this.completeMessage}: ${JSON.stringify(error)}`);
     }
   }
 

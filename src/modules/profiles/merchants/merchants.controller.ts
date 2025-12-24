@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,6 +27,7 @@ import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { UpdateMerchantDto } from './dto/update-merchant.dto';
 import { MerchantQueryDto } from './dto/merchant-query.dto';
 import { RespGetArrayDto } from 'src/dto/resp-app.dto';
+import { Request } from 'express';
 
 @ApiTags('merchants')
 @ApiBearerAuth('JWT-auth')
@@ -72,8 +74,9 @@ export class MerchantsController {
   @ApiOperation({ summary: 'Crear un nuevo comercio' })
   async create(
     @Body() body: CreateMerchantDto,
+    @Req() req:Request
   ): Promise<Merchant> {
-    return this.service.create(body);
+    return this.service.create({...body, user_id: req.user?.id});
   }
 
   @Put('activate/:id')

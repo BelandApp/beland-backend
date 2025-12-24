@@ -1,0 +1,10 @@
+export enum CreatorCategoryEnum {
+  FOOD = 'FOOD',
+  FITNESS = 'FITNESS',
+  TECH = 'TECH',
+  FASHION = 'FASHION',
+  TRAVEL = 'TRAVEL',
+  EDUCATION = 'EDUCATION',
+  ENTERTAINMENT = 'ENTERTAINMENT',
+  OTHER = 'OTHER',
+}

@@ -51,7 +51,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'No autenticado.' })
   @ApiResponse({ status: 403, description: 'No autorizado.' })
   async getProfile(@Req() req: Request): Promise<User> {
-    const user = req.user as User;
+    const user = req.user;
     this.logger.log(
       `GET /auth/me: Solicitud de perfil para usuario ID: ${user.id}`,
     );

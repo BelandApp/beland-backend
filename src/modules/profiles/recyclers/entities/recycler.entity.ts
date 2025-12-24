@@ -6,8 +6,10 @@ import {
   UpdateDateColumn,
   OneToOne,
   JoinColumn,
+  ManyToOne,
 } from 'typeorm';
 import { User } from '../../../users/entities/users.entity'; 
+import { UserAddress } from '../../../user-address/entities/user-address.entity';
 
 @Entity('recyclers')
 export class RecyclerBase {
@@ -21,6 +23,12 @@ export class RecyclerBase {
 
   @Column({ type: 'uuid', unique: true })
   user_id: string;
+
+  @ManyToOne(() => UserAddress)
+  @JoinColumn({name:'address_id'})
+  address: UserAddress
+  @Column('uuid')
+  address_id: string
 
   // --- IDENTIFICACIÓN ---
   @Column({ type: 'varchar', length: 20, unique: true })
