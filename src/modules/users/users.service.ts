@@ -23,30 +23,14 @@ import * as bcrypt from 'bcrypt';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
 import { Cart } from 'src/modules/cart/entities/cart.entity';
-import { ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
+import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { AuthService } from '../auth/auth.service'; // Importar AuthService
 const QRCode = require('qrcode'); // Importar qrcode aquí para que esté disponible en el contexto
-import { UserEventBeland } from './entities/users-event-beland.entity';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
+import { ChangePasswordUserDto } from './dto/change-password-user.dto';
 
 // Constantes para los nombres de roles
-const ROLE_USER = 'USER';
-const ROLE_LEADER = 'LEADER';
-const ROLE_ADMIN = 'ADMIN';
-const ROLE_SUPERADMIN = 'SUPERADMIN';
-const ROLE_COMMERCE = 'COMMERCE';
-const ROLE_FUNDATION = 'FUNDATION';
-
-// // Definición de tipo para todos los roles válidos
-// type ValidRoleNames =
-//   | 'USER'
-//   | 'LEADER'
-//   | 'ADMIN'
-//   | 'SUPERADMIN'
-//   | 'COMMERCE'
-//   | 'FUNDATION';
-
 
 @Injectable()
 export class UsersService {
@@ -159,7 +143,7 @@ export class UsersService {
         await queryRunner.manager.save(User, user);
 
         // Asegurarse de que las relaciones necesarias (ej. rol) estén cargadas para los guards.
-        user = await this.usersRepository.findOne(user.id);
+        user = await this.usersRepository.findById(user.id);
         const { token } = await this.authService.createToken(user); // Generar JWT local
         await queryRunner.commitTransaction(); // Confirma la transacción para usuario existente
         return { user, token };
@@ -170,15 +154,15 @@ export class UsersService {
         `findOrCreateAuth0User(): Creando nuevo usuario para email: ${auth0LoginDto.email}`,
       );
 
-      let defaultRole = await this.rolesRepository.findByName(ROLE_USER);
+      let defaultRole = await this.rolesRepository.findByName(RoleEnum.USER);
       if (!defaultRole) {
         defaultRole = await queryRunner.manager.save(Role, {
-          name: ROLE_USER,
+          name: RoleEnum.USER,
           description: 'Usuario básico del sistema',
           is_active: true,
         });
         this.logger.warn(
-          `findOrCreateAuth0User(): El rol '${ROLE_USER}' no existía, fue creado.`,
+          `findOrCreateAuth0User(): El rol '${RoleEnum.USER}' no existía, fue creado.`,
         );
       }
 
@@ -211,7 +195,7 @@ export class UsersService {
       await queryRunner.commitTransaction(); // Confirma la transacción para el nuevo usuario
 
       // Retornar el usuario recién creado, asegurando que las relaciones estén cargadas
-      user = await this.usersRepository.findOne(savedUser.id);
+      user = await this.usersRepository.findById(savedUser.id);
       const { token } = await this.authService.createToken(user); // Generar JWT local
       return { user, token };
     } catch (error) {
@@ -376,7 +360,7 @@ export class UsersService {
   async isAdmin(userId: string): Promise<boolean> {
     const user = await this.usersRepository.findOne(userId);
     return (
-      user?.role_name === ROLE_ADMIN || user?.role_name === ROLE_SUPERADMIN
+      user?.role_name === RoleEnum.ADMIN || user?.role_name === RoleEnum.SUPERADMIN
     );
   }
 
@@ -393,6 +377,45 @@ export class UsersService {
   }
 
   // MÉTODOS DE CREACIÓN/ACTUALIZACIÓN/ELIMINACIÓN
+
+    async changePassword(userId: string, dto: ChangePasswordUserDto) {
+    this.logger.debug(`Solicitud de cambio de contraseña para usuario: ${userId}`);
+
+    const { currentPassword, newPassword, confirmPassword } = dto;
+
+    // 1. Validar confirmación de contraseña
+    if (newPassword !== confirmPassword) {
+      this.logger.warn(`La nueva contraseña y su confirmación no coinciden para usuario ${userId}`);
+      throw new BadRequestException('La nueva contraseña y la confirmación no coinciden');
+    }
+    
+    // 2. Buscar usuario
+    const user = await this.usersRepository.findById(userId);
+    if (!user) {
+      this.logger.warn(`Usuario ${userId} no encontrado`);
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    // 3. Validar contraseña actual
+    const passwordMatches = await bcrypt.compare(currentPassword, user.password);
+    if (!passwordMatches) {
+      this.logger.warn(`Contraseña actual incorrecta para usuario ${userId}`);
+      throw new BadRequestException('La contraseña actual es incorrecta');
+    }
+
+    // 4. Hashear nueva clave
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // 5. Actualizar contraseña
+    await this.usersRepository.update(userId, {password: hashedPassword});
+
+    this.logger.log(`Contraseña actualizada correctamente para usuario: ${userId}`);
+
+    return {
+      message: 'La contraseña ha sido cambiada exitosamente',
+      success: true,
+    };
+  }
 
   async uploadImgProfileService(id: string, file: Express.Multer.File): Promise<User> {
     try {
@@ -464,11 +487,11 @@ export class UsersService {
     await queryRunner.startTransaction();
 
     try {
-      let userRole = await this.rolesRepository.findByName(ROLE_USER);
+      let userRole = await this.rolesRepository.findByName(RoleEnum.USER);
 
       if (!userRole) {
         userRole = await queryRunner.manager.save(Role, {
-          name: ROLE_USER,
+          name: RoleEnum.USER,
           description: 'Usuario básico del sistema',
           is_active: true,
         });
@@ -628,8 +651,8 @@ export class UsersService {
 
     if (updateUserDto.role) {
       if (
-        userToUpdate.role_name === ROLE_SUPERADMIN &&
-        updateUserDto.role !== ROLE_SUPERADMIN
+        userToUpdate.role_name === RoleEnum.SUPERADMIN &&
+        updateUserDto.role !== RoleEnum.SUPERADMIN
       ) {
         throw new BadRequestException(
           'No se puede cambiar el rol de un SUPERADMIN.',
@@ -670,7 +693,7 @@ export class UsersService {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
 
-    if (user.role_name === ROLE_SUPERADMIN) {
+    if (user.role_name === RoleEnum.SUPERADMIN) {
       throw new BadRequestException(
         'No se puede bloquear o desbloquear a un SUPERADMIN.',
       );
@@ -701,7 +724,7 @@ export class UsersService {
         `El usuario con ID "${id}" ya está desactivado.`,
       );
     }
-    if (user.role_name === ROLE_SUPERADMIN) {
+    if (user.role_name === RoleEnum.SUPERADMIN) {
       throw new BadRequestException('No se puede desactivar a un SUPERADMIN.');
     }
 
@@ -749,7 +772,7 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
-    if (user.role_name === ROLE_SUPERADMIN) {
+    if (user.role_name === RoleEnum.SUPERADMIN) {
       throw new BadRequestException(
         'No se puede eliminar a un SUPERADMIN permanentemente.',
       );

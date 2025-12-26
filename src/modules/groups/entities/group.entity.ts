@@ -12,28 +12,37 @@ import {
 import { GroupMember } from '../../group-members/entities/group-member.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { User } from '../../users/entities/users.entity';
-import { GroupInvitation } from '../../group-invitations/entities/group-invitation.entity';
 import { GroupType } from '../../group-type/entities/group-type.entity';
+import { UserAddress } from '../../user-address/entities/user-address.entity';
 
 @Entity('groups')
 export class Group {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'varchar' })
   name: string;
 
-  @Column({ type: 'text', nullable: true })
-  location: string;
+  @Column({ type: 'varchar', nullable: true })
+  description: string;
 
-  @Column({ type: 'text', nullable: true })
-  location_url: string;
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  latitude?: number;
 
-  @Column({ type: 'timestamptz', nullable: true })
-  date_time: Date;
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  longitude?: number;
 
-  @Column({ type: 'text', default: 'ACTIVE' })
-  status: 'ACTIVE' | 'PENDING' | 'INACTIVE' | 'DELETE';
+  @ManyToOne(() => UserAddress, {onDelete : 'SET NULL'})
+  @JoinColumn({name:'user_address_id'})
+  user_address: UserAddress;
+  @Column('uuid', { nullable:true })
+  user_address_id:string;
+
+  @Column({ type: 'boolean', default: true })
+  is_active: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  is_delete: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
@@ -49,10 +58,10 @@ export class Group {
     nullable: true, // A group might not have a leader assigned initially (though logic assigns one)
     onDelete: 'SET NULL', // If the leader user is deleted, their reference in the group is set to NULL
   })
-  @JoinColumn({ name: 'leader_id', referencedColumnName: 'id' }) // <-- Explicitly define FK column
-  leader: User;
-  @Column('uuid') // This column stores the actual UUID of the leader
-  leader_id: string;
+  @JoinColumn({ name: 'user_id'}) 
+  user: User;
+  @Column('uuid') 
+  user_id: string;
 
   @ManyToOne(() => GroupType, {onDelete : 'SET NULL'})
   @JoinColumn({name:'group_type_id'})
@@ -65,8 +74,4 @@ export class Group {
 
   @OneToMany(() => Order, (order) => order.group)
   orders: Order[];
-
-  // NEW: Invitations associated with this group
-  @OneToMany(() => GroupInvitation, (invitation) => invitation.group)
-  invitations: GroupInvitation[];
 }

@@ -3,331 +3,215 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  BadRequestException,
   Logger,
-  Inject,
-  forwardRef,
-  ForbiddenException,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { GroupMembersRepository } from './group-members.repository';
-import { CreateGroupMemberDto } from './dto/create-group-member.dto';
-import { UpdateGroupMemberDto } from './dto/update-group-member.dto';
-import { GroupMemberDto } from './dto/group-member.dto';
-import { UsersService } from 'src/modules/users/users.service';
-import { GroupsService } from 'src/modules/groups/groups.service';
-import { plainToInstance } from 'class-transformer';
 import { Group } from 'src/modules/groups/entities/group.entity';
 import { User } from 'src/modules/users/entities/users.entity';
-import { GroupMember } from './entities/group-member.entity';
 import { DataSource } from 'typeorm';
-import { LessThanOrEqual, IsNull, Not } from 'typeorm';
-import {
-  GroupInvitation,
-  GroupInvitationStatus,
-} from 'src/modules/group-invitations/entities/group-invitation.entity'; // Importar el enum también
-import { GroupInvitationDto } from 'src/modules/group-invitations/dto/group-invitation.dto';
-import { GroupInvitationsService } from 'src/modules/group-invitations/group-invitations.service';
+import { GroupMember } from './entities/group-member.entity';
+import { RoleGroupEnum } from './enums/role-group.enum';
+import { CreateGroupMemberDto, CreateManyGroupMemberDto } from './dto/create-group-member.dto';
 
 @Injectable()
 export class GroupMembersService {
   private readonly logger = new Logger(GroupMembersService.name);
 
   constructor(
-    private readonly groupMembersRepository: GroupMembersRepository,
-    @Inject(forwardRef(() => UsersService))
-    private readonly usersService: UsersService,
-    @Inject(forwardRef(() => GroupsService))
-    private readonly groupsService: GroupsService,
+    private readonly repository: GroupMembersRepository,
     private readonly dataSource: DataSource,
-    @Inject(forwardRef(() => GroupInvitationsService))
-    private readonly groupInvitationsService: GroupInvitationsService,
-  ) {}
+  ) { }
 
-  /**
-   * Crea una nueva membresía de grupo.
-   * @param createGroupMemberDto Los datos para crear la membresía.
-   * @returns La membresía de grupo creada.
-   */
-  async createGroupMember(
-    createGroupMemberDto: CreateGroupMemberDto,
-  ): Promise<GroupMemberDto> {
-    this.logger.debug(
-      `createGroupMember(): Creando membresía para groupId: ${createGroupMemberDto.group_id}, userId: ${createGroupMemberDto.user_id}`,
-    );
+  async createGroupMember(createDto: CreateGroupMemberDto, req_user_id: string): Promise<GroupMember> {
+    const { group_id, user_id } = createDto;
+
+    // 1. Check if group exists
+    const group = await this.dataSource.manager.findOne(Group, { where: { id: group_id }, relations: ['user'] });
+    if (!group) throw new NotFoundException(`Grupo con ID "${group_id}" no encontrado.`);
+
+    if (group.user_id !== req_user_id) {
+      throw new ForbiddenException('No tienes permiso para agregar miembros a este grupo.');
+    }
+
+    // 3. User existence
+    const userToAdd = await this.dataSource.manager.findOne(User, { where: { id: user_id } });
+    if (!userToAdd) throw new NotFoundException(`Usuario con ID "${user_id}" no encontrado.`);
+
+    // 4. Check duplicate
+    const existing = await this.repository.findOneByGroupAndUser(group_id, user_id);
+    if (existing) throw new ConflictException('Este usuario ya es miembro del grupo.');
+
+    try {
+      const member = this.repository.create({
+        group_id,
+        user_id,
+        role: RoleGroupEnum.MEMBER,
+      });
+      return member;
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new ConflictException('Este usuario ya es miembro del grupo.');
+      }
+      throw new InternalServerErrorException('Error interno al crear la membresía.');
+    }
+  }
+
+  async createMany(dto: CreateManyGroupMemberDto, req_user_id: string): Promise<{ message: string; success: true }> {
+    const { group_id, users } = dto;
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // 1. Verificar si el usuario ya es miembro de este grupo
-      const existingMembership =
-        await this.groupMembersRepository.findOneByGroupAndUser(
-          createGroupMemberDto.group_id,
-          createGroupMemberDto.user_id,
-        );
-
-      if (existingMembership) {
-        throw new ConflictException(
-          'Este usuario ya es miembro de este grupo.',
-        );
+      // validar que el grupo exista
+      const group = await queryRunner.manager.findOne(Group, {
+        where: { id: group_id },
+      });
+      if (!group) {
+        throw new NotFoundException(`Grupo con ID "${group_id}" no encontrado.`);
       }
 
-      // 2. Verificar que el grupo y el usuario existen (Obtener ENTIDADES, no DTOs)
-      const groupEntity = await queryRunner.manager.findOne(Group, {
-        where: { id: createGroupMemberDto.group_id },
-      });
-      if (!groupEntity) {
-        throw new NotFoundException(
-          `Grupo con ID "${createGroupMemberDto.group_id}" no encontrado.`,
-        );
+      if (group.user_id !== req_user_id) {
+        throw new ForbiddenException(`Solo el creador del grupo puede agregar miembros.`);
       }
 
-      const userEntity = await queryRunner.manager.findOne(User, {
-        where: { id: createGroupMemberDto.user_id },
-      });
-      if (!userEntity) {
-        throw new NotFoundException(
-          `Usuario con ID "${createGroupMemberDto.user_id}" no encontrado.`,
-        );
+      for (const user_id of users) {
+        // validar usuario
+        const user = await queryRunner.manager.findOne(User, {
+          where: { id: user_id },
+        });
+        if (!user) {
+          throw new NotFoundException(`Usuario con ID "${user_id}" no encontrado.`);
+        }
+
+        // validar membresía existente
+        const existing = await queryRunner.manager.findOne(GroupMember, {
+          where: {
+            group: { id: group_id },
+            user: { id: user_id },
+          },
+        });
+        if (existing) {
+          throw new ConflictException(
+            `El usuario "${user_id}" ya es miembro del grupo.`,
+          );
+        }
+
+        // crear membresía
+        const member = queryRunner.manager.create(GroupMember, {
+          group,
+          user,
+          role: RoleGroupEnum.MEMBER,
+        });
+
+        await queryRunner.manager.save(member);
       }
-
-      // 3. Crear la nueva entidad GroupMember (usando las entidades obtenidas)
-      const newGroupMember = this.groupMembersRepository.create({
-        group: groupEntity,
-        user: userEntity,
-        role: createGroupMemberDto.role || 'MEMBER',
-      });
-
-      // 4. Guardar la nueva membresía usando el queryRunner
-      const savedMembership = await queryRunner.manager.save(newGroupMember);
 
       await queryRunner.commitTransaction();
-      this.logger.log(
-        `createGroupMember(): Membresía creada para el usuario ${createGroupMemberDto.user_id} en el grupo ${createGroupMemberDto.group_id}.`,
-      );
-      return plainToInstance(GroupMemberDto, savedMembership);
-    } catch (error) {
+      return { message: 'Miembros agregados correctamente.', success: true };
+    } catch (error: any) {
       await queryRunner.rollbackTransaction();
-      this.logger.error(
-        `createGroupMember(): Error durante la transacción de creación de membresía: ${
-          (error as Error).message
-        }`,
-        (error as Error).stack,
-      );
-      if (
-        error instanceof ConflictException ||
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      ) {
-        throw error;
+
+      // fallback por concurrencia
+      if (error?.code === '23505') {
+        throw new ConflictException(
+          'Uno o más usuarios ya son miembros del grupo.',
+        );
       }
-      throw new InternalServerErrorException(
-        'Fallo al crear la membresía del grupo debido a un error interno.',
-      );
+
+      throw error;
     } finally {
       await queryRunner.release();
     }
-  }
+  } 
 
-  /**
-   * Encuentra una membresía de grupo por su ID.
-   * @param id El ID de la membresía.
-   * @returns La membresía encontrada.
-   * @throws NotFoundException si la membresía no es encontrada.
-   */
-  async findOne(id: string): Promise<GroupMemberDto> {
-    this.logger.debug(`findOne(): Buscando membresía de grupo con ID: ${id}`);
-    const membership = await this.groupMembersRepository.findOneById(id);
-    if (!membership) {
-      throw new NotFoundException(
-        `Membresía de grupo con ID "${id}" no encontrada.`,
-      );
-    }
-    return plainToInstance(GroupMemberDto, membership);
-  }
-
-  /**
-   * Obtiene todos los miembros de un grupo dado.
-   * @param groupId El ID del grupo.
-   * @returns Lista de GroupMemberDto.
-   */
-  async findAllByGroupId(groupId: string): Promise<GroupMemberDto[]> {
-    this.logger.debug(
-      `findAllByGroupId(): Obteniendo miembros para el grupo ID: ${groupId}`,
-    );
-    const members = await this.groupMembersRepository.findGroupMembersByGroupId(
-      groupId,
-    );
-    return plainToInstance(GroupMemberDto, members);
-  }
-
-  /**
-   * Actualiza una membresía de grupo existente.
-   * @param id El ID de la membresía a actualizar.
-   * @param updateGroupMemberDto Los datos de actualización.
-   * @returns La membresía actualizada.
-   */
-  async updateGroupMember(
-    id: string,
-    updateGroupMemberDto: UpdateGroupMemberDto,
-  ): Promise<GroupMemberDto> {
-    this.logger.debug(
-      `updateGroupMember(): Actualizando membresía de grupo ID: ${id}`,
-    );
-    const existingMembership = await this.groupMembersRepository.findOneById(
-      id,
-    );
-    if (!existingMembership) {
-      throw new NotFoundException(
-        `Membresía de grupo con ID "${id}" no encontrada.`,
-      );
-    }
-
-    Object.assign(existingMembership, updateGroupMemberDto);
-    const updatedMembership = await this.groupMembersRepository.saveGroupMember(
-      existingMembership,
-    );
-
-    this.logger.log(
-      `updateGroupMember(): Membresía de grupo ${id} actualizada.`,
-    );
-    return plainToInstance(GroupMemberDto, updatedMembership);
-  }
-
-  /**
-   * Elimina una membresía de grupo por su ID.
-   * @param id El ID de la membresía a eliminar.
-   */
-  async deleteGroupMember(id: string): Promise<void> {
-    this.logger.debug(
-      `deleteGroupMember(): Eliminando membresía de grupo ID: ${id}`,
-    );
-    const result = await this.groupMembersRepository.deleteGroupMember(id);
-    this.logger.log(`deleteGroupMember(): Membresía de grupo ${id} eliminada.`);
-  }
-
-  /**
-   * Marca una invitación de grupo como aceptada y crea la membresía correspondiente.
-   * @param invitationId El ID de la invitación de grupo.
-   * @returns La nueva membresía creada.
-   * @throws NotFoundException Si la invitación no se encuentra o ya está expirada/cancelada.
-   * @throws ConflictException Si el usuario ya es miembro del grupo.
-   * @throws BadRequestException Si la invitación ya fue aceptada.
-   */
-  async acceptInvitation(invitationId: string): Promise<GroupMemberDto> {
-    this.logger.debug(
-      `acceptInvitation(): Aceptando invitación con ID: ${invitationId}`,
-    );
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
+  async findOne(id: string): Promise<GroupMember> {
     try {
-      const invitationEntity =
-        await this.groupInvitationsService.findInvitationById(invitationId);
-
-      if (!invitationEntity) {
-        throw new NotFoundException(
-          `Invitación con ID "${invitationId}" no encontrada.`,
-        );
+      const member = await this.repository.findOneById(id);
+      if (!member) {
+        throw new NotFoundException(`Membresía con ID "${id}" no encontrada.`);
       }
-
-      if (invitationEntity.status === GroupInvitationStatus.ACCEPTED) {
-        throw new BadRequestException('Esta invitación ya ha sido aceptada.');
-      }
-      if (
-        invitationEntity.status === GroupInvitationStatus.CANCELED ||
-        invitationEntity.status === GroupInvitationStatus.EXPIRED ||
-        invitationEntity.status === GroupInvitationStatus.REJECTED
-      ) {
-        throw new BadRequestException(
-          `Esta invitación está ${invitationEntity.status.toLowerCase()}.`,
-        );
-      }
-
-      const existingMembership =
-        await this.groupMembersRepository.findOneByGroupAndUser(
-          invitationEntity.group.id,
-          invitationEntity.invited_user.id,
-        );
-
-      if (existingMembership) {
-        throw new ConflictException(
-          `El usuario ${invitationEntity.invited_user.email} ya es miembro del grupo ${invitationEntity.group.name}.`,
-        );
-      }
-
-      const groupEntity = await queryRunner.manager.findOne(Group, {
-        where: { id: invitationEntity.group.id },
-      });
-      const invitedUserEntity = await queryRunner.manager.findOne(User, {
-        where: { id: invitationEntity.invited_user.id },
-      });
-
-      if (!groupEntity || !invitedUserEntity) {
-        throw new InternalServerErrorException(
-          'Error al obtener entidades de grupo o usuario para la membresía.',
-        );
-      }
-
-      const newMembership = this.groupMembersRepository.create({
-        group: groupEntity,
-        user: invitedUserEntity,
-        role: 'MEMBER',
-      });
-
-      const savedMembership = await queryRunner.manager.save(newMembership);
-
-      // Eliminado: invitationEntity.accepted_at = new Date();
-      invitationEntity.status = GroupInvitationStatus.ACCEPTED;
-
-      await this.groupInvitationsService.saveInvitation(invitationEntity);
-
-      await queryRunner.commitTransaction();
-      this.logger.log(
-        `acceptInvitation(): Invitación ${invitationId} aceptada. Usuario ${invitationEntity.invited_user.email} añadido al grupo ${invitationEntity.group.name}.`,
-      );
-      return plainToInstance(GroupMemberDto, savedMembership);
+      return member;
     } catch (error) {
-      await queryRunner.rollbackTransaction();
-      this.logger.error(
-        `acceptInvitation(): Error al aceptar la invitación ${invitationId}: ${
-          (error as Error).message
-        }`,
-        (error as Error).stack,
-      );
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException ||
-        error instanceof BadRequestException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'Fallo al aceptar la invitación debido a un error interno.',
-      );
-    } finally {
-      await queryRunner.release();
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error al buscar la membresía.');
     }
   }
 
-  /**
-   * Comprueba si un usuario es miembro de un grupo.
-   * @param groupId ID del grupo.
-   * @param userId ID del usuario.
-   * @returns True si es miembro, false en caso contrario.
-   */
-  async isUserMemberOfGroup(groupId: string, userId: string): Promise<boolean> {
-    this.logger.debug(
-      `isUserMemberOfGroup(): Checking if user ${userId} is member of group ${groupId}`,
-    );
-    const membership = await this.groupMembersRepository.findOneByGroupAndUser(
-      groupId,
-      userId,
-    );
-    return !!membership; // Retorna true si se encuentra la membresía, false si es null
+  async findAllByGroupId(groupId: string): Promise<GroupMember[]> {
+    try {
+      const members = await this.repository.findMembersByGroupId(
+        groupId,
+      );
+      return members;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error al buscar la membresía.');
+    }
   }
+
+  async findGroupsByUserId(userId: string): Promise<GroupMember[]> {
+    try {
+      const groups = await this.repository.findGroupsByUserId(userId);
+      return groups;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error al buscar la membresía.');
+    }
+  }
+
+  async findOneByGroupAndUser(groupId: string, userId: string): Promise<GroupMember> {
+    try {
+      const member = await this.repository.findOneByGroupAndUser(groupId, userId);
+      if (!member) {
+        throw new NotFoundException(`Membresía no encontrada.`);
+      }
+      return member;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error al buscar la membresía.');
+    }
+  }
+
+  async deleteGroupMember(id: string, user_id: string): Promise<{message: string, success: boolean}> {
+    try {
+      const membership = await this.repository.findOneById(id);
+      if (!membership) throw new NotFoundException('Membresía no encontrada');
+      
+      const is_user_owner = membership.user_id === user_id;
+      const is_user_admin = membership.group.user_id === user_id;
+      if (!is_user_owner && !is_user_admin) throw new ForbiddenException('No tienes permiso para eliminar a este miembro.');
+      
+      const memebership_deleted = await this.repository.delete(id);
+      if (memebership_deleted.affected === 0) throw new NotFoundException('No se encontró la membresía a eliminar.');
+      return {message: 'Membresía eliminada correctamente.', success: true}
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error al eliminar la membresía.');
+    }
+  }
+
+  async removeMemberByGroupAndUser(groupId: string, userId: string, req_user_id: string): Promise<{message: string, success: boolean}> {
+    try {
+      const membership = await this.repository.findOneByGroupAndUser(groupId, userId);
+      if (!membership) throw new NotFoundException('El usuario no es miembro de este grupo');
+
+      const is_user_owner = membership.user_id === req_user_id;
+      const is_user_admin = membership.group.user_id === req_user_id;
+      if (!is_user_owner && !is_user_admin) throw new ForbiddenException('No tienes permiso para eliminar a este miembro.');
+      
+      const memebership_deleted = await this.repository.delete(membership.id);
+      if (memebership_deleted.affected === 0) throw new NotFoundException('No se encontró la membresía a eliminar.');
+      return {message: 'Membresía eliminada correctamente.', success: true}
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error al eliminar la membresía.');
+    }
+  }
+
 }
+
+

@@ -59,6 +59,7 @@ import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.e
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
 import { UserEventBeland } from './entities/users-event-beland.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ChangePasswordUserDto } from './dto/change-password-user.dto';
 
 // DTO para la ruta de bloqueo/desbloqueo (puede vivir aquí o en un archivo separado)
 class BlockUserDto extends PickType(UpdateUserDto, ['isBlocked'] as const) {
@@ -104,7 +105,7 @@ export class UsersController {
   // Helper para obtener el ID del usuario de la request.
   // Lanza ForbiddenException si el usuario no está correctamente autenticado o no tiene ID.
   private getUserId(req: Request): string {
-    const user = req.user as User;
+    const user = req.user;
     if (!user || !user.id) {
       this.logger.error(
         'getUserId(): ID de usuario no encontrado en la solicitud después de la autenticación.',
@@ -374,15 +375,11 @@ export class UsersController {
       `GET /users: Solicitud para listar usuarios por Admin ID: ${adminUserId}.`,
     );
     try {
-      const currentUser = req.user as User;
-      const isSuperAdminOrAdmin =
-        currentUser?.role_name === 'ADMIN' ||
-        currentUser?.role_name === 'SUPERADMIN';
 
       // Pasa el `query` y el `isSuperAdminOrAdmin` al servicio para que decida `includeDeleted`.
       const { users, total } = await this.usersService.findAll(
         query,
-        isSuperAdminOrAdmin,
+        true,
       );
 
       this.logger.log(
@@ -442,53 +439,25 @@ export class UsersController {
   @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación. La lógica de autorización es interna.
   @ApiOperation({
     summary: 'Obtener un usuario por ID (Propietario o Admin/Superadmin).',
-    description:
-      'Recupera los detalles de un usuario específico. Solo el **propietario** o un **Admin/Superadmin** puede acceder. Un Admin/Superadmin también puede incluir perfiles desactivados.',
+    description:'Recupera los detalles de un usuario específico. Solo el **propietario** o un **Admin/Superadmin** puede acceder. Un Admin/Superadmin también puede incluir perfiles desactivados.',
   })
   @ApiParam({ name: 'id', description: 'ID del usuario', type: String })
-  @ApiResponse({
-    status: 200,
-    description: 'Usuario encontrado.',
-    type: UserDto,
-  })
+  @ApiResponse({status: 200,description: 'Usuario encontrado.',type: UserDto,})
   @ApiResponse({ status: 401, description: 'No autenticado.' })
-  @ApiResponse({
-    status: 403,
-    description:
-      'No autorizado (no es el propietario o rol/permiso insuficiente).',
-  })
+  @ApiResponse({status: 403, description:'No autorizado (no es el propietario o rol/permiso insuficiente).'})
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async findOne(
     @Param('id', ParseUUIDPipe) id: string, // Asegura que el ID es un UUID
     @Req() req: Request,
-    @Query() query: GetUserByIdQueryDto, // DTO para `includeDeleted`
   ): Promise<UserDto> {
     const currentUserId = this.getUserId(req); // ID del usuario autenticado
     this.logger.log(
       `GET /users/${id}: Solicitud para buscar usuario con ID: ${id} por el usuario ID: ${currentUserId}.`,
     );
     try {
-      const currentUser = req.user as User;
-      const isSuperAdminOrAdmin =
-        currentUser?.role_name === 'ADMIN' ||
-        currentUser?.role_name === 'SUPERADMIN';
 
-      // Lógica de autorización: Permitir acceso si es el propio usuario o si es Admin/Superadmin.
-      if (currentUserId !== id && !isSuperAdminOrAdmin) {
-        throw new ForbiddenException(
-          'No tienes autorización para ver este perfil de usuario.',
-        );
-      }
-
-      // La lógica de `bIncludeDeleted` se maneja en el servicio,
-      // aquí solo preparamos el valor que se le pasará.
-      const bIncludeDeleted = isSuperAdminOrAdmin
-        ? query.includeDeleted
-        : false;
-
-      const user = await this.usersService.findOneById(id, bIncludeDeleted);
+      const user = await this.usersService.findOneById(id, true);
       this.logger.log(`Usuario con ID ${id} encontrado exitosamente.`);
       return user;
     } catch (error) {
@@ -572,6 +541,16 @@ export class UsersController {
       await this.usersService.updateRolToSuperadmin(req.user.id, role_name),
     );
   }
+
+  @ApiBearerAuth()
+  @Patch('change-password')
+  @ApiOperation({ summary: 'Cambiar la contraseña del usuario autenticado' })
+  async changePassword(
+  @Req() req,
+  @Body() dto: ChangePasswordUserDto
+  ) {
+    return this.usersService.changePassword(req.user.id, dto);
+  } 
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)

@@ -9,6 +9,7 @@ import { CartItemsRepository } from './cart-items.repository';
 
 @Injectable()
 export class CartItemsService {
+
   private readonly completeMessage = 'el item del carrito';
 
   constructor(private readonly repository: CartItemsRepository) {}
@@ -54,24 +55,63 @@ export class CartItemsService {
     }
   }
 
+  async updateQuantityProduct(product_id: string, cart_id: string, quantity: number) {
+    const item = await this.repository.findByProduct( product_id, cart_id);
+    if (!item) throw new NotFoundException(`No se encontró el producto del carrito`);
+
+    return await this.update (item.id, {quantity})
+  }
+
   async update(id: string, body: Partial<CartItem>) {
     try {
-      let updateItem = body;
-      if (body.quantity) {
-        const itemCart = await this.findOne(id);
-        const total_price = +itemCart.unit_price * +body.quantity;
-        const total_becoin = +itemCart.unit_becoin * +body.quantity;
-        const total_weight = +itemCart.unit_weight * +body.quantity;
-        updateItem = {...updateItem, total_price, total_becoin, total_weight};
+      // Obtener el item actual
+      const item = await this.repository.findOne( id );
+
+      if (!item) {
+        throw new NotFoundException(`No se encontró el item del carrito`);
       }
-      const res = await this.repository.update(id, updateItem);
+
+      // Si la cantidad viene en la petición...
+      if (body.quantity !== undefined) {
+        const newQuantity = Number(body.quantity);
+
+        // Si la cantidad es 0 → eliminar el ítem
+        if (newQuantity === 0) {
+          await this.repository.remove(id);
+          return { message: 'Item eliminado porque la cantidad es 0' };
+        }
+
+        // Si la cantidad es mayor a 0 → recalcular totales
+        body.total_price = Number(item.unit_price) * newQuantity;
+        body.total_becoin = Number(item.unit_becoin) * newQuantity;
+        body.total_weight = Number(item.unit_weight) * newQuantity;
+      }
+
+      // Merge y guardar (dispara los hooks si los tuvieras)
+      const updated = await this.repository.save({
+        ...item,
+        ...body,
+      });
+
+      return updated;
+
+    } catch (error) {
+      throw new InternalServerErrorException(JSON.stringify(error));
+    }
+  }
+
+  async removeProduct(product_id: string, cart_id:string) {
+    try {
+      const cartProduct = await this.repository.findByProduct(product_id, cart_id)
+      if (!cartProduct) throw new NotFoundException('Producto no encontrado')
+      const res = await this.repository.remove(cartProduct.id);
       if (res.affected === 0)
         throw new NotFoundException(
           `No se encontró ${this.completeMessage}`,
         );
       return res;
     } catch (error) {
-      throw new InternalServerErrorException(error);
+      throw new ConflictException(`No se puede eliminar ${this.completeMessage}: ${JSON.stringify(error)}`);
     }
   }
 
@@ -84,7 +124,7 @@ export class CartItemsService {
         );
       return res;
     } catch (error) {
-      throw new ConflictException(`No se puede eliminar ${this.completeMessage}`);
+      throw new ConflictException(`No se puede eliminar ${this.completeMessage}: ${JSON.stringify(error)}`);
     }
   }
 }

@@ -12,7 +12,6 @@ import { Product } from 'src/modules/products/entities/product.entity';
 import { PaymentType } from 'src/modules/payment-types/entities/payment-type.entity';
 import { Category } from 'src/modules/category/entities/category.entity';
 import { GroupType } from 'src/modules/group-type/entities/group-type.entity';
-import { ResourcesType } from 'src/modules/resources-types/entities/resources-type.entity';
 import { WithdrawAccountType } from 'src/modules/withdraw-account-type/entities/withdraw-account-type.entity';
 import { DatabaseIntiController } from './database-init.controller';
 
@@ -22,7 +21,7 @@ import { DatabaseIntiController } from './database-init.controller';
     UsersModule,
     ConfigModule, // Asegúrate de que ConfigModule esté importado aquí o globalmente
     TypeOrmModule.forFeature([TransactionState, TransactionType, Product, PaymentType, Category, GroupType,
-      ResourcesType, WithdrawAccountType
+      WithdrawAccountType
     ])
   ],
   controllers: [DatabaseIntiController],

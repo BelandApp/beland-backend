@@ -26,6 +26,7 @@ import { CartsService } from './cart.service';
 import { CreateCartDto } from './dto/create-cart.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
+import { DeliveryCartDto } from './dto/delivery-cart.dto';
 
 @ApiTags('carts')
 @Controller('carts')
@@ -57,10 +58,10 @@ export class CartsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crear un nuevo cupón' })
-  @ApiResponse({ status: 201, description: 'Cupón creado exitosamente' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos para crear el cupón' })
-  @ApiResponse({ status: 500, description: 'No se pudo crear el cupón' })
+  @ApiOperation({ summary: 'Crear un nuevo Carrito' })
+  @ApiResponse({ status: 201, description: 'Carrito creado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para crear el Carrito' })
+  @ApiResponse({ status: 500, description: 'No se pudo crear el Carrito' })
   async create(@Body() body: CreateCartDto): Promise<Cart> {
     return await this.service.create(body);
   }
@@ -110,6 +111,20 @@ export class CartsController {
     return this.service.update(id, {payment_type_id});
   }
 
+  @Put('delivery/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar Costo, tiempo y distancia de envio de un carrito existente' })
+  @ApiParam({ name: 'id', description: 'UUID del carrito' })
+  @ApiResponse({ status: 200, description: 'Carrito actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el carrito a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
+  async updateDelivery(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DeliveryCartDto,
+  ) {
+    return this.service.update(id, dto);
+  }
+
   @Put('clean/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Vacia un carrito existente' })
@@ -119,7 +134,6 @@ export class CartsController {
   @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
   async updateCleanCart(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('payment_type_id', ParseUUIDPipe) payment_type_id: string,
   ) {
     return this.service.updateCleanCart(id);
   }

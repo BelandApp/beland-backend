@@ -7,6 +7,7 @@ import { NotFoundException } from '@zxing/library';
 
 @Injectable()
 export class CartItemsRepository {
+
   constructor(
     @InjectRepository(CartItem)
     private repository: Repository<CartItem>,
@@ -36,6 +37,13 @@ export class CartItemsRepository {
     });
   }
 
+  findByProduct(product_id: string, cart_id: string): Promise<CartItem> {
+    return this.repository.findOne({
+      where: { cart_id, product_id },
+      relations: {product:true},
+    });
+  }
+
   async create(body: Partial<CartItem>): Promise<CartItem> {
     const item = await this.repository.findOne({where: {cart_id: body.cart_id, product_id:body.product_id}})
     if (!item) {
@@ -55,6 +63,10 @@ export class CartItemsRepository {
     item.total_weight = +item.unit_weight * +quantity
     return await this.repository.save(item);
   }
+
+  async save(body: Partial<CartItem>): Promise<CartItem> {
+    return await this.repository.save(body);
+  }  
 
   async update(id: string, body: Partial<CartItem>): Promise<UpdateResult> {
     return await this.repository.update(id, body);

@@ -12,6 +12,7 @@ import {
   HttpStatus,
   UseGuards,
   BadRequestException,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,6 +27,7 @@ import { CartItemsService } from './cart-items.service';
 import { CreateCartItemDto } from './dto/create-cart-item.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
+import { Request } from 'express';
 
 @ApiTags('cart-items')
 @Controller('cart-items')
@@ -91,6 +93,22 @@ export class CartItemsController {
     return this.service.update(id, {quantity});
   }
 
+  @Put('quantity-by-product/:product_id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar la cantidad de un item de carrito existente' })
+  @ApiParam({ name: 'product_id', description: 'UUID del producto' })
+  @ApiQuery({ name: 'quantity', required: true, type: Number, example: 1, description: 'Cantidad a reemplazar' })
+  @ApiResponse({ status: 200, description: 'item de carrito actualizado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el item de carrito a actualizar' })
+  @ApiResponse({ status: 500, description: 'Error al actualizar el item de carrito' })
+  async updateQuantityProduct(
+    @Param('product_id', ParseUUIDPipe) product_id: string,
+    @Query('quantity') quantity: number,
+    @Req () req:Request,
+  ) {
+    return this.service.updateQuantityProduct(product_id, req.user?.cart_id, quantity);
+  }
+
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar un item de carrito existente' })
@@ -103,6 +121,19 @@ export class CartItemsController {
     @Body() body: UpdateCartItemDto,
   ) {
     return this.service.update(id, body);
+  }
+
+  @Delete('product/:product_id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar un item de carrito por su ID' })
+  @ApiParam({ name: 'product_id', description: 'UUID del productos a eliminar' })
+  @ApiResponse({ status: 204, description: 'item de carrito eliminado correctamente' })
+  @ApiResponse({ status: 404, description: 'No se encontró el item de carrito a eliminar' })
+  @ApiResponse({ status: 409, description: 'No se puede eliminar el item de carrito (conflicto)' })
+  async removeProduct(
+    @Param('product_id', ParseUUIDPipe) product_id: string, 
+    @Req() req:Request): Promise<void> {
+    await this.service.removeProduct(product_id, req.user?.cart_id);
   }
 
   @Delete(':id')

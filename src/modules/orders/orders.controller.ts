@@ -24,6 +24,8 @@ import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
 import { Request } from 'express';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
+import { OrderFilterDto } from './dto/order-filter.dto';
+import { RegisterReturnsDto } from './dto/register-returns.dto';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -35,17 +37,12 @@ export class OrdersController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listar ordenes con paginación y filtrado '})
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
   @ApiResponse({ status: 200, description: 'Listado de ordenes retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findAll(
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
+    @Query() filters: OrderFilterDto
   ): Promise<[Order[], number]> {
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(pageNumber, limitNumber);
+    return await this.service.findAll(filters);
   }
 
   @Get('pending')
@@ -90,6 +87,24 @@ export class OrdersController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Order> {
     return await this.service.findOne(id);
+  }
+
+  @Post('returns/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({summary: 'Registrar devoluciones y recalcular pagos de la orden'})
+  @ApiParam({name: 'id',description: 'ID de la orden',type: String})
+  @ApiResponse({status: 200,description: 'Devoluciones registradas y orden recalculada correctamente'})
+  @ApiResponse({status: 400,description: 'La orden ya fue recolectada o datos inválidos'})
+  @ApiResponse({status: 404,description: 'Orden o ítems no encontrados'})
+  async registerReturns(
+    @Param('id') orderId: string,
+    @Body() body: RegisterReturnsDto,
+  ): Promise<{ success: boolean }> {
+
+    return this.service.registerReturnsAndRecalculate(
+      orderId,
+      body.returns,
+    );
   }
 
   @Put('preparing')

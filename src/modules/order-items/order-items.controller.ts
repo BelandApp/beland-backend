@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,30 +26,30 @@ import { OrderItem } from './entities/order-item.entity';
 import { CreateOrderItemDto } from './dto/create-order-item.dto';
 import { UpdateOrderItemDto } from './dto/update-order-item.dto';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
+import { OrderItemConsumptionService } from './order-item-consumption.service';
+import { Request } from 'express';
+import { MarkConsumedDto } from './dto/mark-consumed.dto';
 
 @ApiTags('order-items')
 @Controller('order-items')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(FlexibleAuthGuard)
 export class OrderItemsController {
-  constructor(private readonly service: OrderItemsService) {}
+  constructor(
+    private readonly service: OrderItemsService,
+    private readonly serviceConsumption: OrderItemConsumptionService
+  ) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listar items de Ordenes con paginación y filtrado por orden' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
-  @ApiQuery({ name: 'order_id', required: false, type: String, description: 'Filtrar items de ordenes por ID de orden, si no se envia retorna todos los items' })
+  @ApiQuery({ name: 'order_id', required: true, type: String, description: 'Filtrar items de ordenes por ID de orden, si no se envia retorna todos los items' })
   @ApiResponse({ status: 200, description: 'Listado de items de Orden retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findAll(
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
-    @Query('order_id') order_id = '',
+    @Query('order_id') order_id,
   ): Promise<[OrderItem[], number]> {
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(order_id, pageNumber, limitNumber);
+    return await this.service.findAll(order_id);
   }
 
   @Get(':id')
@@ -60,6 +61,24 @@ export class OrderItemsController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<OrderItem> {
     return await this.service.findOne(id);
+  }
+
+  @Post('consumption')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({summary: 'Registrar consumo de productos en una orden grupal'})
+  @ApiResponse({status: 201,description: 'Consumos registrados correctamente'})
+  @ApiResponse({status: 400,description: 'Datos inválidos o consumo no permitido'})
+  @ApiResponse({status: 403,description: 'El usuario no pertenece al grupo'})
+  @ApiResponse({status: 404,description: 'Orden o productos no encontrados'})
+  async markConsumed(
+    @Body() body: MarkConsumedDto,
+    @Req() req: Request,
+  ): Promise<{ success: boolean; message: string }> {
+
+    return this.serviceConsumption.markConsumed(
+      body.order_item_ids,
+      req.user.id,
+    );
   }
 
   @Post()

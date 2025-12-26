@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository, UpdateResult } from 'typeorm';
-import { WithdrawAccount } from './entities/withdraw-account.entity';
+import { WithdrawAccount } from './entities/withdraw-account.entity';;
 
 @Injectable()
 export class WithdrawAccountsRepository {
   constructor(
     @InjectRepository(WithdrawAccount)
     private repository: Repository<WithdrawAccount>,
+
   ) {}
 
   async findAll(

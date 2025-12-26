@@ -1,0 +1,47 @@
+[
+  {
+    "code": "FOOD",
+    "name": "Gastronomía",
+    "description": "Contenido relacionado con comida, recetas y experiencias culinarias"
+  },
+  {
+    "code": "TECH",
+    "name": "Tecnología",
+    "description": "Contenido sobre tecnología, gadgets, software y tendencias digitales"
+  },
+  {
+    "code": "FITNESS",
+    "name": "Fitness",
+    "description": "Entrenamiento físico, vida saludable y bienestar"
+  },
+  {
+    "code": "FASHION",
+    "name": "Moda",
+    "description": "Tendencias de moda, estilo personal y lifestyle"
+  },
+  {
+    "code": "TRAVEL",
+    "name": "Viajes",
+    "description": "Experiencias de viaje, destinos y turismo"
+  },
+  {
+    "code": "EDUCATION",
+    "name": "Educación",
+    "description": "Contenido educativo, tutoriales y divulgación de conocimiento"
+  },
+  {
+    "code": "ENTERTAINMENT",
+    "name": "Entretenimiento",
+    "description": "Contenido de humor, shows, reseñas y cultura popular"
+  },
+  {
+    "code": "GAMING",
+    "name": "Gaming",
+    "description": "Videojuegos, streaming y contenido relacionado al mundo gamer"
+  },
+  {
+    "code": "OTHERs",
+    "name": "Otros",
+    "description": "Otro tipo de cotenido que no esta en la lista"
+  }
+]

@@ -86,7 +86,7 @@ export class TestimoniesController {
    * @throws ForbiddenException si el rol del usuario no puede ser determinado.
    */
   private getUserRole(req: Request): string {
-    const user = req.user as User;
+    const user = req.user;
     const userRole = user?.role_name;
 
     if (!userRole) {

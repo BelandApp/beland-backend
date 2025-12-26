@@ -13,7 +13,6 @@ import { Wallet } from '../../wallets/entities/wallet.entity';
 import { Group } from '../../groups/entities/group.entity';
 import { GroupMember } from '../../group-members/entities/group-member.entity';
 import { Order } from '../../orders/entities/order.entity';
-// import { OrderItem } from '../../order-items/entities/order-item.entity'; // No utilizada actualmente
 import { Payment } from '../../payments/entities/payment.entity';
 import { Action } from '../../actions/entities/action.entity';
 import { RecycledItem } from '../../recycled-items/entities/recycled-item.entity';
@@ -22,15 +21,14 @@ import { Coupon } from '../../coupons/entities/coupon.entity';
 import { Role } from '../../roles/entities/role.entity';
 import { Admin } from '../../admins/entities/admin.entity';
 import { Exclude } from 'class-transformer';
-import { Organization } from '../../organizations/entities/organization.entity';
 import { Cart } from '../../cart/entities/cart.entity';
 import { UserAddress } from '../../user-address/entities/user-address.entity';
 import { UserCard } from '../../user-cards/entities/user-card.entity';
-import { GroupInvitation } from '../../group-invitations/entities/group-invitation.entity';
 import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';
 import { Testimony } from '../../testimonies/entities/testimony.entity';
-import { ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
+import { RoleEnum, ValidRoleNames } from '../../roles/enum/role-validate.enum';
 import { CouponUsage } from '../../coupons/entities/coupon-usage.entity';
+import { UserProfile } from './profile-user.entity';
 
 @Entity('users')
 export class User {
@@ -61,7 +59,7 @@ export class User {
   // Actualizado para usar los roles que me indicaste
   @Column({
     type: 'enum',
-    enum: ['USER', 'LEADER', 'ADMIN', 'SUPERADMIN', 'COMMERCE', 'FUNDATION'],
+    enum: RoleEnum,
     default: 'USER',
   })
   role_name: ValidRoleNames; // Nombre del rol (ej. 'USER', 'ADMIN')
@@ -115,19 +113,11 @@ export class User {
   @OneToOne(() => Wallet, (wallet) => wallet.user, { cascade: true })
   wallet: Wallet;
 
-  @OneToMany(() => Group, (group) => group.leader)
+  @OneToMany(() => Group, (group) => group.user)
   led_groups: Group[];
 
   @OneToMany(() => GroupMember, (member) => member.user)
   group_memberships: GroupMember[];
-
-  // NEW: Invitations sent by this user
-  @OneToMany(() => GroupInvitation, (invitation) => invitation.sender)
-  sent_invitations: GroupInvitation[];
-
-  // NEW: Invitations received by this user
-  @OneToMany(() => GroupInvitation, (invitation) => invitation.invited_user)
-  received_invitations: GroupInvitation[];
 
   // NUEVO: Relación con Testimonios
   @OneToMany(() => Testimony, (testimony) => testimony.user)
@@ -163,9 +153,6 @@ export class User {
 
   // **FIN CUPONES**
 
-  @OneToOne(() => Organization, (org) => org.user)
-  organization: Organization;
-
   @OneToMany(() => UserAddress, (address) => address.user, { cascade: true })
   addresses: UserAddress[];
 
@@ -175,4 +162,7 @@ export class User {
   // 🔹 Un usuario puede tener varias cuentas de retiro
   @OneToMany(() => WithdrawAccount, (withdrawAccount) => withdrawAccount.user)
   withdraw_accounts: WithdrawAccount[];
+
+  @OneToMany(() => UserProfile, (userProfile) => userProfile.user)
+  profiles: UserProfile[];
 }

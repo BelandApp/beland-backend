@@ -13,16 +13,10 @@ export class OrderItemsService {
 
   constructor(private readonly repository: OrderItemsRepository) {}
 
-  async findAll(
-    order_id: string,
-    pageNumber: number,
-    limitNumber: number,
-  ): Promise<[OrderItem[], number]> {
+  async findAll( order_id: string ): Promise<[OrderItem[], number]> {
     try {
       const response = await this.repository.findAll(
         order_id,
-        pageNumber,
-        limitNumber,
       );
       return response;
     } catch (error) {

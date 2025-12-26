@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ValidRoleNames } from '../enum/role-validate.enum';
 
 export class RoleDto {
   @ApiProperty({
@@ -12,7 +13,7 @@ export class RoleDto {
     example: 'USER', // USER, LEADER, ADMIN, SUPERADMIN, COMMERCE, FUNDATION
   })
   // ¡ACTUALIZADO para incluir EMPRESA!
-  name: 'USER' | 'LEADER' | 'ADMIN' | 'SUPERADMIN' | 'COMMERCE' | 'FUNDATION';
+  name: ValidRoleNames;
 
   @ApiProperty({
     description: 'Descripción del rol',

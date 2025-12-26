@@ -1,8 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column, CreateDateColumn, OneToOne, BeforeUpdate, BeforeInsert } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column, CreateDateColumn, OneToOne, BeforeUpdate, BeforeInsert, Unique } from 'typeorm';
 import { Cart } from '../../cart/entities/cart.entity'; 
 import { Product } from '../../products/entities/product.entity';
 
 @Entity('cart_items')
+@Unique(['cart_id', 'product_id'])
 export class CartItem {
   @PrimaryGeneratedColumn('uuid') 
   id: string;

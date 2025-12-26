@@ -39,7 +39,7 @@ import { UpdateEventPassDto } from './dto/update-event-pass.dto';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { Request } from 'express';
 import { AnyFilesInterceptor, FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
-import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { EventPassType } from './entities/event-pass-type.entity';
 
 @ApiTags('event-pass')

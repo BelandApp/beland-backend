@@ -13,7 +13,7 @@ import * as QRCode from 'qrcode';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { UploadApiResponse } from 'cloudinary';
-import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { CreateEventPassDto } from './dto/create-event-pass.dto';
 import { EventPassType } from './entities/event-pass-type.entity';
 

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { EventPass } from './entities/event-pass.entity';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
-import { RespGetArrayDto } from 'src/dto/resp-get-Array.dto';
+import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { EventPassType } from './entities/event-pass-type.entity';
 
 @Injectable()

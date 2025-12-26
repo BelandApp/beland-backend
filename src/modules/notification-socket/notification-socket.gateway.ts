@@ -18,6 +18,7 @@ import { UsersRepository } from 'src/modules/users/users.repository';
 import { RespSocketDto } from './dto/respSocket.dto';
 import { RespSocketEventpassDto } from './dto/respSocketEventpass.dto';
 import { RespSocketOrdersDto } from './dto/respSocketOrders.dto';
+import { RespSocketStatusOrdersDto } from './dto/respSocketStautsOrder.dto';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -193,6 +194,11 @@ export class NotificationsGateway
 
   // Método para notificar Cuando se genera una orden
   notifyOrders(userId: string, payload: RespSocketOrdersDto) {
+    this.server.to(`user_${userId}`).emit('payment-success', payload);
+  }
+
+  // Método para notificar Cuando se genera una orden
+  notifyStatusOrders(userId: string, payload: RespSocketStatusOrdersDto) {
     this.server.to(`user_${userId}`).emit('payment-success', payload);
   }
 }

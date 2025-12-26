@@ -26,8 +26,8 @@ import { CreateRecyclePriceDto } from './dto/create-recycle_price.dto';
 import { UpdateRecyclePriceDto } from './dto/update-recycle_price.dto';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 
-@ApiTags('orders')
-@Controller('orders')
+@ApiTags('recycle-price')
+@Controller('recycle-price')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(FlexibleAuthGuard)
 export class RecyclePricesController {

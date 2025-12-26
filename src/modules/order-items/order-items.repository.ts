@@ -12,24 +12,19 @@ export class OrderItemsRepository {
 
   async findAll(
     order_id: string,
-    page: number,
-    limit: number,
   ): Promise<[OrderItem[], number]> {
-    const where = order_id ? { order_id } : {};
 
     return this.repository.findAndCount({
-        where,
+        where: {order_id},
         order: { created_at: 'DESC' },
-        skip: (page - 1) * limit,
-        take: limit,
-        relations: ['order', 'product', 'consumed_by_user'],
+        relations: {product:true},
     });
   }
 
   async findOne(id: string): Promise<OrderItem> {
     return this.repository.findOne({
       where: { id },
-      relations: ['order', 'product', 'consumed_by_user'],
+      relations: ['product'],
     });
   }
 

@@ -33,7 +33,6 @@ import { DataSourceOptions } from 'typeorm';
 import { RequestLoggerMiddleware } from './middlleware/request-logger.middleware'; // Asegúrate de que este archivo exista
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { RecyclePricesModule } from './modules/recycle_prices/recycle_prices.module';
-import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { TransactionTypeModule } from './modules/transaction-type/transaction-type.module';
 import { TransactionStateModule } from './modules/transaction-state/transaction-state.module';
 import { DatabaseInitModule } from './database/init/database-init.module';
@@ -45,13 +44,9 @@ import { UserCardsModule } from './modules/user-cards/user-cards.module';
 import { UserAddressModule } from './modules/user-address/user-address.module';
 import { PaymentTypesModule } from './modules/payment-types/payment-types.module';
 import { CategoryModule } from './modules/category/category.module';
-import { GroupInvitationsModule } from './modules/group-invitations/group-invitations.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GroupTypeModule } from './modules/group-type/group-type.module';
 import { EmailModule } from './modules/email/email.module';
-import { ResourcesModule } from './modules/resources/resources.module';
-import { ResourcesTypesModule } from './modules/resources-types/resources-types.module';
-import { UserResourcesModule } from './modules/user-resources/user-resources.module';
 import { SuperadminModule } from './modules/superadmin-config/superadmin-config.module';
 import { WithdrawAccountModule } from './modules/withdraw-account/withdraw-account.module';
 import { WithdrawAccountTypeModule } from './modules/withdraw-account-type/withdraw-account-type.module';
@@ -64,11 +59,18 @@ import { UserFeedbackModule } from './modules/user-feedback/user-feedback.module
 import { UserRechargeModule } from './modules/user-recharge/user-recharge.module';
 import { PaymentAccountModule } from './modules/payment-account/payment-account.module';
 import { DeliveryStatusModule } from './modules/delivery-status/delivery-status.module';
-import { AdminBecoinModule } from './modules/admin-becoin/admin-becoin.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { EventPassModule } from './modules/event-pass/event-pass.module';
 import { UserEventPassModule } from './modules/user-event-pass/user-event-pass.module';
 import { TopupModule } from './modules/topup/topup.module';
+import { DeliveryModule } from './modules/delivery/delivery.module';
+import { DriversModule } from './modules/profiles/drivers/drivers.module';
+import { MerchantsModule } from './modules/profiles/merchants/merchants.module';
+import { HubsModule } from './modules/profiles/hubs/hubs.module';
+import { FoundationsModule } from './modules/profiles/foundations/foundations.module';
+import { RecyclersModule } from './modules/profiles/recyclers/recyclers.module';
+import { HubProductsModule } from './modules/hub-product/hub-product.module';
+import { CreatorsModule } from './modules/profiles/creators/creators.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -111,9 +113,14 @@ const isTs = process.env.NODE_ENV !== 'production';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         logging: false,
-        ssl: isTs ? false : {rejectUnauthorized: false},
+        ssl: isTs ? false : { rejectUnauthorized: false },
+
+        extra: {
+          max: 5, 
+        },
       }),
     }),
+
     //  hola agragar algo
     ScheduleModule.forRoot(),
 
@@ -138,7 +145,6 @@ const isTs = process.env.NODE_ENV !== 'production';
     CommonModule,
     TransactionsModule,
     RecyclePricesModule,
-    OrganizationsModule,
     TransactionTypeModule,
     TransactionStateModule,
     AdminsModule,
@@ -148,12 +154,8 @@ const isTs = process.env.NODE_ENV !== 'production';
     UserAddressModule,
     PaymentTypesModule,
     CategoryModule,
-    GroupInvitationsModule,
     GroupTypeModule,
     EmailModule,
-    ResourcesModule,
-    ResourcesTypesModule,
-    UserResourcesModule,
     WithdrawAccountModule,
     WithdrawAccountTypeModule,
     UserWithdrawModule,
@@ -164,15 +166,21 @@ const isTs = process.env.NODE_ENV !== 'production';
     SuperadminModule,
     UserFeedbackModule,
     UserRechargeModule,
-    UserResourcesModule,
     PaymentAccountModule,
     DeliveryStatusModule,
-    AdminBecoinModule,
     PaymentAccountModule,
     CloudinaryModule, 
     EventPassModule,
     UserEventPassModule,
     TopupModule,
+    DeliveryModule,
+    DriversModule,
+    MerchantsModule,
+    HubsModule,
+    FoundationsModule,
+    RecyclersModule,
+    HubProductsModule,
+    CreatorsModule
   ],
   controllers: [],
   providers: [

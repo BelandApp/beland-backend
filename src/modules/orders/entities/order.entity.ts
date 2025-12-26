@@ -22,6 +22,13 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({
+    type: 'bigint',
+    generated: 'increment',   // ← esto crea autoincremental en el schema
+    unique: true
+  })
+  order_number: number;
+
   @Column({ type: 'integer', nullable:true})
   code: number;
 
@@ -37,14 +44,20 @@ export class Order {
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
   total_becoin: number;
 
-  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
-  price_delivery: number;
-
   @Column({ type: 'int', default: 0 })
   total_items: number;
 
   @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
   total_weight: number;
+
+  @Column({ type: 'numeric', precision: 7, scale: 2, default: 0, nullable:true })
+  delivery_cost: number
+
+  @Column({ type: 'numeric', precision: 7, scale: 2, default: 0, nullable:true })
+  distance_km: number
+
+  @Column({ type: 'numeric', precision: 7, scale: 2, default: 0, nullable:true })
+  duration_min: number
 
   @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
   recycled_weight: number;

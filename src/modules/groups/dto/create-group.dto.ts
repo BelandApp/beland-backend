@@ -1,52 +1,45 @@
-// src/groups/dto/create-group.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
 import {
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
-  IsDate,
-  IsIn,
+  Length,
+  IsLatitude,
+  IsLongitude,
 } from 'class-validator';
-import { Type } from 'class-transformer'; // Import Type from class-transformer
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateGroupDto {
-  @ApiProperty({ description: 'Nombre del grupo' })
-  @IsNotEmpty()
+  @ApiProperty({ description: 'Nombre del grupo', example: 'Juntada Histórica' })
   @IsString()
+  @IsNotEmpty()
+  @Length(3, 255)
   name: string;
 
-  @ApiProperty({ description: 'Ubicación física del grupo', required: false })
+  @ApiPropertyOptional({ description: 'Descripción del grupo', example: 'Grupo de voluntarios del barrio San Martín' })
   @IsOptional()
   @IsString()
-  location?: string;
+  @Length(3, 200)
+  description?: string;
 
-  @ApiProperty({
-    description: 'URL de la ubicación (mapa u otro servicio)',
-    required: false,
-  })
+  @ApiPropertyOptional({ description: 'Latitud geográfica', example: -34.603722 })
   @IsOptional()
-  @IsString()
-  location_url?: string;
+  @IsLatitude()
+  latitude?: number;
 
-  @ApiProperty({
-    description: 'Fecha y hora del grupo',
-    required: false,
-    type: 'string',
-    format: 'date-time',
-  })
+  @ApiPropertyOptional({ description: 'Longitud geográfica', example: -58.381592 })
   @IsOptional()
-  @Type(() => Date) // <--- ADD THIS LINE
-  @IsDate({ message: 'date_time must be a valid ISO 8601 date string' }) // Consider using IsISO8601 if you want to strictly validate the string format
-  date_time?: Date;
+  @IsLongitude()
+  longitude?: number;
 
-  @ApiProperty({
-    description: 'Estado del grupo',
-    enum: ['ACTIVE', 'PENDING', 'INACTIVE', 'DELETE'],
-    required: false,
-    default: 'ACTIVE',
-  })
+  @ApiPropertyOptional({ description: 'ID de la dirección por defecto asociada del usuario', example: '8e4d9c44-0f0c-4d77-b8fd-4b9c25c3c999' })
   @IsOptional()
-  @IsIn(['ACTIVE', 'PENDING', 'INACTIVE', 'DELETE'])
-  status?: 'ACTIVE' | 'PENDING' | 'INACTIVE' | 'DELETE';
+  @IsUUID()
+  user_address_id?: string;
+
+  @ApiPropertyOptional({ description: 'ID del tipo de grupo', example: 'c1a7f0d2-1b43-4f69-9e63-3c2c6b2e7777' })
+  @IsOptional()
+  @IsUUID()
+  group_type_id?: string;
+
 }
