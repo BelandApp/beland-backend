@@ -18,5 +18,10 @@
     "code": "CANCELLED",
     "name": "Cancelada",
     "description": "La transacción fue cancelada"
+  },
+  {
+    "code": "PARTIAL",
+    "name": "Parcial",
+    "description": "El Pago esta incompleto. Solo se cubrio parcialmente"
   }
 ]
