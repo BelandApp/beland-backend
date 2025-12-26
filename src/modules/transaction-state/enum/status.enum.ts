@@ -3,4 +3,5 @@ export enum StatusCode {
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
   CANCELLED = 'CANCELLED',
+  PARTIAL = 'PARTIAL',
 }

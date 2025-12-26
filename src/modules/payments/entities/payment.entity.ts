@@ -18,38 +18,54 @@ export class Payment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'numeric' })
+  // 💰 Monto total que este usuario debía pagar
+  @Column({ type: 'numeric', precision: 14, scale: 2, nullable:true  })
+  total_due: number;
+
+  // 💸 Monto efectivamente pagado por el usuario
+  @Column({ type: 'numeric', precision: 14, scale: 2, default: 0 })
   amount_paid: number;
+
+  // ❗ Monto pendiente de pago (total_due - amount_paid)
+  @Column({ type: 'numeric', precision: 14, scale: 2, default: 0, nullable:true  })
+  outstanding_amount: number;
+
+  // ✅ Flag rápido para saber si completó el pago
+  @Column({ type: 'boolean', default: false, nullable:true })
+  is_fully_paid: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
+  // ───────────── Relaciones ─────────────
+
   @ManyToOne(() => Order, (order) => order.payments, { onDelete: 'CASCADE' })
-  @JoinColumn({name:'order_id'})
+  @JoinColumn({ name: 'order_id' })
   order: Order;
   @Column('uuid')
   order_id: string;
 
   @ManyToOne(() => PaymentType)
-  @JoinColumn({name:'payment_type_id'})
+  @JoinColumn({ name: 'payment_type_id' })
   payment_type: PaymentType;
   @Column('uuid')
   payment_type_id: string;
 
+  // Última transacción asociada (puede haber más en el futuro)
   @ManyToOne(() => Transaction)
-  @JoinColumn({name:'transaction_id'})
+  @JoinColumn({ name: 'transaction_id' })
   transaction: Transaction;
-  @Column('uuid', {nullable: true})
+  @Column('uuid', { nullable: true })
   transaction_id: string;
 
   @ManyToOne(() => User, (user) => user.payments)
-  @JoinColumn({name:'user_id'})
+  @JoinColumn({ name: 'user_id' })
   user: User;
   @Column('uuid')
   user_id: string;
 
   @ManyToOne(() => TransactionState)
-  @JoinColumn({name: 'status_id'})
+  @JoinColumn({ name: 'status_id' })
   status: TransactionState;
   @Column('uuid')
   status_id: string;

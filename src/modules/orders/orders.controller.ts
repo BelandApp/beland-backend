@@ -25,6 +25,7 @@ import { Order } from './entities/order.entity';
 import { Request } from 'express';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { OrderFilterDto } from './dto/order-filter.dto';
+import { RegisterReturnsDto } from './dto/register-returns.dto';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -86,6 +87,24 @@ export class OrdersController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Order> {
     return await this.service.findOne(id);
+  }
+
+  @Post('returns/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({summary: 'Registrar devoluciones y recalcular pagos de la orden'})
+  @ApiParam({name: 'id',description: 'ID de la orden',type: String})
+  @ApiResponse({status: 200,description: 'Devoluciones registradas y orden recalculada correctamente'})
+  @ApiResponse({status: 400,description: 'La orden ya fue recolectada o datos inválidos'})
+  @ApiResponse({status: 404,description: 'Orden o ítems no encontrados'})
+  async registerReturns(
+    @Param('id') orderId: string,
+    @Body() body: RegisterReturnsDto,
+  ): Promise<{ success: boolean }> {
+
+    return this.service.registerReturnsAndRecalculate(
+      orderId,
+      body.returns,
+    );
   }
 
   @Put('preparing')
