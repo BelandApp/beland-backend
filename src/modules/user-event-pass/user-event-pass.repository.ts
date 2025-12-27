@@ -14,6 +14,8 @@ import { TransactionCode } from '../transaction-type/enum/transaction-code';
 import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { PurchaseWhitRechargeDto } from './dto/purchaseWhitRecarge.dto';
 import { WalletsService } from '../wallets/wallets.service';
+import { GroupMember } from '../group-members/entities/group-member.entity';
+import { RoleGroupEnum } from '../group-members/enums/role-group.enum';
 
 @Injectable()
 export class UserEventPassRepository {
@@ -86,6 +88,7 @@ async findAll(
   ): Promise<UserEventPass> {
     return await this.dataSource.transaction(async (manager) => {
       const walletRepo = manager.getRepository(Wallet);
+      const groupMembersRepo = manager.getRepository(GroupMember);
       const eventRepo = manager.getRepository(EventPass);
       const transRepo = manager.getRepository(Transaction);
       const statusRepo = manager.getRepository(TransactionState);
@@ -94,7 +97,7 @@ async findAll(
 
       // 1️⃣ Buscar usuario y evento
       const [event, walletUser, status, typePurchase, typeSale] = await Promise.all([
-        eventRepo.findOne({ where: { id: event_pass_id, is_active: true } }),
+        eventRepo.findOne({ where: { id: event_pass_id, is_active: true }, relations: {group:true} }),
         walletRepo.findOne({where: {user_id}}),
         statusRepo.findOne({where: {code: StatusCode.COMPLETED}}),
         typeRepo.findOne({where: {code: TransactionCode.PURCHASE_EVENTPASS}}),
@@ -175,6 +178,15 @@ async findAll(
         is_active: true,
       });
       const savedPass = await passRepo.save(newPass);
+
+      if (event.group) {
+        const newMembers = groupMembersRepo.create({
+          group_id: event.group.id,
+          user_id,
+          role: RoleGroupEnum.MEMBER
+        });
+        await groupMembersRepo.save(newMembers);
+      }
 
       return savedPass;
     });

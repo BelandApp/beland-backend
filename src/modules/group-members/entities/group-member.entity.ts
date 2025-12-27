@@ -19,13 +19,13 @@ export class GroupMember {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-@Column({
-  type: 'enum',
-  enum: RoleGroupEnum,
-  enumName: 'group_member_role_enum',
-  default: RoleGroupEnum.MEMBER,
-})
-role: RoleGroupEnum;
+  @Column({
+    type: 'enum',
+    enum: RoleGroupEnum,
+    enumName: 'group_member_role_enum',
+    default: RoleGroupEnum.MEMBER,
+  })
+  role: RoleGroupEnum;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

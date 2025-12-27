@@ -5,10 +5,13 @@ import {
   Repository,
   DeleteResult,
   UpdateResult,
+  DataSource,
 } from 'typeorm'; 
 import { Group } from './entities/group.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { OrderDto } from 'src/common/dto/order.dto';
+import { GroupPrivacy } from './entities/group-privacy.entity';
+import { RespGetTypeDto } from 'src/dto/resp-app.dto';
 
 @Injectable()
 export class GroupsRepository {
@@ -17,6 +20,7 @@ export class GroupsRepository {
   constructor(
     @InjectRepository(Group)
     private readonly repository: Repository<Group>,
+    private readonly dataSurce: DataSource,
   ) {}
 
   async findOneById( id: string ): Promise<Group | null> {
@@ -24,6 +28,13 @@ export class GroupsRepository {
       where: {id},
       relations: {group_type:true}
     })
+  }
+
+  async findAllGroupPrivacy(): Promise<RespGetTypeDto<GroupPrivacy>> {
+    const [data, total] = await this.dataSurce.manager.findAndCount(GroupPrivacy, {
+      where: {is_active: true}
+    })
+    return {data, total}
   }
 
   async getGroupsByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {

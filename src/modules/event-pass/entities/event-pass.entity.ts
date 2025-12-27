@@ -6,9 +6,11 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToOne,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { EventPassType } from './event-pass-type.entity';
+import { Group } from 'src/modules/groups/entities/group.entity';
 
 @Entity({ name: 'event_pass' })
 export class EventPass {
@@ -111,6 +113,9 @@ export class EventPass {
   type: EventPassType;
   @Column('uuid', {nullable:true})
   type_id: string
+
+  @OneToOne(() => Group, (group) => group.event_pass)
+  group: Group;
 
   // 🕓 CONTROL DE CREACIÓN / ACTUALIZACIÓN
   @CreateDateColumn({ type: 'timestamp' })
