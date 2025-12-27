@@ -22,6 +22,11 @@ export class CreateGroupDto {
   @Length(3, 200)
   description?: string;
 
+  @ApiPropertyOptional({ description: 'Mensaje para invitación del grupo', example: 'Hola! Unete a esta fiesta! Pasemos juntos un momento increible' })
+  @IsOptional()
+  @IsString()
+  message_invitation?: string;
+
   @ApiPropertyOptional({ description: 'Latitud geográfica', example: -34.603722 })
   @IsOptional()
   @IsLatitude()
@@ -41,5 +46,10 @@ export class CreateGroupDto {
   @IsOptional()
   @IsUUID()
   group_type_id?: string;
+
+  @ApiPropertyOptional({ description: 'ID del tipo de provacidad', example: 'c1a7f0d2-1b43-4f69-9e63-3c2c6b2e7777' })
+  @IsOptional()
+  @IsUUID()
+  privacy_id?: string;
 
 }

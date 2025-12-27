@@ -27,6 +27,7 @@ import { WithdrawAccount } from './entities/withdraw-account.entity';
 import { WithdrawAccountsService } from './withdraw-account.service';
 import { CreateWithdrawAccountDto } from './dto/create-withdraw-account.dto';
 import { UpdateWithdrawAccountDto } from './dto/update-withdraw-account.dto';
+import { CountryEnum, Currency, HolderDocumentType } from './enums/withdraw-account.enum';
 
 @ApiTags('withdraw-account')
 @Controller('withdraw-account')
@@ -52,6 +53,19 @@ export class WithdrawAccountsController {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     return await this.service.findAll(req.user?.id, pageNumber, limitNumber, is_active);
+  }
+
+  @Get('enums')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Retorna los enums para las opciones de las cuentas' })
+  @ApiResponse({ status: 200, description: 'Datos retornados con exito' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findTypes(@Param('id', ParseUUIDPipe) id: string): Promise<Object> {
+    return {
+      countrys: CountryEnum,
+      documentType: HolderDocumentType,
+      currency: Currency,
+    }
   }
 
   @Get(':id')

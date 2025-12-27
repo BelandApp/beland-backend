@@ -7,13 +7,16 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
-  UpdateDateColumn, // <-- Correctly imported
+  UpdateDateColumn,
+  OneToOne, // <-- Correctly imported
 } from 'typeorm';
 import { GroupMember } from '../../group-members/entities/group-member.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { User } from '../../users/entities/users.entity';
 import { GroupType } from '../../group-type/entities/group-type.entity';
 import { UserAddress } from '../../user-address/entities/user-address.entity';
+import { GroupPrivacy } from './group-privacy.entity';
+import { EventPass } from 'src/modules/event-pass/entities/event-pass.entity';
 
 @Entity('groups')
 export class Group {
@@ -25,6 +28,9 @@ export class Group {
 
   @Column({ type: 'varchar', nullable: true })
   description: string;
+
+  @Column({ type: 'text', nullable: true })
+  message_invitation: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
   latitude?: number;
@@ -68,6 +74,18 @@ export class Group {
   group_type: GroupType;
   @Column('uuid', { nullable:true })
   group_type_id:string;
+
+  @ManyToOne(() => GroupPrivacy)
+  @JoinColumn({ name: 'group_privacy_id' })
+  privacy: GroupPrivacy;
+  @Column({ type: 'uuid', nullable:true })
+  privacy_id: string;
+
+  @OneToOne(() => EventPass, (event) => event.group)
+  @JoinColumn({ name: 'event_pass_id' })
+  event_pass: EventPass;
+  @Column({ type: 'uuid', nullable:true })
+  event_pass_id: string;
 
   @OneToMany(() => GroupMember, (member) => member.group)
   members: GroupMember[];
