@@ -31,6 +31,7 @@ import {
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { Request } from 'express'; 
 import { Group } from './entities/group.entity';
+import { GetGroupsQueryDto } from './dto/filters-groups.dto';
 
 @ApiTags('groups') // Etiqueta para la documentación de Swagger
 @Controller('groups')
@@ -40,6 +41,31 @@ export class GroupsController {
   constructor(
     private readonly groupsService: GroupsService,
   ) {}
+
+  // src/groups/groups.controller.ts
+
+  @Get()
+  @UseGuards(FlexibleAuthGuard)
+  @ApiOperation({
+    summary: 'Listar grupos con filtros, paginación y orden',
+  })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({
+    status: 200,
+    description: 'Listado paginado de grupos',
+    type: [Group],
+  })
+  async findAll(
+    @Query() query: GetGroupsQueryDto,
+  ): Promise<{
+    data: Group[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.groupsService.findAll(query);
+  }
+
 
   @Get('by-user')
   @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación

@@ -23,6 +23,30 @@ export class GroupsService {
     private readonly dataSource: DataSource,
   ) {}
 
+  async findAll(
+    query: GetGroupsQueryDto,
+  ): Promise<{
+    data: Group[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const {
+      page = 1,
+      limit = 10,
+    } = query;
+
+    const [data, total] =
+      await this.groupsRepository.findAllWithFilters(query);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+  
   async createGroup(createGroupDto: Partial<Group>,user_id: string): Promise<Group> {
     this.logger.debug(
       `createGroup(): Intentando crear grupo para el líder ID: ${user_id}`,
