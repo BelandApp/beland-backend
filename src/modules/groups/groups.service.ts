@@ -51,7 +51,7 @@ export class GroupsService {
 
       // Guardar la membresía del grupo para el líder
       const leaderMembership = await queryRunner.manager.save(GroupMember, {
-        group: savedGroup, // Asociar con el grupo recién creado
+        group_id: savedGroup.id, // Asociar con el grupo recién creado
         user_id, // Asociar con el usuario líder
         role: RoleGroupEnum.LEADER, // Establecer el rol como LÍDER
       });

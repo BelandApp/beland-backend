@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { EventPassType } from './event-pass-type.entity';
-import { Group } from 'src/modules/groups/entities/group.entity';
+import { Group } from '../../groups/entities/group.entity';
 
 @Entity({ name: 'event_pass' })
 export class EventPass {
