@@ -14,9 +14,12 @@ import { plainToInstance } from 'class-transformer';
 import { DataSource } from 'typeorm';
 import { GetGroupsQueryDto } from './dto/filters-groups.dto';
 import { RoleGroupEnum } from '../group-members/enums/role-group.enum';
+import { RespGetTypeDto } from 'src/dto/resp-app.dto';
+import { GroupPrivacy } from './entities/group-privacy.entity';
 @Injectable()
 export class GroupsService {
   private readonly logger = new Logger(GroupsService.name);
+  getGroupsPrivacy: any;
 
   constructor(
     private readonly groupsRepository: GroupsRepository,
@@ -46,7 +49,12 @@ export class GroupsService {
       limit,
     };
   }
-  
+
+  async getGroupPrivacy(): Promise<RespGetTypeDto<GroupPrivacy>> {
+    const [data, total] = await this.dataSource.manager.findAndCount(GroupPrivacy)
+    return {data, total}
+  }
+
   async createGroup(createGroupDto: Partial<Group>,user_id: string): Promise<Group> {
     this.logger.debug(
       `createGroup(): Intentando crear grupo para el líder ID: ${user_id}`,
