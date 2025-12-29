@@ -32,6 +32,8 @@ import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { Request } from 'express'; 
 import { Group } from './entities/group.entity';
 import { GetGroupsQueryDto } from './dto/filters-groups.dto';
+import { RespGetTypeDto } from 'src/dto/resp-app.dto';
+import { GroupPrivacy } from './entities/group-privacy.entity';
 
 @ApiTags('groups') // Etiqueta para la documentación de Swagger
 @Controller('groups')
@@ -66,6 +68,18 @@ export class GroupsController {
     return this.groupsService.findAll(query);
   }
 
+  @Get('privacy-type')
+  @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
+  @ApiOperation({
+    summary:'Obtener todos tipos de provacidad de grupo'
+  })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({status: 200,description:'Lista de tipos de ´rivacidad de grupos'})
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  async getGroupsPrivacy(): Promise<RespGetTypeDto<GroupPrivacy>> {
+    return await this.groupsService.getGroupPrivacy();
+  }
 
   @Get('by-user')
   @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
