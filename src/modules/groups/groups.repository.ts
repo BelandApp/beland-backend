@@ -97,7 +97,7 @@ export class GroupsRepository {
     return { groups, total };
   }
 
-  async create(group: Group): Promise<Group> {
+  async create(group: Partial<Group>): Promise<Group> {
     
     return await this.repository.save(group);
   }

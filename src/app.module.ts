@@ -71,6 +71,7 @@ import { FoundationsModule } from './modules/profiles/foundations/foundations.mo
 import { RecyclersModule } from './modules/profiles/recyclers/recyclers.module';
 import { HubProductsModule } from './modules/hub-product/hub-product.module';
 import { CreatorsModule } from './modules/profiles/creators/creators.module';
+import { ServicesModule } from './modules/services/services.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -180,7 +181,8 @@ const isTs = process.env.NODE_ENV !== 'production';
     FoundationsModule,
     RecyclersModule,
     HubProductsModule,
-    CreatorsModule
+    CreatorsModule,
+    ServicesModule
   ],
   controllers: [],
   providers: [

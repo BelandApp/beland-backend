@@ -16,7 +16,7 @@ import { User } from '../../users/entities/users.entity';
 import { GroupType } from '../../group-type/entities/group-type.entity';
 import { UserAddress } from '../../user-address/entities/user-address.entity';
 import { GroupPrivacy } from './group-privacy.entity';
-import { EventPass } from 'src/modules/event-pass/entities/event-pass.entity';
+import { EventPass } from '../../event-pass/entities/event-pass.entity';
 
 @Entity('groups')
 export class Group {
