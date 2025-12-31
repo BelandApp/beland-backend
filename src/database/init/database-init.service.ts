@@ -18,6 +18,7 @@ import preloadVehicleType from './json/vehicleType.json'
 import preloadSocialNetwork from './json/socialNetwork.json'
 import preloadContentCategoty from './json/contentCategories.json'
 import preloadGroupPrivacy from './json/groupPrivacy.json'
+import preloadService from './json/servivice.json'
 
 // Entidades
 import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
@@ -35,6 +36,7 @@ import { Vehicle } from 'src/modules/profiles/drivers/entities/vehicle.entity';
 import { ContentCategory } from 'src/modules/profiles/creators/entities/content-category.entity';
 import { SocialNetwork } from 'src/modules/profiles/creators/entities/social-network.entity';
 import { GroupPrivacy } from 'src/modules/groups/entities/group-privacy.entity';
+import { Service } from 'src/modules/services/entities/service.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -154,6 +156,12 @@ export class DatabaseInitService {
         GroupPrivacy,
         'code',
         'Tipos de privacidad de Grupos',
+      );
+      await this.preload<Service>(
+        preloadService,
+        Service,
+        'name',
+        'Servicios',
       );
       await this.preload<Profile>(
         preloadProfiles,
