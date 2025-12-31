@@ -19,7 +19,6 @@ import { GroupPrivacy } from './entities/group-privacy.entity';
 @Injectable()
 export class GroupsService {
   private readonly logger = new Logger(GroupsService.name);
-  getGroupsPrivacy: any;
 
   constructor(
     private readonly groupsRepository: GroupsRepository,

@@ -17,6 +17,7 @@ import { GroupType } from '../../group-type/entities/group-type.entity';
 import { UserAddress } from '../../user-address/entities/user-address.entity';
 import { GroupPrivacy } from './group-privacy.entity';
 import { EventPass } from '../../event-pass/entities/event-pass.entity';
+import { PaymentType } from 'src/modules/payment-types/entities/payment-type.entity';
 
 @Entity('groups')
 export class Group {
@@ -80,6 +81,12 @@ export class Group {
   privacy: GroupPrivacy;
   @Column({ type: 'uuid', nullable:true })
   privacy_id: string;
+
+  @ManyToOne(() => PaymentType, {onDelete : 'SET NULL'})
+  @JoinColumn({name:'payment_type_id'})
+  payment_type: PaymentType;
+  @Column('uuid', { nullable:true })
+  payment_type_id:string;
 
   @OneToOne(() => EventPass, (event) => event.group)
   @JoinColumn({ name: 'event_pass_id' })

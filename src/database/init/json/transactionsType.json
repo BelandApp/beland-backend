@@ -32,7 +32,12 @@
   {
     "code": "PURCHASE_BELAND",
     "name": "Compra Beland",
-    "description": "Compra de productos o servicios con BECOIN en BELAND"
+    "description": "Compra de productos con BECOIN en BELAND"
+  },
+  {
+    "code": "SERVICE_BELAND",
+    "name": "Servicios Beland",
+    "description": "Compra de servicios con BECOIN en BELAND"
   },
   {
     "code": "PURCHASE_RESOURCE",
