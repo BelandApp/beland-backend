@@ -154,7 +154,7 @@ export class OrdersService {
       // 2) Traer el carrito con sus ítems
       const cart = await queryRunner.manager.findOne(Cart, {
         where: { id: cart_id },
-        relations: {items:true}
+        relations: {items:true, group:true}
       });
       if (!cart) throw new NotFoundException('Carrito no encontrado');
 
@@ -173,7 +173,7 @@ export class OrdersService {
         });
       } else {
         paymentType = await queryRunner.manager.findOne(PaymentType, {
-          where: { id: cart.payment_type_id },
+          where: { id: cart.group.payment_type_id },
         });
       }
       

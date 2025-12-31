@@ -1,26 +1,16 @@
 [
   {
-    "code": "PUBLIC_OPEN",
-    "name": "Público abierto",
-    "description": "Cualquiera puede ver el grupo y unirse libremente",
+    "code": "PUBLIC",
+    "name": "Público",
+    "description": "Cualquiera puede ver el grupo y unirse libremente. El creador puede quitar al que quiera",
     "is_visible": true,
-    "allow_free_join": true,
-    "require_approval": false
+    "allow_free_join": true
   },
   {
-    "code": "PUBLIC_CLOSED",
-    "name": "Público con aprobación",
-    "description": "Cualquiera puede ver el grupo pero necesita aprobación para unirse",
-    "is_visible": true,
-    "allow_free_join": false,
-    "require_approval": true
-  },
-  {
-    "code": "PRIVATE_INVITE",
-    "name": "Privado por invitación",
-    "description": "Solo miembros invitados pueden ver y unirse al grupo",
+    "code": "PRIVATE",
+    "name": "Privado",
+    "description": "Solo el creador del grupo agrega personas.",
     "is_visible": false,
-    "allow_free_join": false,
-    "require_approval": false
+    "allow_free_join": false
   }
 ]

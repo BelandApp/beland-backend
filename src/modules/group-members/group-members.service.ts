@@ -28,12 +28,15 @@ export class GroupMembersService {
     const { group_id, user_id } = createDto;
 
     // 1. Check if group exists
-    const group = await this.dataSource.manager.findOne(Group, { where: { id: group_id }, relations: ['user'] });
+    const group = await this.dataSource.manager.findOne(Group, { where: { id: group_id }, relations: {user:true, privacy:true} });
     if (!group) throw new NotFoundException(`Grupo con ID "${group_id}" no encontrado.`);
 
-    if (group.user_id !== req_user_id) {
-      throw new ForbiddenException('No tienes permiso para agregar miembros a este grupo.');
+    if (!group.privacy.allow_free_join) {
+      if (group.user_id !== req_user_id) {
+        throw new ForbiddenException('No tienes permiso para agregar miembros a este grupo.');
+      }
     }
+    
 
     // 3. User existence
     const userToAdd = await this.dataSource.manager.findOne(User, { where: { id: user_id } });
@@ -185,8 +188,8 @@ export class GroupMembersService {
       const is_user_admin = membership.group.user_id === user_id;
       if (!is_user_owner && !is_user_admin) throw new ForbiddenException('No tienes permiso para eliminar a este miembro.');
       
-      const memebership_deleted = await this.repository.delete(id);
-      if (memebership_deleted.affected === 0) throw new NotFoundException('No se encontró la membresía a eliminar.');
+      await this.repository.delete(id);
+      
       return {message: 'Membresía eliminada correctamente.', success: true}
     } catch (error) {
       if (error instanceof NotFoundException) throw error;

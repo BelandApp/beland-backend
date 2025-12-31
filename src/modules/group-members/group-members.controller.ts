@@ -23,7 +23,6 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { Request } from 'express'; // Import Request from express for req.user
-import { User } from 'src/modules/users/entities/users.entity'; // Import User entity for type casting req.user
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { GroupMember } from './entities/group-member.entity';
 

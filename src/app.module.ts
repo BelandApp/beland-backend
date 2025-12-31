@@ -72,6 +72,8 @@ import { RecyclersModule } from './modules/profiles/recyclers/recyclers.module';
 import { HubProductsModule } from './modules/hub-product/hub-product.module';
 import { CreatorsModule } from './modules/profiles/creators/creators.module';
 import { ServicesModule } from './modules/services/services.module';
+import { GroupMembersConsumptionModule } from './modules/group-members-consumption/group-members-consumption.module';
+import { GroupService } from './modules/group-services/entities/group-service.entity';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -182,7 +184,9 @@ const isTs = process.env.NODE_ENV !== 'production';
     RecyclersModule,
     HubProductsModule,
     CreatorsModule,
-    ServicesModule
+    ServicesModule,
+    GroupMembersConsumptionModule,
+    GroupService
   ],
   controllers: [],
   providers: [

@@ -20,9 +20,6 @@ export class GroupPrivacy {
   @Column({ type: 'boolean', default: false })
   allow_free_join:boolean;
 
-  @Column({ type: 'boolean', default: false })
-  require_approval:boolean;
-
   @Column({ type: 'boolean', default: true })
   is_active:boolean;
 }
