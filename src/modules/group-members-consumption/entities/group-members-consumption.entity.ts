@@ -1,7 +1,7 @@
-import { GroupMember } from "src/modules/group-members/entities/group-member.entity";
+import { GroupMember } from "../../group-members/entities/group-member.entity";
 import { Group } from "../../groups/entities/group.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { Product } from "src/modules/products/entities/product.entity";
+import { Product } from "../../products/entities/product.entity";
 
 @Entity('group_member_consumptions')
 export class GroupMemberConsumption {

@@ -52,4 +52,9 @@ export class CreateGroupDto {
   @IsOptional()
   @IsUUID()
   privacy_id?: string;
+
+  @ApiPropertyOptional({ description: 'ID del tipo de pago' })
+  @IsOptional()
+  @IsUUID()
+  payment_type_id?: string;
 }

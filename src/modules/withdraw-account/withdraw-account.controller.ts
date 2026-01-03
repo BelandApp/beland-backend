@@ -60,7 +60,7 @@ export class WithdrawAccountsController {
   @ApiOperation({ summary: 'Retorna los enums para las opciones de las cuentas' })
   @ApiResponse({ status: 200, description: 'Datos retornados con exito' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async findTypes(@Param('id', ParseUUIDPipe) id: string): Promise<Object> {
+  async findTypes(): Promise<Object> {
     return {
       countrys: CountryEnum,
       documentType: HolderDocumentType,

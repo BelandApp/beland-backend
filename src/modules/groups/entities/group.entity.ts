@@ -17,7 +17,7 @@ import { GroupType } from '../../group-type/entities/group-type.entity';
 import { UserAddress } from '../../user-address/entities/user-address.entity';
 import { GroupPrivacy } from './group-privacy.entity';
 import { EventPass } from '../../event-pass/entities/event-pass.entity';
-import { PaymentType } from 'src/modules/payment-types/entities/payment-type.entity';
+import { PaymentType } from '../../payment-types/entities/payment-type.entity';
 
 @Entity('groups')
 export class Group {

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 
 // Seeders
@@ -37,6 +37,10 @@ import { ContentCategory } from 'src/modules/profiles/creators/entities/content-
 import { SocialNetwork } from 'src/modules/profiles/creators/entities/social-network.entity';
 import { GroupPrivacy } from 'src/modules/groups/entities/group-privacy.entity';
 import { Service } from 'src/modules/services/entities/service.entity';
+import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
+import { TransactionCode } from 'src/modules/transaction-type/enum/transaction-code';
+import { StatusCode } from 'src/modules/transaction-state/enum/status.enum';
+import { Transaction } from 'src/modules/transactions/entities/transaction.entity';
 
 @Injectable()
 export class DatabaseInitService {
@@ -243,6 +247,69 @@ export class DatabaseInitService {
       );
     }
   }
+
+ /* async retiroManual () {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1) Buscar la wallet del usuario
+      const user_id = '99e3e5a4-b932-4669-8d83-aaaeddd3d5da'; // richard gomez
+      const wallet = await queryRunner.manager.findOne(Wallet, {
+        where: { user_id },
+      });
+      if (!wallet) throw new NotFoundException('No se encuentra la billetera');
+
+      // 2) Verificar saldo suficiente
+
+      // 3) Obtener tipo de transacción 'WITHDRAW'
+      const type = await queryRunner.manager.findOne(TransactionType, {
+        where: { code: TransactionCode.WITHDRAW },
+      });
+      if (!type)
+        throw new ConflictException(
+          'No se encuentra el tipo ',
+          TransactionCode.WITHDRAW,
+        );
+
+      // 4) Obtener estado 'PENDING'
+      const status = await queryRunner.manager.findOne(TransactionState, {
+        where: { code: StatusCode.COMPLETED },
+      });
+      if (!status)
+        throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED);
+
+      // 5) Reservar fondos: debitar del saldo disponible y aumentar el saldo bloqueado
+      wallet.becoin_balance = +wallet.becoin_balance - 4000; // quemo 200 dlares en becoin
+      const walletUpdated = await queryRunner.manager.save(wallet);
+
+      // 6) Registrar la transacción
+      const tx = await queryRunner.manager.save(Transaction, {
+        wallet_id: wallet.id,
+        type,
+        status,
+        amount_becoin: -4000,
+        post_balance: wallet.becoin_balance,
+      });
+
+      // 7) Registrar la solicitud de retiro del usuario
+      
+
+      // ✅ Confirmo la transacción
+      await queryRunner.commitTransaction();
+
+      // 8) Retornar la wallet actualizada
+      return {wallet: walletUpdated, message: "quema de becoin exitosa,... se quemaron 4000. deben quedar 40 becoin"};
+    } catch (error) {
+      // ❌ Deshago todo si algo falla
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Cierro el queryRunner
+      await queryRunner.release();
+    }
+  }*/
 
 }
 
