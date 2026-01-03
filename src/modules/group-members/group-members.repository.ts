@@ -49,7 +49,7 @@ export class GroupMembersRepository {
   }
 
   async create(groupMember: Partial<GroupMember>): Promise<GroupMember> {
-    return this.repository.save(groupMember);
+    return await this.repository.save(groupMember);
   }
 
   async delete(id: string): Promise<DeleteResult> {

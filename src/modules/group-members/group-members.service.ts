@@ -10,7 +10,7 @@ import {
 import { GroupMembersRepository } from './group-members.repository';
 import { Group } from 'src/modules/groups/entities/group.entity';
 import { User } from 'src/modules/users/entities/users.entity';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { GroupMember } from './entities/group-member.entity';
 import { RoleGroupEnum } from './enums/role-group.enum';
 import { CreateGroupMemberDto, CreateManyGroupMemberDto } from './dto/create-group-member.dto';
@@ -33,13 +33,13 @@ export class GroupMembersService {
 
     if (!group.privacy.allow_free_join) {
       if (group.user_id !== req_user_id) {
-        throw new ForbiddenException('No tienes permiso para agregar miembros a este grupo.');
+        throw new ForbiddenException('Solo el creador del grupo puede ingresar miembros. Este Grupo es privado.');
       }
     }
     
 
     // 3. User existence
-    const userToAdd = await this.dataSource.manager.findOne(User, { where: { id: user_id } });
+    const userToAdd = await this.dataSource.manager.findOne(User, { where: { id: user_id, deleted_at: IsNull(), isBlocked: false} });
     if (!userToAdd) throw new NotFoundException(`Usuario con ID "${user_id}" no encontrado.`);
 
     // 4. Check duplicate
@@ -47,7 +47,7 @@ export class GroupMembersService {
     if (existing) throw new ConflictException('Este usuario ya es miembro del grupo.');
 
     try {
-      const member = this.repository.create({
+      const member = await this.repository.create({
         group_id,
         user_id,
         role: RoleGroupEnum.MEMBER,
