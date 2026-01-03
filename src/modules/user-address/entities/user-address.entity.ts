@@ -50,6 +50,9 @@ export class UserAddress {
   @Column({ default: false })
   isDefault: boolean; // Marcar dirección principal
 
+  @Column({ default: true , nullable:true})
+  is_active: boolean; 
+
   @CreateDateColumn()
   created_at: Date;
 

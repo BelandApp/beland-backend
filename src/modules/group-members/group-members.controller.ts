@@ -102,14 +102,14 @@ export class GroupMembersController {
 
   @Delete('group-and-user')
   @ApiOperation({ summary: 'Eliminar un miembro por ID de Grupo e ID de Usuario. Solo Creador o mismo miembro a eliminar pueden realizar esta acción.' })
-  @ApiQuery({ name: 'groupId', description: 'El ID del grupo', required: true })
-  @ApiQuery({ name: 'userId', description: 'El ID del usuario', required: true })
+  @ApiQuery({ name: 'group_id', description: 'El ID del grupo', required: true })
+  @ApiQuery({ name: 'user_id', description: 'El ID del usuario', required: true })
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeByGroupAndUser(
-    @Query('groupId') groupId: string,
-    @Query('userId') userId: string,
+    @Query('group_id') group_id: string,
+    @Query('user_id') user_id: string,
     @Req() req: Request
   ): Promise<{message: string, success: boolean}> {
-    return await this.service.removeMemberByGroupAndUser(groupId, userId, req.user?.id);
+    return await this.service.removeMemberByGroupAndUser(group_id, user_id, req.user?.id);
   }
 }

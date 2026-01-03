@@ -33,12 +33,6 @@ export class Group {
   @Column({ type: 'text', nullable: true })
   message_invitation: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
-  latitude?: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
-  longitude?: number;
-
   @ManyToOne(() => UserAddress, {onDelete : 'SET NULL'})
   @JoinColumn({name:'user_address_id'})
   user_address: UserAddress;

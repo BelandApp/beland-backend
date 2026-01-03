@@ -16,8 +16,12 @@ import { GetGroupsQueryDto } from './dto/filters-groups.dto';
 import { RoleGroupEnum } from '../group-members/enums/role-group.enum';
 import { RespGetTypeDto } from 'src/dto/resp-app.dto';
 import { GroupPrivacy } from './entities/group-privacy.entity';
+import { UserAddress } from '../user-address/entities/user-address.entity';
+import { GroupType } from '../group-type/entities/group-type.entity';
+import { PaymentType } from '../payment-types/entities/payment-type.entity';
 @Injectable()
 export class GroupsService {
+  
   private readonly logger = new Logger(GroupsService.name);
 
   constructor(
@@ -46,6 +50,32 @@ export class GroupsService {
       total,
       page,
       limit,
+    };
+  }
+
+async getInfoCreate(): Promise<{
+    user_address: UserAddress[];
+    group_types: GroupType[];
+    group_privacies: GroupPrivacy[];
+    payment_types: PaymentType[];
+  }> {
+    const [
+      user_address,
+      group_types,
+      group_privacies,
+      payment_types,
+    ] = await Promise.all([
+      this.dataSource.getRepository(UserAddress).find({ where: { is_active: true } }),
+      this.dataSource.getRepository(GroupType).find(),
+      this.dataSource.getRepository(GroupPrivacy).find({ where: { is_active: true } }),
+      this.dataSource.getRepository(PaymentType).find({ where: { is_active: true } }),
+    ]);
+
+    return {
+      user_address,
+      group_types,
+      group_privacies,
+      payment_types,
     };
   }
 
@@ -118,6 +148,14 @@ export class GroupsService {
   async getGroupsByUserId(user_id: string, is_active?:boolean): Promise<Group[]> {
     try {
     return await this.groupsRepository.getGroupsByUserId(user_id, is_active);
+    } catch (error) {
+      throw new InternalServerErrorException('Error interno: ', error)
+    }
+  }
+  // falta incluir paginacion en todos los que devuvlen array
+  async getGroupsCreatedByUserId(user_id: string, is_active?:boolean): Promise<Group[]> {
+    try {
+    return await this.groupsRepository.getGroupsCreatedByUserId(user_id, is_active);
     } catch (error) {
       throw new InternalServerErrorException('Error interno: ', error)
     }

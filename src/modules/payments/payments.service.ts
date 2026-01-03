@@ -32,6 +32,27 @@ export class PaymentsService {
     }
   }
 
+async findPaymentsByOrder(
+    order_id: string, 
+    user_id: string,
+    uncompleted: boolean,
+    pageNumber: number,
+    limitNumber: number,
+  ): Promise<[Payment[], number]> {
+    try {
+      const response = await this.repository.findPaymentsByOrder(
+        order_id,
+        user_id,
+        uncompleted,
+        pageNumber,
+        limitNumber,
+      );
+      return response;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
   async findOne(id: string): Promise<Payment> {
     try {
       const res = await this.repository.findOne(id);

@@ -84,7 +84,7 @@ export class GroupsRepository {
   async findOneById( id: string ): Promise<Group | null> {
     return await this.repository.findOne({
       where: {id},
-      relations: {group_type:true}
+      relations: {group_type:true, privacy:true, payment_type:true, user_address:true}
     })
   }
 
@@ -97,8 +97,15 @@ export class GroupsRepository {
 
   async getGroupsByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {
     return await this.repository.find({
+      where: {members: {user_id}, is_active},
+      relations: {group_type:true, privacy:true, payment_type:true},
+    })
+  }
+
+  async getGroupsCreatedByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {
+    return await this.repository.find({
       where: {user_id, is_active},
-      relations: {group_type:true},
+      relations: {group_type:true, privacy:true, payment_type:true},
     })
   }
 

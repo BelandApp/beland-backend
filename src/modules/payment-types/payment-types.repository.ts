@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository, UpdateResult } from 'typeorm';
+import { DeleteResult, Not, Repository, UpdateResult } from 'typeorm';
 import { PaymentType } from './entities/payment-type.entity';
 
 @Injectable()
@@ -11,16 +11,23 @@ export class PaymentTypesRepository {
   ) {}
 
   async findAll(
-    page: number,
-    limit: number,
   ): Promise<[PaymentType[], number]> {
 
     return this.repository.findAndCount({
-        order: { created_at: 'DESC' },
-        skip: (page - 1) * limit,
-        take: limit,
+        order: { created_at: 'DESC' }
     });
   }
+
+async findAtServices(): Promise<[PaymentType[], number]> {
+  return this.repository.findAndCount({
+    where: {
+      code: Not('SPLIT'),
+    },
+    order: {
+      created_at: 'DESC',
+    },
+  });
+}
 
   async findOne(id: string): Promise<PaymentType> {
     return this.repository.findOne({

@@ -34,6 +34,9 @@ import { Group } from './entities/group.entity';
 import { GetGroupsQueryDto } from './dto/filters-groups.dto';
 import { RespGetTypeDto } from 'src/dto/resp-app.dto';
 import { GroupPrivacy } from './entities/group-privacy.entity';
+import { UserAddress } from '../user-address/entities/user-address.entity';
+import { GroupType } from '../group-type/entities/group-type.entity';
+import { PaymentType } from '../payment-types/entities/payment-type.entity';
 
 @ApiTags('groups') // Etiqueta para la documentación de Swagger
 @Controller('groups')
@@ -81,10 +84,28 @@ export class GroupsController {
     return await this.groupsService.getGroupPrivacy();
   }
 
+  @Get('info-create')
+  @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
+  @ApiOperation({
+    summary:'Todas las relaciones para crear un grupo'
+  })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({status: 200,description:'Listas de campos necesarios para la creacion'})
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  async getInfoCreate(): Promise<{
+    user_address: UserAddress[],
+    group_types: GroupType[],
+    group_privacies: GroupPrivacy[],
+    payment_types: PaymentType[]
+  }> {
+    return await this.groupsService.getInfoCreate();
+  }
+
   @Get('by-user')
   @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
   @ApiOperation({
-    summary:'Obtener todos los grupos a los que pertenece el usuario autenticado',
+    summary:'Obtener todos los grupos a los que pertenece el usuario autenticado como miembro.',
     description:'Recupera una lista de todos los grupos de los que el usuario autenticado es miembro o líder. Requiere autenticación.',
   })
   @ApiBearerAuth('JWT-auth')
@@ -95,6 +116,21 @@ export class GroupsController {
   @ApiQuery({name: 'is_active', required: false, type: Boolean, description:'Filtrar grupos activos'})
   async getGroupsByUserId(@Req() req: Request, @Query('is_active') is_active: boolean): Promise<Group[]> {
     return await this.groupsService.getGroupsByUserId(req.user?.id, is_active);
+  }
+
+  @Get('user-created')
+  @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
+  @ApiOperation({
+    summary:'Obtener todos los grupos creados por el usuario.',
+  })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({status: 200,description:'Lista de grupos creados por el usuario.'})
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({status: 403,description: 'Prohibido (ID de usuario no encontrado).'})
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  @ApiQuery({name: 'is_active', required: false, type: Boolean, description:'Filtrar grupos activos'})
+  async getGroupsCreatedByUserId(@Req() req: Request, @Query('is_active') is_active: boolean): Promise<Group[]> {
+    return await this.groupsService.getGroupsCreatedByUserId(req.user?.id, is_active);
   }
 
   @Post()
