@@ -35,18 +35,22 @@ export class PaymentTypesController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Listar formas de pagos con paginación y filtrado por usuario' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+  @ApiOperation({ summary: 'Listar formas de pagos' })
   @ApiResponse({ status: 200, description: 'Listado de formas de pagos retornado correctamente' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
   async findAll(
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
   ): Promise<[PaymentType[], number]> {
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    return await this.service.findAll(pageNumber, limitNumber);
+    return await this.service.findAll();
+  }
+
+  @Get("services")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar formas de pagos para servicios' })
+  @ApiResponse({ status: 200, description: 'Listado de formas de pagos retornado correctamente' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findAtServices(
+  ): Promise<[PaymentType[], number]> {
+    return await this.service.findAtServices();
   }
 
   @Get(':id')

@@ -28,16 +28,6 @@ export class CreateGroupDto {
   @Length(3, 1000)
   message_invitation?: string;
 
-  @ApiPropertyOptional({ description: 'Latitud geográfica' })
-  @IsOptional()
-  @IsLatitude()
-  latitude?: number;
-
-  @ApiPropertyOptional({ description: 'Longitud geográfica' })
-  @IsOptional()
-  @IsLongitude()
-  longitude?: number;
-
   @ApiPropertyOptional({ description: 'ID de la dirección del usuario' })
   @IsOptional()
   @IsUUID()

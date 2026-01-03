@@ -74,9 +74,42 @@ export class GroupMemberConsumptionsService {
   }
 
   // ============================
+  // FIND CONSUMOS DEL USUARIO POR GRUPO
+  // ============================
+  async findUserConsumptions(group_id: string, user_id: string): Promise<GroupMemberConsumption[]> {
+    try {
+      const entity =
+        await this.consumptionsRepository.findUserConsumptions(group_id, user_id);
+
+      if (!entity) {
+        throw new NotFoundException(
+          'Consumos no encontrados',
+        );
+      }
+
+      return entity;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+
+      this.logger.error(
+        'findUserConsumptions(): Error obteniendo consumos',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error al obtener los consumos',
+      );
+    }
+  }
+
+  // ============================
   // AGRUPADO POR PRODUCTO
   // ============================
-  async findGroupedByProduct(group_id: string) {
+  async findGroupedByProduct(group_id: string): Promise<Array<{
+      product_id: string;
+      product_name: string;
+      product_image_url: string | null;
+      total_consumers: number;
+    }>> {
     try {
       return await this.consumptionsRepository.findGroupedByProduct(
         group_id,
@@ -97,9 +130,10 @@ export class GroupMemberConsumptionsService {
   // ============================
   async createOne(
     dto: CreateGroupMemberConsumptionDto,
+    user_id:string
   ): Promise<GroupMemberConsumption> {
     try {
-      return await this.consumptionsRepository.createOne(dto);
+      return await this.consumptionsRepository.createOne(dto, user_id);
     } catch (error) {
       this.logger.error(
         'createOne(): Error creando consumo',

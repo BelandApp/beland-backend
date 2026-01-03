@@ -22,8 +22,9 @@ import {
 import { UpdateGroupMemberConsumptionDto } from './dto/update-group-members-consumption.dto';
 import { Request } from 'express';
 import { FlexibleAuthGuard } from '../auth/guards/flexible-auth.guard';
+import { GroupMemberConsumption } from './entities/group-members-consumption.entity';
 
-@ApiTags('Group Member Consumptions')
+@ApiTags('group-member-consumptions')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(FlexibleAuthGuard)
 @Controller('group-member-consumptions')
@@ -44,6 +45,37 @@ export class GroupMemberConsumptionsController {
   }
 
   // ==============================
+  // AGRUPADO POR PRODUCTO
+  // ==============================
+  @Get('summary-product/:group_id')
+  @ApiOperation({
+    summary:
+      'Resumen de consumos por producto dentro de un grupo',
+  })
+  findGroupedByProduct(
+    @Param('group_id', ParseUUIDPipe) group_id: string,
+  ): Promise<Array<{
+      product_id: string;
+      product_name: string;
+      product_image_url: string | null;
+      total_consumers: number;
+    }>> {
+    return this.service.findGroupedByProduct(group_id);
+  }
+
+  // ==============================
+  // FIND BY USER
+  // ==============================
+  @Get('user-consumptions/:group_id')
+  @ApiOperation({ summary: 'Obtener los consumos el usuario por id del grupo' })
+  findUserConsumptions(
+    @Param('group_id', ParseUUIDPipe) group_id: string,
+    @Req() req: Request,
+  ): Promise<GroupMemberConsumption[]> {
+    return this.service.findUserConsumptions(group_id, req.user?.id);
+  }
+
+  // ==============================
   // FIND ONE
   // ==============================
   @Get(':id')
@@ -55,28 +87,15 @@ export class GroupMemberConsumptionsController {
   }
 
   // ==============================
-  // AGRUPADO POR PRODUCTO
-  // ==============================
-  @Get('group/:group_id/summary')
-  @ApiOperation({
-    summary:
-      'Resumen de consumos por producto dentro de un grupo',
-  })
-  findGroupedByProduct(
-    @Param('group_id', ParseUUIDPipe) group_id: string,
-  ) {
-    return this.service.findGroupedByProduct(group_id);
-  }
-
-  // ==============================
   // CREATE ONE
   // ==============================
   @Post()
   @ApiOperation({ summary: 'Crear un consumo individual' })
   createOne(
     @Body() dto: CreateGroupMemberConsumptionDto,
+    @Req() req: Request,
   ) {
-    return this.service.createOne(dto);
+    return this.service.createOne(dto, req.user?.id);
   }
 
   // ==============================

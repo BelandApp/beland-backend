@@ -55,7 +55,19 @@ export class GroupMemberConsumptionsRepository extends Repository<GroupMemberCon
     });
   }
 
-    async findGroupedByProduct(group_id: string) {
+  async findUserConsumptions(group_id: string, user_id: string) {
+    return this.find({
+      where: { group_id, groupMember: {user_id} },
+      relations: ['product', 'groupMember', 'group'],
+    });
+  }
+
+    async findGroupedByProduct(group_id: string): Promise<Array<{
+      product_id: string;
+      product_name: string;
+      product_image_url: string | null;
+      total_consumers: number;
+    }>> {
     return this.createQueryBuilder('gmc')
         .innerJoin('gmc.product', 'product')
         .select([
@@ -73,9 +85,24 @@ export class GroupMemberConsumptionsRepository extends Repository<GroupMemberCon
     }
 
 
-  async createOne(dto: CreateGroupMemberConsumptionDto) {
-    const entity = this.create(dto);
-    return this.save(entity);
+  async createOne(dto: CreateGroupMemberConsumptionDto, user_id:string) {
+    const { group_id, product_id, notes } = dto;
+    const groupMember = await this.manager.findOne(GroupMember, {
+        where: {group_id, user_id}
+    })
+
+    if (!groupMember) {
+        throw new NotFoundException('Usted no es miembro del grupo donde esta intentando guardar los consumos.');
+    }
+
+    const entity = this.create({
+      group_id,
+      group_member_id: groupMember.id,
+      product_id: product_id,
+      notes: notes,
+    });
+    
+    return await this.save(entity);
   }
 
     async createMany(dto: CreateManyGroupMemberConsumptionDto, user_id:string) {

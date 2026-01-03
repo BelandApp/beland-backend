@@ -32,6 +32,30 @@ export class PaymentsRepository {
     });
   }
 
+  async findPaymentsByOrder(
+    order_id: string, 
+    user_id: string,
+    uncompleted:boolean,
+    page: number,
+    limit: number,
+  ): Promise<[Payment[], number]> {
+    const where: any = {
+      order_id,
+      order: { user_id },
+    };
+
+    if (uncompleted) {
+      where.is_fully_paid = false;
+    }
+    return this.repository.findAndCount({
+        where,
+        order: { created_at: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+        relations: { user:true},
+    });
+  }
+
   async findOne(id: string): Promise<Payment> {
     return this.repository.findOne({
       where: { id },
