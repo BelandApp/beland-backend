@@ -71,7 +71,7 @@ export class Group {
   group_type_id:string;
 
   @ManyToOne(() => GroupPrivacy)
-  @JoinColumn({ name: 'group_privacy_id' })
+  @JoinColumn({ name: 'privacy_id' })
   privacy: GroupPrivacy;
   @Column({ type: 'uuid', nullable:true })
   privacy_id: string;
