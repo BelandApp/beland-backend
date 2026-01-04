@@ -74,6 +74,7 @@ import { CreatorsModule } from './modules/profiles/creators/creators.module';
 import { ServicesModule } from './modules/services/services.module';
 import { GroupMembersConsumptionModule } from './modules/group-members-consumption/group-members-consumption.module';
 import { GroupService } from './modules/group-services/entities/group-service.entity';
+import { GroupServicesModule } from './modules/group-services/group-services.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -186,7 +187,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     CreatorsModule,
     ServicesModule,
     GroupMembersConsumptionModule,
-    GroupService
+    GroupServicesModule,
   ],
   controllers: [],
   providers: [

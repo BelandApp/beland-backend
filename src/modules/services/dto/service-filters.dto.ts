@@ -29,6 +29,7 @@ export class ServiceFiltersDto {
 
   @ApiPropertyOptional({
     description: 'Campo por el cual ordenar',
+     enum: ['created_at', 'name', 'price', 'price_becoin'],
     example: 'created_at',
   })
   @IsOptional()
