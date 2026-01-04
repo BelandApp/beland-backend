@@ -19,6 +19,7 @@ import { GroupPrivacy } from './entities/group-privacy.entity';
 import { UserAddress } from '../user-address/entities/user-address.entity';
 import { GroupType } from '../group-type/entities/group-type.entity';
 import { PaymentType } from '../payment-types/entities/payment-type.entity';
+import { GroupPrivacyCode } from './enums/group-privacy.enum';
 @Injectable()
 export class GroupsService {
   
@@ -104,6 +105,11 @@ async getInfoCreate(): Promise<{
         );
       }
 
+      if (!createGroupDto.privacy_id) {
+        const privacy = await this.dataSource.manager.findOne(GroupPrivacy, {where: {code: GroupPrivacyCode.PRIVATE}})
+        createGroupDto.privacy_id = privacy.id;
+      }
+
       // Guardar la nueva entidad de grupo
       const savedGroup = await queryRunner.manager.save(Group, {
         ...createGroupDto,
@@ -111,7 +117,7 @@ async getInfoCreate(): Promise<{
       });
 
       // Guardar la membresía del grupo para el líder
-      const leaderMembership = await queryRunner.manager.save(GroupMember, {
+      await queryRunner.manager.save(GroupMember, {
         group_id: savedGroup.id, // Asociar con el grupo recién creado
         user_id, // Asociar con el usuario líder
         role: RoleGroupEnum.LEADER, // Establecer el rol como LÍDER

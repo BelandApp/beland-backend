@@ -47,7 +47,7 @@ export class GroupMembersService {
     if (existing) throw new ConflictException('Este usuario ya es miembro del grupo.');
 
     try {
-      const member = await this.repository.create({
+      const member = await this.dataSource.manager.save(GroupMember, {
         group_id,
         user_id,
         role: RoleGroupEnum.MEMBER,
