@@ -20,7 +20,7 @@ import { DeliveryStatus } from '../../delivery-status/entities/delivery-status.e
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id: string; 
 
   @Column({
     type: 'bigint',
