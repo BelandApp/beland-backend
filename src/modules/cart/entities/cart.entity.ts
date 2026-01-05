@@ -20,7 +20,7 @@ export class Cart {
   @JoinColumn({ name: 'address_id' })
   address: UserAddress;
   @Column('uuid', {nullable:true})
-  address_id: string;
+  address_id: string; 
 
   @ManyToOne(() => Group, {
     nullable: true,

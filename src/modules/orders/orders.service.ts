@@ -166,15 +166,25 @@ export class OrdersService {
       if (cart.user_id !== wallet.user_id) throw new BadRequestException('Carrito no pertenece al usuario de la wallet');
 
       // 3) Validar forma de pago
-      let paymentType: PaymentType;
+      let paymentType: PaymentType; 
       if (!cart.group_id) {
         paymentType = await queryRunner.manager.findOne(PaymentType, {
           where: { code: PaymentTypeCode.FULL },
         });
       } else {
-        paymentType = await queryRunner.manager.findOne(PaymentType, {
-          where: { id: cart.group.payment_type_id },
-        });
+        if (cart.payment_type_id) {
+            paymentType = await queryRunner.manager.findOne(PaymentType, {
+              where: { id: cart.payment_type_id },
+            });
+          } else {
+          if (cart.group) {
+            paymentType = await queryRunner.manager.findOne(PaymentType, {
+              where: { id: cart.group.payment_type_id },
+            });
+          } else {
+            throw new BadRequestException('No se encontro el metodo de pago en el grupo ni en el carrito. Debe ingresar un metodo de pago');
+          }
+        }
       }
       
       if (!paymentType) {

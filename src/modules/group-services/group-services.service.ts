@@ -62,7 +62,7 @@ export class GroupServicesService {
       if (!service) throw new NotFoundException('Servicio no encontrado');
 
       // 3️⃣ Crear servicio
-      const groupService = await this.repository.createOne({
+      const groupServiceSaved = await this.repository.createOne({
         ...dto,
         cost: service.price_becoin,
       });
@@ -77,6 +77,11 @@ export class GroupServicesService {
       });
 
       const cost = Number(service.price_becoin);
+
+      const groupService = await qr.manager.findOne(GroupService, {
+        where: {id:groupServiceSaved.id},
+        relations: {payment_type:true}
+      })
 
       /* ======================================================
        * 5️⃣ RETENCIÓN SEGÚN PAYMENT TYPE
