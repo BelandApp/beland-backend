@@ -32,6 +32,9 @@ export class Order {
   @Column({ type: 'integer', nullable:true})
   code: number;
 
+  @Column({ type: 'boolean', nullable:true, default:false})
+  paied: boolean;
+
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
   subtotal_amount: number;
 
@@ -43,6 +46,9 @@ export class Order {
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
   total_becoin: number;
+
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
+  total_becoin_paied: number;
 
   @Column({ type: 'int', default: 0 })
   total_items: number;
@@ -110,7 +116,7 @@ export class Order {
   @ManyToOne(() => User)
   @JoinColumn({name:'user_id'})
   user: User;
-  @Column('uuid')
+  @Column('uuid', { nullable:true })
   user_id: string;
 
   // payments_type: 'FULL' | 'EQUAL_SPLIT' | 'SPLIT';

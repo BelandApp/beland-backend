@@ -139,32 +139,24 @@ export class OrdersService {
     }
   }
 
-  async createOrderByCart(cart_id:string, userId:string): Promise<Order> {
+  async createOrderByCart(cart_id:string): Promise<Order> {
     // 0) Preparar transacción
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction(); // opcional: pasar aislamiento
 
     try {
-      // 1) Traer wallet del usuario
-      const wallet = await queryRunner.manager.findOne(Wallet, {
-        where: { user_id: userId },
-      });
-      if (!wallet) throw new NotFoundException('Wallet no encontrada');
 
       // 2) Traer el carrito con sus ítems
       const cart = await queryRunner.manager.findOne(Cart, {
         where: { id: cart_id },
-        relations: {items:true, group:true}
+        relations: {items:true, group: {members:true}}
       });
       if (!cart) throw new NotFoundException('Carrito no encontrado');
 
       if (!cart.items || cart.items.length === 0) {
         throw new BadRequestException('El carrito esta vacio');
       }
-
-      // (opcional recomendado) Validar que el carrito pertenezca al mismo usuario de la wallet
-      if (cart.user_id !== wallet.user_id) throw new BadRequestException('Carrito no pertenece al usuario de la wallet');
 
       // 3) Validar forma de pago
       let paymentType: PaymentType; 
@@ -173,20 +165,14 @@ export class OrdersService {
           where: { code: PaymentTypeCode.FULL },
         });
       } else {
-        if (cart.payment_type_id) {
-            paymentType = await queryRunner.manager.findOne(PaymentType, {
-              where: { id: cart.payment_type_id },
-            });
-          } else {
-          if (cart.group) {
-            paymentType = await queryRunner.manager.findOne(PaymentType, {
-              where: { id: cart.group.payment_type_id },
-            });
-          } else {
+        if (cart.group) {
+          paymentType = await queryRunner.manager.findOne(PaymentType, {
+            where: { id: cart.group.payment_type_id },
+          });
+        } else {
             throw new BadRequestException('No se encontro el metodo de pago en el grupo ni en el carrito. Debe ingresar un metodo de pago');
           }
         }
-      }
       
       if (!paymentType) {
         throw new ConflictException('Forma de pago no disponible. Pruebe otra o intente luego.');
@@ -195,21 +181,7 @@ export class OrdersService {
       // HASTA ACA TODO EN CONDICIONES PARA HACER LA TRANSACCION
 
       // 5) Crear la orden desde el carrito (copiando campos necesarios)
-      // a) busco el status id del payment
-      const statusTransaction = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: StatusCode.PENDING },
-      });
-      if (!statusTransaction)
-        throw new ConflictException("No se encuentra el estado de transaccion ", StatusCode.PENDING);
-
-      // b) busco el type id de las transacciones PURCHASE_BELAND
-      const typeTrans = await queryRunner.manager.findOne(TransactionType, {
-        where: { code: TransactionCode.PURCHASE_BELAND },
-      });
-      if (!typeTrans)
-        throw new ConflictException("No se encuentra el tipo de transaccion ", TransactionCode.PURCHASE_BELAND );
-
-      // c) busco el status id del delivery order
+      // a) busco el status id del delivery order
       const statusOrder = await queryRunner.manager.findOne(DeliveryStatus, {
         where: { code: DeliveryStatusCode.PENDING },
       });
@@ -247,104 +219,6 @@ export class OrdersService {
         throw new ConflictException('No se pudieron crear los ítems asociados a la orden');
       }
 
-      // Retener saldo segun la forma de pago
-      const cartTotal = Number(cart.total_becoin) + (+createOrder.delivery_cost/+this.superadminService.getPriceOneBecoin());
-      /*switch (paymentType.code) {
-        case 'SPLIT':
-        case 'FULL':*/
-
-          const currentBalance = Number(wallet.becoin_balance);
-          if (currentBalance < cartTotal) {
-            throw new NotAcceptableException(
-              'Saldo insuficiente. Para esta forma de pago se requiere cubrir el total de la orden',
-            );
-          }
-
-          // Retener todo al creador
-          wallet.becoin_balance = +currentBalance - +cartTotal;
-          wallet.locked_balance = +wallet.locked_balance + +cartTotal;
-          await queryRunner.manager.save(Wallet, wallet);
-
-          // Crear transacción pendiente
-          const transaction = queryRunner.manager.create(Transaction, {
-            wallet_id: wallet.id,
-            type_id: typeTrans.id,
-            status_id: statusTransaction.id,
-            amount_becoin: savedOrder.total_becoin,
-            post_balance: wallet.becoin_balance,
-            reference: `ORDER- ${savedOrder.id}`,
-          });
-          await queryRunner.manager.save(Transaction, transaction);
-
-      /*    break;
-
-        case 'EQUAL_SPLIT': {
-          // 1️⃣ Obtener wallets de todos los miembros del grupo
-          const [wallets, membersCount] = await queryRunner.manager.findAndCount(Wallet, {
-            where: {
-              user: {
-                group_memberships: {
-                  group_id: cart.group_id,
-                },
-              },
-            },
-            relations: { user: true },
-          });
-
-          if (!wallets || membersCount === 0) {
-            throw new NotFoundException(
-              'Grupo inexistente o sin miembros. Use FULL o asegúrese de que el grupo tenga miembros.',
-            );
-          }
-
-          // 2️⃣ Calcular monto a retener por usuario
-          const amountSplit =
-            Number(cartTotal) / Number(membersCount);
-
-          // (opcional pero recomendable) redondeo defensivo
-          const splitAmount = Number(amountSplit.toFixed(2));
-
-          // 3️⃣ Retener saldo, crear transacciones y payments por cada miembro
-          for (const memberWallet of wallets) {
-
-            const currentBalance = Number(memberWallet.becoin_balance);
-
-            if (currentBalance < splitAmount) {
-              throw new NotAcceptableException(
-                `Saldo insuficiente en la billetera de ${
-                  memberWallet.user.full_name ?? memberWallet.user.email
-                }`,
-              );
-            }
-
-            // 🔒 Retener saldo
-            memberWallet.becoin_balance = currentBalance - splitAmount;
-            memberWallet.locked_balance =
-              Number(memberWallet.locked_balance) + splitAmount;
-
-            await queryRunner.manager.save(Wallet, memberWallet);
-
-            // 🧾 Crear transacción pendiente
-            const transactionSplit = queryRunner.manager.create(Transaction, {
-              wallet_id: memberWallet.id,
-              type_id: typeTrans.id,
-              status_id: statusTransaction.id,
-              amount_becoin: splitAmount,
-              post_balance: memberWallet.becoin_balance,
-              reference: `ORDER-${savedOrder.id}`,
-            });
-
-            await queryRunner.manager.save(Transaction, transactionSplit);
-
-          }
-
-          break;
-        }
-
-        default:
-          throw new BadRequestException('La forma de pago no existe');
-      }*/
-
        // 11) Resetear el carrito
       cart.address_id = null;
       cart.delivery_at = null;
@@ -357,12 +231,29 @@ export class OrdersService {
       await queryRunner.manager.save(Cart, cart);
       await queryRunner.manager.delete(CartItem, {cart_id : cart.id})
 
+      const statusPayment = await queryRunner.manager.findOne(TransactionState, {
+        where: {code: StatusCode.PENDING}
+      })
+      
+      if (cart.group.members) {
+        let sumTotal = 0
+        for (const member of cart.group.members) {
+          await queryRunner.manager.save(Payment, {
+            amount_paid : Number(member.pendingAmount),
+            order_id: order.id,
+            payment_type_id: order.payment_type_id,
+            user_id: member.user_id,
+            status_id: statusPayment.id,
+          })
+          sumTotal = sumTotal + +member.pendingAmount
+        }
+        if (sumTotal !== Number(order.total_becoin)) throw new ConflictException(`Hay una diferencia entre los compromisos de pago y el total de la orden. Total Orden $${order.total_becoin}. Total a Cobrar $${sumTotal}`)
+      }
       // 12) Confirmar transacción
       await queryRunner.commitTransaction();
 
       // 12Bis) Emiten un mensaje al Superadmin por socket
-      const superadminId = this.superadminService.getSuperadminId();
-      this.notificationsGateway.notifyOrders(superadminId, {
+      this.notificationsGateway.notifyOrders(this.superadminService.getSuperadminId(), {
             order_id: savedOrder.id,
             total_becoin: savedOrder.total_becoin,
             items: +savedOrder.items,
@@ -690,6 +581,7 @@ export class OrdersService {
         where: { id: order_id },
       });
       if (!order) throw new NotFoundException('Orden no encontrada');
+      if (!order.paied) throw new ConflictException('La orden todavia no fue Cobrada en su totalidad')
 
       // 3️⃣ Validar código
       if (order.code !== code)
@@ -759,180 +651,11 @@ export class OrdersService {
       /* =======================================================
       * 3️⃣ TRANSACTIONS → EJECUTAR COBROS
       * ======================================================= */
-      const statusCompleted = await qr.manager.findOne(TransactionState, {
-        where: { code: StatusCode.COMPLETED },
-      });
-
-      const statusPartial = await qr.manager.findOne(TransactionState, {
-        where: { code: StatusCode.PARTIAL },
-      });
-
-      const txType = await qr.manager.findOne(TransactionType, {
-        where: { code: TransactionCode.PURCHASE_BELAND },
-      });
-      
-      // recupero la transaccion del creador del grupo
-      const txCreator = await qr.manager.findOne(Transaction, {
-        where: {
-          reference: `ORDER-${order.id}`,
-          status_id: Not(statusCompleted.id),
-        },
-      });
-
-      // recupero wallet del creador del grupo
-      const walletCreator = await qr.manager.findOne(Wallet, {
-        where: { id: txCreator.wallet_id },
-      });
-
-      // recupero el payment del creador del grupo
-      const paymentCreator = await qr.manager.findOne(Payment, {
-        where: {order_id : order.id}
-      })
-
-      if (order.payment_type.code = PaymentTypeCode.FULL) {
-        // actualizo estado de la tansaccion del creador del grupo
-        txCreator.status_id = statusCompleted.id;
-
-        // actualizo el payment del creador
-        paymentCreator.status_id = statusCompleted.id;
-
-        // liberar saldo retenido
-        walletCreator.locked_balance = +walletCreator.locked_balance - Number(txCreator.amount_becoin);
-        
-        await qr.manager.save([walletCreator, txCreator, paymentCreator]);
-
-      }
-    
-      if (order.payment_type.code = PaymentTypeCode.EQUAL_SPLIT) {
-        const [members, membersCount] = await qr.manager.findAndCount(GroupMember, {
-          where: { group_id: order.group_id },
-        });
-        const amountSplit = +order.total_becoin / membersCount; 
-        let creatorPayAdd = 0;
-        for (const member of members) {
-          // excluimos al creador del grupo
-          if (member.user_id !== order.user_id) {
-            const wallet = await qr.manager.findOne(Wallet, {
-              where: {user_id: member.user_id}
-            })
-
-            let amount_paid = amountSplit;
-            let outstanding_amount = 0;
-            let is_fully_paid = true;
-            let status_id = statusCompleted.id
-
-            if (+wallet.becoin_balance < amountSplit) {
-              creatorPayAdd += (amountSplit - +wallet.becoin_balance)
-              amount_paid = +wallet.becoin_balance;
-              outstanding_amount = (amountSplit - +wallet.becoin_balance)
-              is_fully_paid= false
-              status_id = statusPartial.id
-            }
-
-            wallet.becoin_balance = +wallet.becoin_balance - amount_paid;
-            await qr.manager.save(wallet);
-
-            await qr.manager.save(Payment, {
-              order_id: order.id,
-              user_id: wallet.user_id,
-              payment_type_id: order.payment_type_id,
-              total_due: amountSplit,
-              amount_paid,
-              outstanding_amount,
-              is_fully_paid,
-              status_id,
-            });
-
-            await qr.manager.save(Transaction, {
-              wallet_id: wallet.id,
-              type_id: txType.id,
-              status_id: statusCompleted.id,
-              amount_becoin: amount_paid,
-              post_balance: +wallet.becoin_balance,
-              reference: `ORDER-${order.id}`,
-            });
-          }
-        }
-        
-        const updatePay = amountSplit+creatorPayAdd
-
-        walletCreator.locked_balance = +walletCreator.locked_balance - +order.total_becoin + (updatePay);
-        walletCreator.becoin_balance = +order.total_becoin - (updatePay);
-
-        // actualizo estado de la tansaccion del creador del grupo
-        txCreator.amount_becoin = updatePay;
-        txCreator.post_balance = +walletCreator.becoin_balance;
-        txCreator.status_id = statusCompleted.id;
-
-        // actualizo el payment del creador
-        paymentCreator.total_due = updatePay;
-        paymentCreator.amount_paid = updatePay;
-        paymentCreator.status_id = statusCompleted.id;
-        
-        await qr.manager.save([walletCreator, txCreator, paymentCreator]);
-
-      }
-
-     /* for (const tx of txs) {
-        const wallet = await qr.manager.findOne(Wallet, {
-          where: { id: tx.wallet_id },
-        });
-
-        // liberar saldo retenido
-        wallet.locked_balance = +wallet.locked_balance - Number(tx.amount_becoin);
-
-        // no se devuelve balance: ya fue descontado
-        tx.status_id = txStatusCompleted.id;
-
-        await qr.manager.save([wallet, tx]);
-      }
-
-
-
-      const payments = await qr.manager.find(Payment, {
-        where: { order_id: order.id },
-      });
-
-      for (const p of payments) {
-        p.status_id =
-          Number(p.amount_paid) === Number(p.total_due)
-            ? paymentStatusCompleted.id
-            : paymentStatusPartial.id;
-
-        await qr.manager.save(p);
-      }*/
 
       /* =======================================================
       * 5️⃣ SUPERADMIN → ACREDITAR TOTAL COBRADO
       * ======================================================= */
-      const superadminWallet = await qr.manager.findOne(Wallet, {
-        where: { user_id: this.superadminService.getSuperadminId() },
-      });
-      if (!superadminWallet)
-        throw new NotFoundException('Wallet superadmin no encontrada');
 
-      const txTypeSale = await qr.manager.findOne(TransactionType, {
-        where: { code: TransactionCode.SALE_BELAND },
-      });
-      if (!txTypeSale)
-        throw new NotFoundException('Transaction SALE_BELAND no encontrada');
-
-      superadminWallet.becoin_balance =
-        Number(superadminWallet.becoin_balance) + Number(order.total_becoin);
-
-      await qr.manager.save(superadminWallet);
-
-      // 🧾 Transaction ingreso superadmin
-      const txSuperadmin = qr.manager.create(Transaction, {
-        wallet_id: superadminWallet.id,
-        type_id: txTypeSale.id,
-        status_id: statusCompleted.id,
-        amount_becoin: order.total_becoin,
-        post_balance: superadminWallet.becoin_balance,
-        reference: `ORDER-${order.id}`,
-      });
-
-      await qr.manager.save(Transaction, txSuperadmin);
 
       if (is_collected) {
         /* =======================================================
@@ -1028,9 +751,7 @@ export class OrdersService {
       }
 
       // 2 BIS) PROVISORIO esto esta porque solo esta realizada el pago FULL. 
-      // Implementar los otros pagos
-      if (order.payment_type.code !== PaymentTypeCode.FULL) throw new BadRequestException('Forma de Pago no habilitadas todavia')
-    
+
       const statusOld = order.status_id;
       order.status_id = statusOrder.id;
       order.observation = observation;
@@ -1146,3 +867,6 @@ export class OrdersService {
       await queryRunner.manager.save(Transaction, txSale);
   }
 }
+
+// falta devolver las devoluciones en plata. darle la chance al creador de que se lo quede o lo reparta.
+// ver bien el cancelled.

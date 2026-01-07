@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
 import { Product } from '../../products/entities/product.entity';
+import { User } from '../../users/entities/users.entity';
 
 @Entity('order_items')
 export class OrderItem {
@@ -49,9 +50,14 @@ export class OrderItem {
   @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'order_id' })
   order: Order;
-
   @Column('uuid')
   order_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+  @Column('uuid', { nullable:true })
+  user_id: string;
 
   @ManyToOne(() => Product, (product) => product.order_items)
   @JoinColumn({ name: 'product_id' })

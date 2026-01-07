@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column, CreateDateColumn, OneToOne, BeforeUpdate, BeforeInsert, Unique } from 'typeorm';
 import { Cart } from '../../cart/entities/cart.entity'; 
 import { Product } from '../../products/entities/product.entity';
+import { User } from '../../users/entities/users.entity';
 
 @Entity('cart_items')
 @Unique(['cart_id', 'product_id'])
@@ -19,6 +20,12 @@ export class CartItem {
   product: Product;
   @Column('uuid')
   product_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+  @Column('uuid', { nullable:true })
+  user_id: string;
 
   @Column({ type: 'int', default: 1 })
   quantity: number;

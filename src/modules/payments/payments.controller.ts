@@ -87,6 +87,17 @@ export class PaymentsController {
     return await this.service.findOne(id);
   }
 
+  @Post('pay-now/:payment_id')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiParam({ name: 'payment_id', description: 'UUID del pago a realizar' })
+  @ApiOperation({ summary: 'Crear un nuevo pago' })
+  @ApiResponse({ status: 201, description: 'Pago creado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para crear el pago' })
+  @ApiResponse({ status: 500, description: 'Error al crear el miembro' })
+  async payNow(@Param('payment_id', ParseUUIDPipe) payment_id: string): Promise<Payment> {
+    return await this.service.payNow(payment_id);
+  }
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear un nuevo pago' })

@@ -18,6 +18,7 @@ import { UserAddress } from '../../user-address/entities/user-address.entity';
 import { GroupPrivacy } from './group-privacy.entity';
 import { EventPass } from '../../event-pass/entities/event-pass.entity';
 import { PaymentType } from '../../payment-types/entities/payment-type.entity';
+import { Cart } from '../../cart/entities/cart.entity';
 
 @Entity('groups')
 export class Group {
@@ -45,14 +46,14 @@ export class Group {
   @Column({ type: 'boolean', default: false })
   is_delete: boolean;
 
+  @Column({ type: 'timestamptz', nullable: true }) // <-- New column for soft delete
+  deleted_at: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' }) // <-- New column for last update date
   updated_at: Date;
-
-  @Column({ type: 'timestamptz', nullable: true }) // <-- New column for soft delete
-  deleted_at: Date | null;
 
   // ManyToOne relationship with User entity (the group leader)
   @ManyToOne(() => User, (user) => user.led_groups, {
@@ -93,4 +94,7 @@ export class Group {
 
   @OneToMany(() => Order, (order) => order.group)
   orders: Order[];
+
+  @OneToOne(() => Cart, (cart) => cart.group)
+  cart: Cart[];
 }

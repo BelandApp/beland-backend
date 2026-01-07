@@ -48,4 +48,11 @@ export class GroupMember {
   user: User;
   @Column('uuid')
   user_id:string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true })
+  pendingAmount: number; 
+
+  @Column({ type: 'boolean', default: false, nullable: true })
+  paied: boolean; 
+
 }

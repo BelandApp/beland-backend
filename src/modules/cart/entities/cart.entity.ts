@@ -13,7 +13,7 @@ export class Cart {
   @OneToOne(() => User, user => user.cart, { cascade: true, onDelete: 'CASCADE' })
   @JoinColumn({name:'user_id'})
   user: User;
-  @Column('uuid')
+  @Column('uuid', {nullable:true})
   user_id:string
 
   @ManyToOne(() => UserAddress, { onDelete: 'CASCADE' })
@@ -22,7 +22,7 @@ export class Cart {
   @Column('uuid', {nullable:true})
   address_id: string; 
 
-  @ManyToOne(() => Group, {
+  @OneToOne(() => Group, {
     nullable: true,
     onDelete: 'SET NULL',
   })
@@ -31,7 +31,7 @@ export class Cart {
   @Column('uuid', { nullable:true })
   group_id: string;
 
-  // payments_type: 'FULL' | 'EQUAL_SPLIT';
+  // payments_type: 'FULL' | 'EQUAL_SPLIT' | 'SPLIT';
   @ManyToOne(() => PaymentType, (type) => type.carts, { eager: true })
   @JoinColumn({ name: 'payment_type_id' })
   payment_type: PaymentType;

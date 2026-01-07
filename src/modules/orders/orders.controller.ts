@@ -194,10 +194,8 @@ export class OrdersController {
   @ApiResponse({ status: 500, description: 'No se pudo crear la orden' })
   async createOrderByCart(
     @Query('cart_id', ParseUUIDPipe) cart_id: string,
-    @Req() req : Request,
   ): Promise<Order> {
-  const user_id = req.user.id;
-  return await this.service.createOrderByCart(cart_id, user_id);
+  return await this.service.createOrderByCart(cart_id);
   }
 
 }

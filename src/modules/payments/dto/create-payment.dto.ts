@@ -24,10 +24,4 @@ export class CreatePaymentDto {
   @IsUUID()
   payment_type_id: string;
 
-  @ApiProperty({
-    description: 'UUID estado de pago',
-  })
-  @IsUUID()
-  status_id?: string;
-
 }
