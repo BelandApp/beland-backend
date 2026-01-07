@@ -70,12 +70,21 @@ export class CartItemsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear un nuevo item de carrito' })
+  @ApiQuery({ name: 'is_general', required: false, type: Boolean, example: true, description: '¿Es item general o particular de un usuario?' })
   @ApiResponse({ status: 201, description: 'item de carrito creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear el item de carrito' })
   @ApiResponse({ status: 500, description: 'No se pudo crear el item de carrito' })
-  async create(@Body() body: CreateCartItemDto): Promise<CartItem> {
+  async create(
+    @Body() body: CreateCartItemDto,
+    @Query('is_general') is_general:boolean = true,
+    @Req() req:Request,
+  ): Promise<CartItem> {
     const total_price = +body.unit_price * +body.quantity;
-    return await this.service.create({...body, total_price});
+    return await this.service.create({
+      ...body,
+      total_price,
+      user_id: is_general ? null : req.user?.id,
+    });
   }
 
   @Put('quantity/:id')

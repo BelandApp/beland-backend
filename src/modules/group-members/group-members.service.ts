@@ -215,6 +215,11 @@ export class GroupMembersService {
     }
   }
 
+  async paymentCuote () {
+    // toma lo que le falta de cuota.
+    
+  }
+
 }
 
 

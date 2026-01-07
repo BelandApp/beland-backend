@@ -12,7 +12,8 @@ export class CartItemsService {
 
   private readonly completeMessage = 'el item del carrito';
 
-  constructor(private readonly repository: CartItemsRepository) {}
+  constructor(
+    private readonly repository: CartItemsRepository) {}
 
   async findAll(
     cart_id: string,
@@ -49,6 +50,7 @@ export class CartItemsService {
         throw new InternalServerErrorException(
           `No se pudo crear ${this.completeMessage}`,
         );
+      
       return res;
     } catch (error) {
       throw new InternalServerErrorException(error);
@@ -109,6 +111,7 @@ export class CartItemsService {
         throw new NotFoundException(
           `No se encontró ${this.completeMessage}`,
         );
+      await this.repository.calculateCuote(cartProduct.id)
       return res;
     } catch (error) {
       throw new ConflictException(`No se puede eliminar ${this.completeMessage}: ${JSON.stringify(error)}`);
@@ -117,11 +120,13 @@ export class CartItemsService {
 
   async remove(id: string) {
     try {
+      const itemDelete = await this.repository.findOne(id);
       const res = await this.repository.remove(id);
       if (res.affected === 0)
         throw new NotFoundException(
           `No se encontró ${this.completeMessage}`,
         );
+      await this.repository.calculateCuote(itemDelete.cart_id)
       return res;
     } catch (error) {
       throw new ConflictException(`No se puede eliminar ${this.completeMessage}: ${JSON.stringify(error)}`);

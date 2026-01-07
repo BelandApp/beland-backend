@@ -35,7 +35,7 @@ import { DeliveryCartDto } from './dto/delivery-cart.dto';
 export class CartsController {
   constructor(private readonly service: CartsService) {}
 
- @Get('user')
+  @Get('user')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obtener un carrito por id de usuario' })
   @ApiResponse({ status: 200, description: 'Carrito encontrado' })

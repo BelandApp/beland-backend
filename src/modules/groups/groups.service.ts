@@ -20,6 +20,7 @@ import { UserAddress } from '../user-address/entities/user-address.entity';
 import { GroupType } from '../group-type/entities/group-type.entity';
 import { PaymentType } from '../payment-types/entities/payment-type.entity';
 import { GroupPrivacyCode } from './enums/group-privacy.enum';
+import { Cart } from '../cart/entities/cart.entity';
 @Injectable()
 export class GroupsService {
   
@@ -122,6 +123,8 @@ async getInfoCreate(): Promise<{
         user_id, // Asociar con el usuario líder
         role: RoleGroupEnum.LEADER, // Establecer el rol como LÍDER
       });
+
+      await queryRunner.manager.save (Cart, {group_id:savedGroup.id})
 
       await queryRunner.commitTransaction();
 
