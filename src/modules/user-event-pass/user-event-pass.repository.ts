@@ -261,20 +261,19 @@ async findAll(
         throw new BadRequestException(`Solo se permiten devoluciones hasta ${event.refund_days_limit} días antes del evento.`);
 
         // 4️⃣ Repositorios relacionados
-        const [walletUser, walletOrganizer, status, typeRefund, typeDevolution] =
+        const [walletUser, walletOrganizer, status, typeRefund] =
         await Promise.all([
             walletRepo.findOne({ where: { user_id } }),
             walletRepo.findOne({ where: { user_id: event.created_by_id } }),
             statusRepo.findOne({ where: { code: StatusCode.COMPLETED } }),
-            typeRepo.findOne({ where: { code: TransactionCode.REFUND_EVENTPASS } }),
-            typeRepo.findOne({ where: { code: TransactionCode.DEVOLUTION_EVENTPASS } }),
+            typeRepo.findOne({ where: { code: TransactionCode.REFUND_EVENTPASS } })
         ]);
 
         if (!walletUser)
         throw new NotFoundException('Billetera del usuario no encontrada.');
         if (!walletOrganizer)
         throw new NotFoundException('Billetera del organizador no encontrada.');
-        if (!status || !typeRefund || !typeDevolution)
+        if (!status || !typeRefund )
         throw new NotFoundException('Datos de tipo o estado de transacción incompletos.');
 
         // 5️⃣ Validar que el organizador tenga fondos suficientes para devolver
@@ -300,7 +299,7 @@ async findAll(
 
         const devolutionTx = transRepo.create({
         wallet_id: walletOrganizer.id,
-        type_id: typeDevolution.id,
+        type_id: typeRefund.id,
         status_id: status.id,
         related_wallet_id: walletUser.id,
         post_balance: +walletOrganizer.becoin_balance,

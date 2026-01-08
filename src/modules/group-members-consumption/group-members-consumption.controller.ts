@@ -66,7 +66,7 @@ export class GroupMemberConsumptionsController {
   // ==============================
   // FIND BY USER
   // ==============================
-  @Get('user-consumptions/:group_id')
+  @Get('user/:group_id')
   @ApiOperation({ summary: 'Obtener los consumos el usuario por id del grupo' })
   findUserConsumptions(
     @Param('group_id', ParseUUIDPipe) group_id: string,

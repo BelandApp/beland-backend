@@ -35,6 +35,12 @@ export class Order {
   @Column({ type: 'boolean', nullable:true, default:false})
   paied: boolean;
 
+  @Column({ type: 'boolean', nullable:true, default:false})
+  returned_paied: boolean;
+
+  @Column({ type: 'boolean', nullable:true})
+  returned_split: boolean;
+
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
   subtotal_amount: number;
 
@@ -46,6 +52,9 @@ export class Order {
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
   total_becoin: number;
+
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
+  total_becoin_returned: number;
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
   total_becoin_paied: number;
@@ -85,6 +94,9 @@ export class Order {
 
   @Column({ type: 'timestamptz', nullable: true })
   delivered_at: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  cancelled_at: Date;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

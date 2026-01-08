@@ -44,6 +44,9 @@ export class User {
   @Column({ type: 'text', unique: true })
   email: string;
 
+  @Column({ type: 'numeric', precision: 10, scale: 3, default: 0, nullable:true })
+  total_weight_recycled: number;
+
   @Column({ type: 'text', nullable: true })
   username: string | null;
 
