@@ -60,6 +60,12 @@ export class GroupServicesController {
     return this.groupServicesService.findAll();
   }
 
+  @Get('group/:group_id')
+  @ApiOperation({ summary: 'Listar servicios de u grupo individual' })
+  @ApiParam({ name: 'group_id', format: 'uuid' })
+  async findAllGroup(@Param('group_id', ParseUUIDPipe) group_id: string,): Promise<GroupService[]> {
+    return this.groupServicesService.findAllGroup(group_id);
+  }
   /* ======================================================
    * FIND ONE
    * ====================================================== */

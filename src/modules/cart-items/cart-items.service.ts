@@ -32,6 +32,25 @@ export class CartItemsService {
     }
   }
 
+  async findAllUserOrGeneral(
+    cart_id: string,
+    user_id: string,
+    pageNumber: number,
+    limitNumber: number,
+  ): Promise<[CartItem[], number]> {
+    try {
+      const response = await this.repository.findAllUserOrGeneral(
+        cart_id,
+        user_id,
+        pageNumber,
+        limitNumber,
+      );
+      return response;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
   async findOne(id: string): Promise<CartItem> {
     try {
       const res = await this.repository.findOne(id);

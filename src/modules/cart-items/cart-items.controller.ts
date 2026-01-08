@@ -56,6 +56,28 @@ export class CartItemsController {
     return await this.service.findAll(cart_id, pageNumber, limitNumber);
   }
 
+  @Get('user')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar items de Carrito con paginación y filtrado por orden y usuario' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+  @ApiQuery({ name: 'cart_id', required: true, type: String, description: 'Filtrar items de carrito por ID de carrito' })
+  @ApiQuery({ name: 'user_id', required: false, type: String, description: 'Filtrar items de carrito por ID de usuario, si no se envia retorna la compra general' })
+  @ApiResponse({ status: 200, description: 'Listado de items de carrito retornado correctamente' })
+  @ApiResponse({ status: 400, description: 'Debe enviar el identificador del Carrito' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findAllUserOrGeneral(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('cart_id') cart_id,
+    @Query('user_id') user_id,
+  ): Promise<[CartItem[], number]> {
+    if (!cart_id) throw new BadRequestException('Debe enviar el identificador del Carrito');
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.service.findAllUserOrGeneral(cart_id,  user_id, pageNumber, limitNumber,);
+  }
+
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obtener un item de carrito por su ID' })

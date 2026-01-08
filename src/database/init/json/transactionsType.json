@@ -85,13 +85,18 @@
     "description": "El comerciante recibe BECOIN por la venta de una entrada a su evento."
   },
   {
-    "code": "DEVOLUTION_EVENTPASS",
-    "name": "Devolución de entrada",
-    "description": "El usuario recibe de vuelta los BECOIN al devolver o cancelar su entrada dentro del plazo permitido."
-  },
-  {
     "code": "REFUND_EVENTPASS",
     "name": "Reembolso de entrada",
     "description": "El comerciante devuelve los BECOIN al usuario por una entrada reembolsada."
+  },
+  {
+    "code": "REFUND_ORDER",
+    "name": "Reembolso de orden de compra",
+    "description": "El superadmin devuelve los BECOIN al usuario por los productos devueltos de una orden de compra."
+  },
+  {
+    "code": "CANCELLED_ORDER",
+    "name": "Cancelación de orden de compra",
+    "description": "Se cancela la orden de compra, se cancelan los payments y se devuelven los becoin."
   }
 ]

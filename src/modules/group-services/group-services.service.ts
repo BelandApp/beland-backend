@@ -86,7 +86,9 @@ export class GroupServicesService {
       /* ======================================================
        * 5️⃣ RETENCIÓN SEGÚN PAYMENT TYPE
        * ====================================================== */
-      switch (groupService.payment_type.code) {
+      // por el momento solo FULL
+      const full = "FULL"
+      switch (full) {
         case PaymentTypeCode.FULL: {
           if (Number(wallet.becoin_balance) < cost) {
             throw new BadRequestException('Saldo insuficiente');
@@ -111,7 +113,7 @@ export class GroupServicesService {
           break;
         }
 
-        case PaymentTypeCode.EQUAL_SPLIT: {
+        /*case PaymentTypeCode.EQUAL_SPLIT: {
           const [wallets, totalMembers] =
             await qr.manager.findAndCount(Wallet, {
               where: {
@@ -151,7 +153,7 @@ export class GroupServicesService {
           }
 
           break;
-        }
+        }*/
 
         default:
           throw new BadRequestException('Forma de pago inválida');
@@ -173,6 +175,10 @@ export class GroupServicesService {
    * ====================================================== */
   async findAll() {
     return this.repository.findAll();
+  }
+
+  async findAllGroup(group_id:string) {
+    return this.repository.findByGroup(group_id);
   }
 
   async findOne(id: string): Promise<GroupService> {

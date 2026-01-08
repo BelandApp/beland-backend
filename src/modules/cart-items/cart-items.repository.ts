@@ -1,6 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
+import { DataSource, DeleteResult, IsNull, Repository, UpdateResult } from 'typeorm';
 import { CartItem } from './entities/cart-item.entity';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { NotFoundException } from '@zxing/library';
@@ -30,6 +30,34 @@ export class CartItemsRepository {
         skip: (page - 1) * limit,
         take: limit,
         relations: {product:true},
+    });
+  }
+
+  async findAllUserOrGeneral(
+    cart_id: string,
+    user_id: string,
+    page = 1,
+    limit = 10,
+  ): Promise<[CartItem[], number]> {
+
+    const where: any = {};
+
+    if (cart_id) {
+      where.cart_id = cart_id;
+    }
+
+    if (user_id) {
+      where.user_id = user_id;
+    } else {
+      where.user_id = IsNull();
+    }
+
+    return this.repository.findAndCount({
+      where,
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: { product: true },
     });
   }
 

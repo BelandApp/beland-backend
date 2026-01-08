@@ -30,12 +30,6 @@ export class GroupMembersService {
     // 1. Check if group exists
     const group = await this.dataSource.manager.findOne(Group, { where: { id: group_id }, relations: {user:true, privacy:true} });
     if (!group) throw new NotFoundException(`Grupo con ID "${group_id}" no encontrado.`);
-
-    if (!group.privacy.allow_free_join) {
-      if (group.user_id !== req_user_id) {
-        throw new ForbiddenException('Solo el creador del grupo puede ingresar miembros. Este Grupo es privado.');
-      }
-    }
     
 
     // 3. User existence

@@ -107,6 +107,25 @@ export class OrdersController {
     );
   }
 
+  @Post('refunded-returns/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({summary: 'Registrar devoluciones y recalcular pagos de la orden'})
+  @ApiParam({name: 'id',description: 'ID de la orden',type: String})
+  @ApiQuery({ name: 'is_split',type: Boolean , required: true, description: 'si es true divide entre todos, si es false se retorna todo al creador del grupo' })
+  @ApiResponse({status: 200,description: 'Devoluciones registradas y orden recalculada correctamente'})
+  @ApiResponse({status: 400,description: 'La orden ya fue recolectada o datos inválidos'})
+  @ApiResponse({status: 404,description: 'Orden o ítems no encontrados'})
+  async returnDevolutionUsers(
+    @Param('id') orderId: string,
+    @Query('is_split') is_split: boolean,
+  ): Promise<{ success: boolean }> {
+
+    return this.service.returnDevolutionUsers(
+      orderId,
+      is_split,
+    );
+  }
+
   @Put('preparing')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cambiar el estado de la orden a En Preparacion' })
