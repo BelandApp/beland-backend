@@ -6,8 +6,11 @@ import {
   Length,
   IsLatitude,
   IsLongitude,
+  IsDateString,
+  IsDate,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateGroupDto {
   @ApiProperty({ description: 'Nombre del grupo', example: 'Juntada Histórica' })
@@ -47,4 +50,14 @@ export class CreateGroupDto {
   @IsOptional()
   @IsUUID()
   payment_type_id?: string;
+
+ @ApiProperty({
+    description: 'Fecha y hora en la que se realiza el evento',
+    type: 'string',
+    format: 'date-time',
+    example: '2026-03-15T22:00:00-03:00',
+  })
+  @Type(() => Date)
+  @IsDate({ message: 'event_at must be a valid date-time' })
+  event_at: Date;
 }

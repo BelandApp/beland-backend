@@ -49,6 +49,9 @@ export class Group {
   @Column({ type: 'timestamptz', nullable: true }) // <-- New column for soft delete
   deleted_at: Date | null;
 
+  @Column({ type: 'timestamptz', nullable: true }) // <-- New column for soft delete
+  event_at: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
