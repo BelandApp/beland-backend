@@ -19,21 +19,18 @@ export class GroupService {
   @ManyToOne(() => Group, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'group_id' })
   group: Group;
-
   @Column('uuid')
   group_id: string;
 
   @ManyToOne(() => Service)
   @JoinColumn({ name: 'service_id' })
   service: Service;
-
   @Column('uuid')
   service_id: string;
 
   @ManyToOne(() => PaymentType)
   @JoinColumn({ name: 'payment_type_id' })
   payment_type: PaymentType;
-
   @Column('uuid')
   payment_type_id: string;
 
@@ -42,7 +39,7 @@ export class GroupService {
     precision: 10,
     scale: 2,
   })
-  cost: number;
+  total_becoin: number;
 
   @Column({
     type: 'boolean',

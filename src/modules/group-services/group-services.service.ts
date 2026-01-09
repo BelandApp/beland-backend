@@ -61,10 +61,10 @@ export class GroupServicesService {
       const service = await qr.manager.findOne(Service, {where: {id: dto.service_id}})
       if (!service) throw new NotFoundException('Servicio no encontrado');
 
-      // 3️⃣ Crear servicio
-      const groupServiceSaved = await this.repository.createOne({
+      // 3️⃣ Crear contratacion de servicio
+      const groupServiceSaved = await qr.manager.save(GroupService, {
         ...dto,
-        cost: service.price_becoin,
+        total_becoin: service.price_becoin,
       });
 
       // 4️⃣ Preparar estados y tipos
