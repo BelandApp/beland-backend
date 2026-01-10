@@ -31,6 +31,9 @@ export class Group {
   @Column({ type: 'varchar', nullable: true })
   description: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  image_url: string;
+
   @Column({ type: 'text', nullable: true })
   message_invitation: string;
 
