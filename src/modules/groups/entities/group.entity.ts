@@ -102,5 +102,5 @@ export class Group {
   orders: Order[];
 
   @OneToOne(() => Cart, (cart) => cart.group)
-  cart: Cart[];
+  cart: Cart;
 }

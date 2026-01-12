@@ -8,6 +8,8 @@ import {
   Unique,
   JoinColumn,
   UpdateDateColumn,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
 import { Group } from '../../groups/entities/group.entity';
 import { User } from '../../users/entities/users.entity';
@@ -50,7 +52,13 @@ export class GroupMember {
   user_id:string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true })
-  pendingAmount: number; 
+  pending_amount_group: number; 
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true })
+  pending_amount_personal: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true, insert: false, update:false })
+  pendingAmount: number;
 
   @Column({ type: 'boolean', default: false, nullable: true })
   paied: boolean; 

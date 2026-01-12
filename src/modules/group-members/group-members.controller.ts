@@ -82,7 +82,7 @@ export class GroupMembersController {
   @ApiResponse({ status: 201, description: 'Miembro agregado exitosamente.' })
   async create(@Body() createDto: CreateGroupMemberDto, @Req() req: Request): Promise<GroupMember> {
     // Assuming createDto is valid (CreateGroupMemberDto)
-    return await this.service.createGroupMember(createDto, req.user?.id)
+    return await this.service.createGroupMember(createDto)
   }
 
   @Post('many')

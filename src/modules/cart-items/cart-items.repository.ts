@@ -1,12 +1,13 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, DeleteResult, IsNull, Repository, UpdateResult } from 'typeorm';
+import { DataSource, DeleteResult, IsNull, QueryRunner, Repository, UpdateResult } from 'typeorm';
 import { CartItem } from './entities/cart-item.entity';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { NotFoundException } from '@zxing/library';
 import { Cart } from '../cart/entities/cart.entity';
 import { Group } from '../groups/entities/group.entity';
 import { PaymentTypeCode } from '../payment-types/enum/payment-type.enum';
+import { GroupMember } from '../group-members/entities/group-member.entity';
 
 @Injectable()
 export class CartItemsRepository {
@@ -71,122 +72,188 @@ export class CartItemsRepository {
   async findByProduct(product_id: string, cart_id: string): Promise<CartItem> {
     return await this.repository.findOne({
       where: { cart_id, product_id },
-      relations: {product:true},
+      relations: {product:true, cart:true},
     });
   }
 
   async create(body: Partial<CartItem>): Promise<CartItem> {
-    const item = await this.repository.findOne({where: {cart_id: body.cart_id, product_id:body.product_id}})
-    if (!item) {
-      const product = await this.dataSource.manager.findOneBy(Product, {id: body.product_id})
-      if (!product) throw new NotFoundException('Producto no encontrado')
-      body.unit_price = +product.price;
-      body.unit_becoin = +product.price_becoin;
-      body.total_price = +product.price * +body.quantity;
-      body.total_becoin = +product.price_becoin * +body.quantity;
-      body.total_weight = +product.weight * +body.quantity;
-      const itemSave = await this.repository.save(body);
-      if (itemSave) {
-        await this.calculateCuote(itemSave.cart_id);
-      } 
-      return itemSave
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Buscar si el producto ya existe en el carrito
+      // Importante usar el manager del queryRunner para estar dentro de la transacción
+      let item = await queryRunner.manager.findOne(CartItem, {
+        where: { 
+          cart_id: body.cart_id, 
+          product_id: body.product_id 
+        }
+      });
+
+      let itemSave: CartItem;
+
+      if (!item) {
+        // 2. Si no existe, buscamos el producto para obtener precios y pesos
+        const product = await queryRunner.manager.findOneBy(Product, { id: body.product_id });
+        if (!product) throw new NotFoundException('Producto no encontrado');
+
+        // Crear nueva instancia de CartItem
+        const newItem = queryRunner.manager.create(CartItem, {
+          ...body,
+          unit_price: +product.price,
+          unit_becoin: +product.price_becoin,
+          unit_weight: +product.weight, // Asumiendo que existe este campo
+          total_price: +product.price * +body.quantity,
+          total_becoin: +product.price_becoin * +body.quantity,
+          total_weight: +product.weight * +body.quantity,
+        });
+
+        itemSave = await queryRunner.manager.save(newItem);
+      } else {
+        // 3. Si ya existe, actualizamos cantidades y totales
+        const newQuantity = +item.quantity + +body.quantity;
+        
+        item.quantity = newQuantity;
+        item.total_price = +item.unit_price * newQuantity;
+        item.total_becoin = +item.unit_becoin * newQuantity;
+        item.total_weight = +item.unit_weight * newQuantity;
+
+        itemSave = await queryRunner.manager.save(item);
+      }
+
+      // 4. Recalcular balances usando las funciones obligatorias con el queryRunner
+      // Usamos itemSave.cart_id para asegurar que tenemos el ID correcto
+      if (itemSave.user_id) {
+        // Caso Personal: Solo afecta a este usuario
+        await this.recalculateUserPersonalBalance(itemSave.cart_id, itemSave.user_id, queryRunner);
+      } else {
+        // Caso General: Afecta a todos (Shared Items)
+        await this.recalculateSharedBalances(itemSave.cart_id, queryRunner);
+      }
+
+      // Si todo salió bien, confirmamos la transacción
+      await queryRunner.commitTransaction();
+      return itemSave;
+
+    } catch (error) {
+      // Si algo falla, revertimos todos los cambios (el item no se crea y el balance no se toca)
+      await queryRunner.rollbackTransaction();
+      throw new ConflictException('No se pudo procesar la creación del item', error);
+    } finally {
+      // Siempre liberamos el queryRunner
+      await queryRunner.release();
     }
-    const quantity = +item.quantity + +body.quantity;
-    item.quantity = +quantity;
-    item.total_price = +item.unit_price * +quantity
-    item.total_becoin = +item.unit_becoin * +quantity
-    item.total_weight = +item.unit_weight * +quantity
-    const itemSave = await this.repository.save(item);
-    if (itemSave) {
-      await this.calculateCuote(itemSave.cart_id);
-    } 
-    return itemSave
   }
 
   async save(body: Partial<CartItem>): Promise<CartItem> {
-    const itemSave = await this.repository.save(body);
-    if (itemSave) this.calculateCuote(itemSave.cart_id)
-    return itemSave
-  }  
+    const queryRunner = this.dataSource.createQueryRunner();
 
-  async remove(id: string): Promise<DeleteResult> {
-    
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Guardar el ítem (TypeORM manejará INSERT o UPDATE según si existe el ID)
+      // Usamos el manager de la transacción para asegurar atomicidad
+      const itemSave = await queryRunner.manager.save(CartItem, body);
+
+      // 2. Determinar qué balance recalcular
+      if (itemSave.user_id) {
+        // Si el ítem tiene dueño, solo actualizamos el monto personal de ese usuario
+        await this.recalculateUserPersonalBalance(
+          itemSave.cart_id,
+          itemSave.user_id,
+          queryRunner,
+        );
+      } else {
+        // Si es un ítem general (sin user_id), recalculamos el reparto para todos
+        await this.recalculateSharedBalances(itemSave.cart_id, queryRunner);
+      }
+
+      // 3. Confirmar los cambios en la base de datos
+      await queryRunner.commitTransaction();
+      
+      return itemSave;
+    } catch (error) {
+      // Si algo falla, revertimos tanto el guardado del ítem como los balances
+      await queryRunner.rollbackTransaction();
+      throw new ConflictException(
+        'Error al guardar el ítem y actualizar balances',
+        error,
+      );
+    } finally {
+      // Liberar siempre el queryRunner
+      await queryRunner.release();
+    }
+  }
+
+  async remove(id: string): Promise<DeleteResult> { 
     return await this.repository.delete(id);
   }
 
-  async calculateCuote(cart_id: string): Promise<{success: boolean}> {
-    try {
-    const cart = await this.dataSource.manager.findOne(Cart, {
-      where: {id: cart_id},
-      relations: {items:true, payment_type:true, group: {members:true}}
-    })
+  async recalculateSharedBalances(cartId: string, queryRunner: QueryRunner): Promise<void> {
+    const cart = await queryRunner.manager.findOne(Cart, {
+      where: { id: cartId },
+      relations: { 
+        items: true, 
+        group: { members: true }, 
+        payment_type: true 
+      },
+    });
 
-    const group = cart.group;
-    if (!group) return;
+    if (!cart || !cart.group) return;
 
+    const { items, group, delivery_cost, payment_type } = cart;
+    const paymentTypeCode = payment_type?.code as PaymentTypeCode;
     const members = group.members;
-    const balances = new Map<string, number>();
+    const delivery = Number(delivery_cost ?? 0);
 
-    // Inicializar balances
+    // 1. Calcular el total compartido (items sin dueño + delivery)
+    const sharedTotal = items
+      .filter((i) => !i.user_id)
+      .reduce((sum, i) => sum + Number(i.total_price), 0) + delivery;
+
+    // 2. Ejecutar actualizaciones por cada miembro
     for (const member of members) {
-      balances.set(member.user_id, 0);
-    }
+      let groupAmount = 0;
 
-    const items = cart.items ?? [];
-    const paymentType = cart.payment_type?.code as PaymentTypeCode;
-
-    // 1️⃣ Items personales (TODOS los payment types)
-    for (const item of items) {
-      if (item.user_id) {
-        balances.set(
-          item.user_id,
-          (balances.get(item.user_id) ?? 0) + Number(item.total_price),
-        );
+      if (paymentTypeCode === PaymentTypeCode.FULL) {
+        // El creador del grupo absorbe todo lo compartido
+        groupAmount = (member.user_id === group.user_id) ? sharedTotal : 0;
+      } else if (paymentTypeCode === PaymentTypeCode.EQUAL_SPLIT) {
+        // División equitativa entre los miembros presentes
+        groupAmount = sharedTotal / members.length;
       }
-    }
 
-    // 2️⃣ Items compartidos
-    const sharedItemsTotal = items
-      .filter(i => !i.user_id)
+      await queryRunner.manager.update(
+        GroupMember,
+        { id: member.id },
+        { pending_amount_group: Number(groupAmount.toFixed(2)) }
+      );
+    }
+  }
+
+  async recalculateUserPersonalBalance(groupId: string, memberId: string, queryRunner: QueryRunner ): Promise<void> {
+    // 1. Obtener el total de items personales de ese usuario en este carrito
+    const groupMember = await queryRunner.manager.findOne(GroupMember, {
+      where: { group_id: groupId, user_id: memberId },
+      relations: { group: {cart: {items:true}}},
+    });
+
+    const cart = groupMember.group.cart;
+
+    if (!cart) return;
+
+    const personalTotal = cart.items
+      .filter((i) => i.user_id === memberId)
       .reduce((sum, i) => sum + Number(i.total_price), 0);
 
-    const delivery = Number(cart.delivery_cost ?? 0);
-
-    if (paymentType === PaymentTypeCode.FULL) {
-      // 👉 todo lo compartido lo paga el creador
-      const creatorId = group.user_id;
-      balances.set(
-        creatorId,
-        (balances.get(creatorId) ?? 0) + sharedItemsTotal + delivery,
-      );
-    }
-
-    if (paymentType === PaymentTypeCode.EQUAL_SPLIT) {
-      const totalShared = sharedItemsTotal + delivery;
-      const perMember = totalShared / members.length;
-
-      for (const member of members) {
-        balances.set(
-          member.user_id,
-          (balances.get(member.user_id) ?? 0) + perMember,
-        );
-      }
-    }
-
-    // SPLIT → no hay items compartidos, no se hace nada
-
-    // 3️⃣ Persistir balances
-    for (const member of members) {
-      member.pendingAmount = Number(
-        (balances.get(member.user_id) ?? 0).toFixed(2),
-      );
-    }
-
-    await this.dataSource.manager.save(members);
-
-    return {success:true}
-  } catch (error) {
-    throw new ConflictException('no se pudo recalcular la cuota ', error)
-  }
+    // 2. Actualizar solo la columna personal del miembro correspondiente
+    await queryRunner.manager.update(
+      GroupMember,
+      { id: groupMember.id },
+      { pending_amount_personal: Number(personalTotal.toFixed(2)) }
+    );
   }
 }
