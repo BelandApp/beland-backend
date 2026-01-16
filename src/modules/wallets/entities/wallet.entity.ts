@@ -35,6 +35,9 @@ export class Wallet {
   @Column('numeric', { precision: 14, scale: 2, default: 0, nullable: true })
   becoin_green: number; 
 
+  @Column('numeric', { precision: 14, scale: 2, default: 0, nullable: true })
+  becoin_orange: number; 
+
   @Column({ type: 'text', nullable: true })
   private_key_encrypted: string;
 
