@@ -241,7 +241,7 @@ export class WalletsService {
       const totalBeCoins = Math.floor(rawBecoinAmount);
 
       // 3) Calcular 5% para orange
-      const orangeFee = Math.floor(totalBeCoins * 0.05);
+      const orangeFee = Math.floor(totalBeCoins * 0.06);
 
       // 4) BeCoins finales para el usuario
       const userBeCoins = totalBeCoins - orangeFee;

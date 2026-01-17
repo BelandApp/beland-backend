@@ -5,6 +5,16 @@
     "description": "Ingreso de dinero a la wallet desde tarjeta u otro medio"
   },
   {
+    "code": "ORANGE_CREDIT",
+    "name": "Crédito BeCoin Orange",
+    "description": "Crédito promocional otorgado al usuario para compensar comisiones de recarga y ser utilizado dentro de la app."
+  },
+  {
+    "code": "ORANGE_CREDIT_USED",
+    "name": "Uso de BeCoin Orange",
+    "description": "Aplicación de BeCoin Orange en una compra para reducir el impacto de la comisión de recarga."
+  },
+  {
     "code": "WITHDRAW",
     "name": "Retiro",
     "description": "Conversión de BECOIN a USD y transferencia a cuenta bancaria"
@@ -42,7 +52,7 @@
   {
     "code": "PURCHASE_RESOURCE",
     "name": "Compra de Recursos",
-    "description": "Adquisicion de recursos BELAND "
+    "description": "Adquisicion de recursos BELAND"
   },
   {
     "code": "SALE_RESOURCE",
@@ -97,6 +107,7 @@
   {
     "code": "CANCELLED_ORDER",
     "name": "Cancelación de orden de compra",
-    "description": "Se cancela la orden de compra, se cancelan los payments y se devuelven los becoin."
+    "description": "Se cancela la orden de compra, se cancelan los payments y se devuelven los BECOIN."
   }
 ]
+
