@@ -16,6 +16,7 @@ import { TransactionCode } from '../transaction-type/enum/transaction-code';
 import { TransactionState } from '../transaction-state/entities/transaction-state.entity';
 import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 import { Order } from '../orders/entities/order.entity';
+import { OrderItem } from '../order-items/entities/order-item.entity';
 
 @Injectable()
 export class PaymentsService {
@@ -77,7 +78,7 @@ export class PaymentsService {
     }
   }
 
-  async payNow(payment_id: string): Promise<Payment> {
+  async payNow(payment_id: string): Promise<{payment: Payment, message:string, becoinOrangeUsed:number}> {
     const queryRunner = this.dataSource.createQueryRunner();
 
     await queryRunner.connect();
@@ -118,6 +119,76 @@ export class PaymentsService {
       if (!userWallet) {
         throw new BadRequestException('Billetera no encontrada');
       }
+
+      let becoinOrangeUsed:number = 0
+      let message:string = "¡Exclente, pagaste tu orden!"
+
+      if (Number(userWallet.becoin_orange) > 0) {
+        const items = await queryRunner.manager.find(OrderItem, {
+          where: [
+            { order_id: payment.order_id, user_id: payment.user_id },
+          ],
+          relations: { product: true },
+        });
+
+        let profit = 0;
+        for (const item of items) {
+          profit += Number(item.product.price) - Number(item.product.cost);
+        }
+
+        if (profit > 0) {
+          const priceOneBecoin = this.superadminService.getPriceOneBecoin();
+          const profitBecoin = profit / priceOneBecoin;
+
+          // 80% del profit en BeCoin, redondeado
+          const maxRecoverable = Math.floor(profitBecoin * 0.8);
+
+          if (maxRecoverable > 0) {
+            // Cuánto realmente se puede usar
+            becoinOrangeUsed = Math.min(
+              Math.floor(Number(userWallet.becoin_orange)),
+              maxRecoverable,
+            );
+
+            if (becoinOrangeUsed > 0) {
+              // Transferencia interna
+              userWallet.becoin_orange =
+                Number(userWallet.becoin_orange) - becoinOrangeUsed;
+
+              userWallet.becoin_balance =
+                Number(userWallet.becoin_balance) + becoinOrangeUsed;
+
+              // Mensajes
+              if (becoinOrangeUsed === maxRecoverable) {
+                message =
+                  '💙 En Beland cuidamos tu dinero: Aplicamos ${becoinOrangeUsed} BeCoin Naranjas. Seguis recuperando las comiciones que te cobraron las plataformas de recargas.';
+              } else {
+                message = '💙 En Beland cuidamos tu dinero: aplicamos tus BeCoin Naranjas recuperaste todo lo que te cobraron las plataformas de recarga.';
+
+              }
+
+              // Transaction ORANGE_CREDIT_USED
+              const orangeTxType = await queryRunner.manager.findOne(TransactionType, {
+                where: { code: TransactionCode.ORANGE_CREDIT_USED },
+              });
+
+              const txStatus = await queryRunner.manager.findOne(TransactionState, {
+                where: { code: StatusCode.COMPLETED },
+              });
+
+              await queryRunner.manager.save(Transaction, {
+                wallet_id: userWallet.id,
+                amount_becoin: becoinOrangeUsed,
+                post_balance: Number(userWallet.becoin_balance),
+                type_id: orangeTxType.id,
+                status_id: txStatus.id,
+                reference: `ORDER-${payment.order_id}`,
+              });
+            }
+          }
+        }
+      }
+
 
       if (Number(userWallet.becoin_balance) < Number(payment.amount_paid)) {
         throw new BadRequestException('Saldo Insuficiente');
@@ -185,7 +256,7 @@ export class PaymentsService {
       // 🔒 Commit
       await queryRunner.commitTransaction();
 
-      return payment;
+      return {payment, message, becoinOrangeUsed};
 
     } catch (error) {
       await queryRunner.rollbackTransaction();
