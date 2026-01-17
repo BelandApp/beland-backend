@@ -94,7 +94,7 @@ export class PaymentsController {
   @ApiResponse({ status: 201, description: 'Pago creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear el pago' })
   @ApiResponse({ status: 500, description: 'Error al crear el miembro' })
-  async payNow(@Param('payment_id', ParseUUIDPipe) payment_id: string): Promise<Payment> {
+  async payNow(@Param('payment_id', ParseUUIDPipe) payment_id: string): Promise<{payment: Payment, message:string, becoinOrangeUsed:number}> {
     return await this.service.payNow(payment_id);
   }
 
