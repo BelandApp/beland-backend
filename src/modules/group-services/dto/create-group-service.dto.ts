@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateGroupServiceDto {
   @ApiProperty({
@@ -18,11 +18,12 @@ export class CreateGroupServiceDto {
   @IsUUID()
   service_id: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Tipo de pago (FULL o EQUAL_SPLIT)',
     format: 'uuid',
     example: 'e2f9b8a1-1234-4cde-9abc-ff1234567890',
   })
-  @IsUUID()
+  @IsString()
+  @IsOptional()
   payment_type_id: string;
 }

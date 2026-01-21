@@ -26,7 +26,7 @@ export class Cart {
     nullable: true,
     onDelete: 'SET NULL',
   })
-  @JoinColumn({name:'group_ip'})
+  @JoinColumn({name:'group_id'})
   group: Group;
   @Column('uuid', { nullable:true })
   group_id: string;

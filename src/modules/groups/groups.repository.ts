@@ -72,6 +72,7 @@ export class GroupsRepository {
         user: true,
         group_type: true,
         privacy: true,
+        cart:true
       },
       order: {
         [sortBy]: order,
@@ -84,7 +85,7 @@ export class GroupsRepository {
   async findOneById( id: string ): Promise<Group | null> {
     return await this.repository.findOne({
       where: {id},
-      relations: {group_type:true, privacy:true, payment_type:true, user_address:true}
+      relations: {group_type:true, privacy:true, payment_type:true, user_address:true, cart:true}
     })
   }
 
@@ -98,21 +99,21 @@ export class GroupsRepository {
   async getGroupsByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {
     return await this.repository.find({
       where: {members: {user_id}, is_active},
-      relations: {group_type:true, privacy:true, payment_type:true},
+      relations: {group_type:true, privacy:true, payment_type:true, cart:true},
     })
   }
 
   async getGroupsCreatedByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {
     return await this.repository.find({
       where: {user_id, is_active},
-      relations: {group_type:true, privacy:true, payment_type:true},
+      relations: {group_type:true, privacy:true, payment_type:true, cart:true},
     })
   }
 
   async findOneByName(name: string): Promise<Group | null> {
     return this.repository.findOne({
       where: { name: name },
-      relations: ['user', 'members.user'], // Eager load relations for completeness
+      relations: ['user', 'members.user', 'cart'], // Eager load relations for completeness
     });
   }
 
