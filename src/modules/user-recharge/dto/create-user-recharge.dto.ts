@@ -27,4 +27,11 @@ export class CreateRechargeTransferDto {
   @IsNotEmpty()
   @Length(1, 100)
   transfer_id: string;
+  
+  @ApiProperty({
+    description: 'Url de la imagen subida a cloudinary mediante el endpoint correspondiente',
+  })
+  @IsString()
+  @IsNotEmpty()
+  ticket_image_url:string
 }

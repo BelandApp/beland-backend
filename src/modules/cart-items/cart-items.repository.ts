@@ -69,11 +69,26 @@ export class CartItemsRepository {
     });
   }
 
-  async findByProduct(product_id: string, cart_id: string): Promise<CartItem> {
-    return await this.repository.findOne({
-      where: { cart_id, product_id },
-      relations: {product:true, cart:true},
-    });
+  async findByProduct(
+    product_id: string,
+    cart_id: string,
+    user_id?: string | null,
+  ): Promise<CartItem | null> {
+
+    const qb = this.repository
+      .createQueryBuilder('item')
+      .leftJoinAndSelect('item.product', 'product')
+      .leftJoinAndSelect('item.cart', 'cart')
+      .where('item.cart_id = :cart_id', { cart_id })
+      .andWhere('item.product_id = :product_id', { product_id });
+
+    if (user_id) {
+      qb.andWhere('item.user_id = :user_id', { user_id });
+    } else {
+      qb.andWhere('item.user_id IS NULL');
+    }
+
+    return qb.getOne();
   }
 
   async create(body: Partial<CartItem>): Promise<CartItem> {
@@ -85,17 +100,23 @@ export class CartItemsRepository {
     try {
       // 1. Buscar si el producto ya existe en el carrito
       // Importante usar el manager del queryRunner para estar dentro de la transacción
-      let item = await queryRunner.manager.findOne(CartItem, {
-        where: { 
-          cart_id: body.cart_id, 
-          product_id: body.product_id 
-        }
-      });
+      const item = await queryRunner.manager
+        .createQueryBuilder(CartItem, 'item')
+        .where('item.cart_id = :cartId', { cartId: body.cart_id })
+        .andWhere('item.product_id = :productId', { productId: body.product_id })
+        .andWhere(
+          body.user_id
+            ? 'item.user_id = :userId'
+            : 'item.user_id IS NULL',
+          body.user_id ? { userId: body.user_id } : {}
+        )
+        .getOne();
 
       let itemSave: CartItem;
-
+      console.log("llegamos hasta aca 1");
       if (!item) {
         // 2. Si no existe, buscamos el producto para obtener precios y pesos
+        console.log("llegamos hasta aca 2");
         const product = await queryRunner.manager.findOneBy(Product, { id: body.product_id });
         if (!product) throw new NotFoundException('Producto no encontrado');
 
@@ -111,8 +132,10 @@ export class CartItemsRepository {
         });
 
         itemSave = await queryRunner.manager.save(newItem);
+        console.log("llegamos hasta aca 3");
       } else {
         // 3. Si ya existe, actualizamos cantidades y totales
+        console.log("llegamos hasta aca 4");
         const newQuantity = +item.quantity + +body.quantity;
         
         item.quantity = newQuantity;
@@ -121,26 +144,33 @@ export class CartItemsRepository {
         item.total_weight = +item.unit_weight * newQuantity;
 
         itemSave = await queryRunner.manager.save(item);
+        console.log("llegamos hasta aca 5");
       }
 
       // 4. Recalcular balances usando las funciones obligatorias con el queryRunner
       // Usamos itemSave.cart_id para asegurar que tenemos el ID correcto
       if (itemSave.user_id) {
         // Caso Personal: Solo afecta a este usuario
+        console.log("llegamos hasta aca 6");
         await this.recalculateUserPersonalBalance(itemSave.cart_id, itemSave.user_id, queryRunner);
+        console.log("llegamos hasta aca 7");
       } else {
         // Caso General: Afecta a todos (Shared Items)
+        console.log("llegamos hasta aca 8");
         await this.recalculateSharedBalances(itemSave.cart_id, queryRunner);
+        console.log("llegamos hasta aca 9");
       }
 
       // Si todo salió bien, confirmamos la transacción
       await queryRunner.commitTransaction();
+      console.log("llegamos hasta aca 10");
       return itemSave;
 
     } catch (error) {
       // Si algo falla, revertimos todos los cambios (el item no se crea y el balance no se toca)
       await queryRunner.rollbackTransaction();
-      throw new ConflictException('No se pudo procesar la creación del item', error);
+      console.error("error: ", JSON.stringify(error))
+      throw new ConflictException('No se pudo procesar la creación del item', JSON.stringify(error));
     } finally {
       // Siempre liberamos el queryRunner
       await queryRunner.release();
@@ -212,7 +242,7 @@ export class CartItemsRepository {
     // 1. Calcular el total compartido (items sin dueño + delivery)
     const sharedTotal = items
       .filter((i) => !i.user_id)
-      .reduce((sum, i) => sum + Number(i.total_price), 0) + delivery;
+      .reduce((sum, i) => sum + Number(i.total_becoin), 0) + delivery;
 
     // 2. Ejecutar actualizaciones por cada miembro
     for (const member of members) {
@@ -234,10 +264,10 @@ export class CartItemsRepository {
     }
   }
 
-  async recalculateUserPersonalBalance(groupId: string, memberId: string, queryRunner: QueryRunner ): Promise<void> {
+  async recalculateUserPersonalBalance(cartId: string, memberId: string, queryRunner: QueryRunner ): Promise<void> {
     // 1. Obtener el total de items personales de ese usuario en este carrito
     const groupMember = await queryRunner.manager.findOne(GroupMember, {
-      where: { group_id: groupId, user_id: memberId },
+      where: { group: {cart: {id: cartId}}, user_id: memberId },
       relations: { group: {cart: {items:true}}},
     });
 
@@ -247,7 +277,7 @@ export class CartItemsRepository {
 
     const personalTotal = cart.items
       .filter((i) => i.user_id === memberId)
-      .reduce((sum, i) => sum + Number(i.total_price), 0);
+      .reduce((sum, i) => sum + Number(i.total_becoin), 0);
 
     // 2. Actualizar solo la columna personal del miembro correspondiente
     await queryRunner.manager.update(

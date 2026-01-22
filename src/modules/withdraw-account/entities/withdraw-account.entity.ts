@@ -25,10 +25,6 @@ export class WithdrawAccount {
   @Column({ type: 'enum', enum: Currency, nullable:true })
   currency: Currency;
 
-  //Banco
-  @Column({ length: 50, nullable:true })
-  bankCode: string;
-
   @Column({ length: 150, nullable:true })
   bankName: string;
 
