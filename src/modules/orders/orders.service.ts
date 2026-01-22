@@ -223,7 +223,6 @@ export class OrdersService {
        // 11) Resetear el carrito
       cart.address_id = null;
       cart.delivery_at = null;
-      cart.group_id = null;
       cart.payment_type_id = null;
       cart.total_amount = 0;
       cart.total_items = 0;
@@ -239,15 +238,23 @@ export class OrdersService {
       if (cart.group.members) {
         let sumTotal = 0
         for (const member of cart.group.members) {
+          const amount = Number(member.pendingAmount);
+
+          if (!amount || amount <= 0) {
+            continue;
+          }
+
           await queryRunner.manager.save(Payment, {
-            amount_paid : Number(member.pendingAmount),
+            amount_paid: amount,
             order_id: order.id,
             payment_type_id: order.payment_type_id,
             user_id: member.user_id,
             status_id: statusPayment.id,
-          })
-          sumTotal = sumTotal + +member.pendingAmount
+          });
+
+          sumTotal += amount;
         }
+        
         if (sumTotal !== Number(order.total_becoin)) throw new ConflictException(`Hay una diferencia entre los compromisos de pago y el total de la orden. Total Orden $${order.total_becoin}. Total a Cobrar $${sumTotal}`)
       }
       // 12) Confirmar transacción

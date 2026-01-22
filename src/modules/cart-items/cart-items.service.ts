@@ -79,8 +79,8 @@ export class CartItemsService {
     }
   }
 
-  async updateQuantityProduct(product_id: string, cart_id: string, quantity: number) {
-    const item = await this.repository.findByProduct( product_id, cart_id);
+  async updateQuantityProduct(product_id: string, cart_id: string, quantity: number, user_id?: string | null) {
+    const item = await this.repository.findByProduct( product_id, cart_id, user_id);
     if (!item) throw new NotFoundException(`No se encontró el producto del carrito`);
 
     return await this.update (item.id, {quantity})
@@ -124,65 +124,65 @@ export class CartItemsService {
     }
   }
 
-  async removeProduct(product_id: string, cart_id: string) {
-  const queryRunner = this.dataSource.createQueryRunner();
+  // async removeProduct(product_id: string, cart_id: string) {
+  // const queryRunner = this.dataSource.createQueryRunner();
 
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
+  // await queryRunner.connect();
+  // await queryRunner.startTransaction();
 
-  try {
-    // 1. Buscar el ítem ANTES de eliminarlo
-    // Necesitamos saber si tenía un user_id para decidir qué balance recalcular
-    const item = await queryRunner.manager.findOne(CartItem, {
-      where: { product_id, cart_id },
-    });
+  // try {
+  //   // 1. Buscar el ítem ANTES de eliminarlo
+  //   // Necesitamos saber si tenía un user_id para decidir qué balance recalcular
+  //   const item = await queryRunner.manager.findOne(CartItem, {
+  //     where: { product_id, cart_id },
+  //   });
 
-    if (!item) {
-      throw new NotFoundException('Producto no encontrado en el carrito');
-    }
+  //   if (!item) {
+  //     throw new NotFoundException('Producto no encontrado en el carrito');
+  //   }
 
-    const userId = item.user_id;
+  //   const userId = item.user_id;
 
-    // 2. Eliminar el ítem de la base de datos
-    const deleteResult = await queryRunner.manager.delete(CartItem, item.id);
+  //   // 2. Eliminar el ítem de la base de datos
+  //   const deleteResult = await queryRunner.manager.delete(CartItem, item.id);
 
-    if (deleteResult.affected === 0) {
-      throw new NotFoundException(`No se pudo eliminar el producto`);
-    }
+  //   if (deleteResult.affected === 0) {
+  //     throw new NotFoundException(`No se pudo eliminar el producto`);
+  //   }
 
-    // 3. Recalcular balances
-    // Como el ítem ya no existe en la DB, las funciones de recálculo
-    // obtendrán el nuevo total correcto (sin este producto).
-    if (userId) {
-      // Caso Personal
-      await this.repository.recalculateUserPersonalBalance(cart_id, userId, queryRunner);
-    } else {
-      // Caso compartido/general
-      await this.repository.recalculateSharedBalances(cart_id, queryRunner);
-    }
+  //   // 3. Recalcular balances
+  //   // Como el ítem ya no existe en la DB, las funciones de recálculo
+  //   // obtendrán el nuevo total correcto (sin este producto).
+  //   if (userId) {
+  //     // Caso Personal
+  //     await this.repository.recalculateUserPersonalBalance(cart_id, userId, queryRunner);
+  //   } else {
+  //     // Caso compartido/general
+  //     await this.repository.recalculateSharedBalances(cart_id, queryRunner);
+  //   }
 
-    // 4. Confirmar cambios
-    await queryRunner.commitTransaction();
+  //   // 4. Confirmar cambios
+  //   await queryRunner.commitTransaction();
     
-    return { 
-      success: true, 
-      message: 'Producto eliminado y balance actualizado correctamente' 
-    };
+  //   return { 
+  //     success: true, 
+  //     message: 'Producto eliminado y balance actualizado correctamente' 
+  //   };
 
-  } catch (error) {
-    // Si algo falla (ej: error en recálculo), el ítem NO se elimina
-    await queryRunner.rollbackTransaction();
+  // } catch (error) {
+  //   // Si algo falla (ej: error en recálculo), el ítem NO se elimina
+  //   await queryRunner.rollbackTransaction();
     
-    if (error instanceof NotFoundException) throw error;
+  //   if (error instanceof NotFoundException) throw error;
     
-    throw new ConflictException(
-      `No se pudo eliminar el producto: ${error}`
-    );
-  } finally {
-    // Liberar el recurso
-    await queryRunner.release();
-  }
-  }
+  //   throw new ConflictException(
+  //     `No se pudo eliminar el producto: ${error}`
+  //   );
+  // } finally {
+  //   // Liberar el recurso
+  //   await queryRunner.release();
+  // }
+  // }
 
   async remove(id: string) {
     const queryRunner = this.dataSource.createQueryRunner();

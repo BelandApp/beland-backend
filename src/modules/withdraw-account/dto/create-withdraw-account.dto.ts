@@ -40,15 +40,6 @@ export class CreateWithdrawAccountDto {
    * ============================= */
 
   @ApiProperty({
-    description: 'Código interno o del sistema bancario',
-    example: '072',
-  })
-  @IsString()
-  @IsNotEmpty()
-  @Length(1, 50)
-  bankCode: string;
-
-  @ApiProperty({
     description: 'Nombre del banco',
     example: 'Banco Santander Río',
   })

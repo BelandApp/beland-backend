@@ -4,7 +4,7 @@ import { Product } from '../../products/entities/product.entity';
 import { User } from '../../users/entities/users.entity';
 
 @Entity('cart_items')
-@Unique(['cart_id', 'product_id'])
+@Unique(['cart_id', 'product_id', 'user_id'])
 export class CartItem {
   @PrimaryGeneratedColumn('uuid') 
   id: string;
