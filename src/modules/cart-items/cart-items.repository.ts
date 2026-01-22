@@ -222,47 +222,94 @@ export class CartItemsRepository {
     return await this.repository.delete(id);
   }
 
-  async recalculateSharedBalances(cartId: string, queryRunner: QueryRunner): Promise<void> {
-    const cart = await queryRunner.manager.findOne(Cart, {
-      where: { id: cartId },
-      relations: { 
-        items: true, 
-        group: { members: true }, 
-        payment_type: true 
-      },
-    });
+async recalculateSharedBalances(cartId: string, queryRunner: QueryRunner): Promise<void> {
+  console.log('🛒 recalculating balances for cart:', cartId);
 
-    if (!cart || !cart.group) return;
+  const cart = await queryRunner.manager.findOne(Cart, {
+    where: { id: cartId },
+    relations: { 
+      items: true, 
+      group: { members: true, payment_type:true }
+    },
+  });
 
-    const { items, group, delivery_cost, payment_type } = cart;
-    const paymentTypeCode = payment_type?.code as PaymentTypeCode;
-    const members = group.members;
-    const delivery = Number(delivery_cost ?? 0);
-
-    // 1. Calcular el total compartido (items sin dueño + delivery)
-    const sharedTotal = items
-      .filter((i) => !i.user_id)
-      .reduce((sum, i) => sum + Number(i.total_becoin), 0) + delivery;
-
-    // 2. Ejecutar actualizaciones por cada miembro
-    for (const member of members) {
-      let groupAmount = 0;
-
-      if (paymentTypeCode === PaymentTypeCode.FULL) {
-        // El creador del grupo absorbe todo lo compartido
-        groupAmount = (member.user_id === group.user_id) ? sharedTotal : 0;
-      } else if (paymentTypeCode === PaymentTypeCode.EQUAL_SPLIT) {
-        // División equitativa entre los miembros presentes
-        groupAmount = sharedTotal / members.length;
-      }
-
-      await queryRunner.manager.update(
-        GroupMember,
-        { id: member.id },
-        { pending_amount_group: Number(groupAmount.toFixed(2)) }
-      );
-    }
+  if (!cart) {
+    console.log('❌ Cart not found');
+    return;
   }
+
+  if (!cart.group) {
+    console.log('❌ Cart has no group');
+    return;
+  }
+
+  const { items, group, delivery_cost } = cart;
+
+  console.log('📦 Items:', items);
+  console.log('👥 Group members:', group.members);
+  console.log('🚚 Delivery cost:', delivery_cost);
+  console.log('💳 Payment type:', group.payment_type);
+
+  const paymentTypeCode = group.payment_type?.code as PaymentTypeCode;
+  const members = group.members;
+  const delivery = Number(delivery_cost ?? 0);
+
+  console.log('🔢 PaymentTypeCode:', paymentTypeCode);
+  console.log('👤 Members count:', members.length);
+  console.log('🚚 Delivery numeric:', delivery);
+
+  // Items compartidos (sin user)
+  const sharedItems = items.filter((i) => !i.user_id);
+
+  console.log('📦 Shared items (user_id null):', sharedItems);
+
+  const sharedItemsTotal = sharedItems.reduce((sum, i) => {
+    console.log(
+      '➕ item:',
+      i.id,
+      'total_becoin:',
+      i.total_becoin,
+      'numeric:',
+      Number(i.total_becoin)
+    );
+    return sum + Number(i.total_becoin);
+  }, 0);
+
+  console.log('💰 Shared items total:', sharedItemsTotal);
+
+  const sharedTotal = sharedItemsTotal + delivery;
+
+  console.log('💰💰 FINAL sharedTotal:', sharedTotal);
+
+  for (const member of members) {
+    let groupAmount = 0;
+
+    if (paymentTypeCode === PaymentTypeCode.FULL) {
+      groupAmount = (member.user_id === group.user_id) ? sharedTotal : 0;
+    } 
+    else if (paymentTypeCode === PaymentTypeCode.EQUAL_SPLIT) {
+      groupAmount = members.length > 0
+        ? sharedTotal / members.length
+        : 0;
+    }
+
+    console.log(
+      '👤 Member:',
+      member.user_id,
+      'groupAmount:',
+      groupAmount
+    );
+
+    await queryRunner.manager.update(
+      GroupMember,
+      { id: member.id },
+      { pending_amount_group: Number(groupAmount.toFixed(2)) }
+    );
+  }
+
+  console.log('✅ Recalculation finished');
+}
+
 
   async recalculateUserPersonalBalance(cartId: string, memberId: string, queryRunner: QueryRunner ): Promise<void> {
     // 1. Obtener el total de items personales de ese usuario en este carrito
