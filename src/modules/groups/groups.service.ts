@@ -124,7 +124,7 @@ async getInfoCreate(): Promise<{
         role: RoleGroupEnum.LEADER, // Establecer el rol como LÍDER
       });
 
-      await queryRunner.manager.save (Cart, {group_id:savedGroup.id})
+      await queryRunner.manager.save (Cart, {group_id:savedGroup.id, payment_type_id: savedGroup.payment_type_id})
 
       await queryRunner.commitTransaction();
 
