@@ -235,7 +235,7 @@ export class OrdersService {
         where: {code: StatusCode.PENDING}
       })
       
-      if (cart.group.members) {
+      if (cart.group_id && cart.group?.members?.length) {
         let sumTotal = 0
         for (const member of cart.group.members) {
           const amount = Number(member.pendingAmount);

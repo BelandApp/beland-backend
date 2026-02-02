@@ -12,7 +12,12 @@ import {
   HttpStatus,
   UseGuards,
   ParseUUIDPipe, // Para validar IDs como UUIDs automáticamente
-  Put, // Importar ValidationPipe
+  Put,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
+  UploadedFile,
+  Patch, // Importar ValidationPipe
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -25,7 +30,8 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
-  ApiBody, // Para documentar el cuerpo de la solicitud en Swagger
+  ApiBody,
+  ApiConsumes, // Para documentar el cuerpo de la solicitud en Swagger
 } from '@nestjs/swagger';
 // Rutas absolutas para guards y decoradores
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
@@ -37,6 +43,7 @@ import { GroupPrivacy } from './entities/group-privacy.entity';
 import { UserAddress } from '../user-address/entities/user-address.entity';
 import { GroupType } from '../group-type/entities/group-type.entity';
 import { PaymentType } from '../payment-types/entities/payment-type.entity';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('groups') // Etiqueta para la documentación de Swagger
 @Controller('groups')
@@ -135,6 +142,12 @@ export class GroupsController {
 
   @Post()
   @UseGuards(FlexibleAuthGuard) 
+  @UseInterceptors(
+      FileFieldsInterceptor([
+        { name: 'image', maxCount: 1 },
+      ]),
+    )
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Crear un nuevo grupo',
     description:'Crea un nuevo grupo y asigna al usuario autenticado como su líder y primer miembro.',
@@ -148,10 +161,35 @@ export class GroupsController {
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() createGroupDto: CreateGroupDto,
+    @UploadedFiles() 
+        files: {
+          image?: Express.Multer.File[];
+        },
     @Req() req: Request,
   ): Promise<Group> {
+
+      // ✅ Validación manual
+      const allFiles = [
+        ...(files.image || []),
+      ];
+    
+      for (const file of allFiles) {
+        if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)) {
+          throw new BadRequestException(
+            `Formato de archivo inválido (${file.originalname}). Solo se permiten JPG, PNG o WEBP.`,
+          );
+        }
+    
+        if (file.size > 10_000_000) {
+          throw new BadRequestException(
+            `El archivo ${file.originalname} supera los 10 MB permitidos.`,
+          );
+        }
+      }
+
     return await this.groupsService.createGroup(
         createGroupDto,
+        files,
         req.user?.id,
       );
 
@@ -173,6 +211,40 @@ export class GroupsController {
     @Param('groupId', ParseUUIDPipe) groupId: string, 
   ): Promise<Group> {
       return await this.groupsService.findGroupById(groupId);
+  }
+
+  @Patch('image/:id')
+  @UseGuards(FlexibleAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('image')
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Actualizar imagen del grupo' })
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  async updateGroupImage(
+    @Param('id') groupId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ): Promise<Group> {
+
+    if (!file) {
+      throw new BadRequestException('Debe enviar una imagen');
+    }
+
+    if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)) {
+      throw new BadRequestException('Formato de imagen inválido');
+    }
+
+    if (file.size > 10_000_000) {
+      throw new BadRequestException('La imagen supera los 10 MB');
+    }
+
+    return this.groupsService.updateGroupImage(
+      groupId,
+      file,
+      req.user.id,
+    );
   }
 
   @Put('soft-delete/:groupId')

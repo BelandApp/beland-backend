@@ -6,6 +6,7 @@ import {
   ConflictException,
   Logger,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { GroupsRepository } from './groups.repository';
 import { Group } from './entities/group.entity';
@@ -21,6 +22,7 @@ import { GroupType } from '../group-type/entities/group-type.entity';
 import { PaymentType } from '../payment-types/entities/payment-type.entity';
 import { GroupPrivacyCode } from './enums/group-privacy.enum';
 import { Cart } from '../cart/entities/cart.entity';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 @Injectable()
 export class GroupsService {
   
@@ -29,6 +31,7 @@ export class GroupsService {
   constructor(
     private readonly groupsRepository: GroupsRepository,
     private readonly dataSource: DataSource,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async findAll(
@@ -86,7 +89,12 @@ async getInfoCreate(): Promise<{
     return {data, total}
   }
 
-  async createGroup(createGroupDto: Partial<Group>,user_id: string): Promise<Group> {
+  async createGroup(
+    createGroupDto: Partial<Group>,
+    files: {
+      image?: Express.Multer.File[];
+    },
+    user_id: string): Promise<Group> {
     this.logger.debug(
       `createGroup(): Intentando crear grupo para el líder ID: ${user_id}`,
     );
@@ -111,9 +119,18 @@ async getInfoCreate(): Promise<{
         createGroupDto.privacy_id = privacy.id;
       }
 
+      let image_url: string;
+      if (files?.image?.length > 0) {
+        image_url = await this.cloudinaryService.uploadImage(files.image[0]) as string;
+      } else {
+        const groupType = await queryRunner.manager.findOne(GroupType, {where: {id: createGroupDto.group_type_id}})
+        image_url = groupType?.image_url ?? null;
+      }
+
       // Guardar la nueva entidad de grupo
       const savedGroup = await queryRunner.manager.save(Group, {
         ...createGroupDto,
+        image_url,
         user_id
       });
 
@@ -212,6 +229,54 @@ async getInfoCreate(): Promise<{
       throw new InternalServerErrorException('Error al Recuperar Grupo: ', error)
     }
     
+  }
+
+  async updateGroupImage(
+    groupId: string,
+    file: Express.Multer.File,
+    requesterId: string,
+  ): Promise<Group> {
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const group = await queryRunner.manager.findOne(Group, {
+        where: { id: groupId },
+      });
+
+      if (!group) {
+        throw new NotFoundException('Grupo no encontrado');
+      }
+
+      // 🔐 Permisos: solo líder
+      if (group.user_id !== requesterId) {
+        throw new ForbiddenException(
+          'Solo el líder del grupo puede actualizar la imagen',
+        );
+      }
+
+      // (opcional) borrar imagen anterior
+      if (group.image_url) {
+        await this.cloudinaryService.deleteImage(group.image_url);
+      }
+
+      // subir nueva
+      const newImageUrl = await this.cloudinaryService.uploadImage(file) as string;
+
+      group.image_url = newImageUrl;
+      const savedGroup = await queryRunner.manager.save(Group, group);
+
+      await queryRunner.commitTransaction();
+      return savedGroup;
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async update(id: string,body: Partial<Group>, user_id:string): Promise<{success: boolean, message: string}> {

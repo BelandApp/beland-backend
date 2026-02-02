@@ -6,10 +6,11 @@ import { GroupsController } from './groups.controller';
 import { Group } from './entities/group.entity';
 import { GroupsRepository } from './groups.repository';
 import { User } from 'src/modules/users/entities/users.entity'; 
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Group, User])],
   controllers: [GroupsController],
-  providers: [GroupsService, GroupsRepository],
+  providers: [GroupsService, GroupsRepository, CloudinaryService],
 })
 export class GroupsModule {}
