@@ -25,11 +25,14 @@ export class CreateGroupDto {
   @Length(3, 255)
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Imagen del grupo' })
+  @ApiProperty({
+    description: 'Imagen principal del EventPass',
+    type: 'string',
+    format: 'binary',
+    required: false, 
+  })
   @IsOptional()
-  @IsString()
-  @Length(3, 255)
-  image_url?: string;
+  image?: any;
 
   @ApiPropertyOptional({ description: 'Mensaje para invitación del grupo' })
   @IsOptional()

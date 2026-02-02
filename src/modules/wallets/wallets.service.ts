@@ -264,8 +264,8 @@ export class WalletsService {
       // 6) Registrar la transacción del balance general
       await queryRunner.manager.save(Transaction, {
         wallet_id: wallet.id,
-        type,
-        status,
+        type_id: type.id,
+        status_id: status.id,
         amount_becoin: +userBeCoins,
         post_balance: wallet.becoin_balance,
         reference: dto.referenceCode,
@@ -276,7 +276,7 @@ export class WalletsService {
       // 6) Registrar la transacción de las becoin_orange
       await queryRunner.manager.save(Transaction, {
         wallet_id: wallet.id,
-        typeOrange,
+        type_id: typeOrange.id,
         status,
         amount_becoin: +orangeFee,
         post_balance: wallet.becoin_orange,

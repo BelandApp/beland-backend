@@ -10,6 +10,9 @@ export class GroupType {
     @Column('varchar')
     name: string;
 
+    @Column("varchar", {nullable:true})
+    image_url: string;
+
     @CreateDateColumn()
     created_at: Date;
 
