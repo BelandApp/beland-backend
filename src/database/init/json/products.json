@@ -2,6 +2,7 @@
   {
     "name": "Red label 750",
     "description": "Whisky escocés de mezcla, conocido por su sabor ahumado y picante.",
+    "quantity": 0,
     "cost": 25.0,
     "price": 26.5,
     "price_becoin": 530,
@@ -11,6 +12,7 @@
   {
     "name": "Gin W 750",
     "description": "Ginebra premium de sabor botánico, ideal para cócteles.",
+    "quantity": 0,
     "cost": 16.0,
     "price": 17.0,
     "price_becoin": 340,
@@ -20,6 +22,7 @@
   {
     "name": "Antioqueño 750",
     "description": "Aguardiente colombiano clásico, con notas anisadas y dulces.",
+    "quantity": 0,
     "cost": 17.0,
     "price": 18.5,
     "price_becoin": 370,
@@ -29,6 +32,7 @@
   {
     "name": "Antioqueño 350",
     "description": "Aguardiente colombiano en formato de 350ml, con notas anisadas.",
+    "quantity": 0,
     "cost": 10.5,
     "price": 12.0,
     "price_becoin": 240,
@@ -38,6 +42,7 @@
   {
     "name": "Abuelo 750",
     "description": "Ron añejo panameño, con cuerpo y sabor suave a caramelo y vainilla.",
+    "quantity": 0,
     "cost": 14.5,
     "price": 15.0,
     "price_becoin": 300,
@@ -47,6 +52,7 @@
   {
     "name": "Jagger 750",
     "description": "Licor de hierbas alemán, conocido por su sabor complejo y amargo.",
+    "quantity": 0,
     "cost": 28.0,
     "price": 30.0,
     "price_becoin": 600,
@@ -56,6 +62,7 @@
   {
     "name": "Club Platinum 330",
     "description": "Cerveza pilsner ligera y refrescante.",
+    "quantity": 0,
     "cost": 1.4,
     "price": 1.6,
     "price_becoin": 32,
@@ -65,6 +72,7 @@
   {
     "name": "Corona 270",
     "description": "Cerveza mexicana estilo lager, conocida por su suavidad y frescura.",
+    "quantity": 0,
     "cost": 1.4,
     "price": 1.5,
     "price_becoin": 30,
@@ -74,6 +82,7 @@
   {
     "name": "Pilsener 270",
     "description": "Cerveza clásica de sabor suave y refrescante.",
+    "quantity": 0,
     "cost": 1.1,
     "price": 1.25,
     "price_becoin": 25,
@@ -83,6 +92,7 @@
   {
     "name": "Red Bull 270",
     "description": "Bebida energética con sabor afrutado y alta cafeína.",
+    "quantity": 0,
     "cost": 2.7,
     "price": 3.0,
     "price_becoin": 60,
@@ -92,10 +102,211 @@
   {
     "name": "Manufactura de Producto - Beland",
     "description": "Manufactura de producto circular Beland.",
+    "quantity": 0,
     "cost": 4.0,
     "price": 9.0,
     "price_becoin": 180,
     "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1758061367/Productos_Circulares_w55rd6.jpg",
     "category": "Productos Circulares"
+  },
+  {
+    "category": "Licores",
+    "name": "BLACK & WHITE 750ml",
+    "description": "Whisky",
+    "quantity": 2,
+    "cost": 12.19,
+    "price": 16.5,
+    "price_becoin": 330,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127725/Whisky_B_W_yftrs8.png"
+  },
+  {
+    "category": "Licores",
+    "name": "HEINEKEN LATA 264ml",
+    "description": "6 pack",
+    "quantity": 4,
+    "cost": 5.08,
+    "price": 6.5,
+    "price_becoin": 130,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127721/Sixpack_Heineken_ppwsei.jpg"
+  },
+  {
+    "category": "Despensa",
+    "name": "LECHE TRU 1L",
+    "description": "Semidescremada",
+    "quantity": 12,
+    "cost": 1.08,
+    "price": 1.45,
+    "price_becoin": 29,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127713/Leche_TRU_qbxczi.png"
+  },
+  {
+    "category": "Bebidas",
+    "name": "COCA COLA 2L",
+    "description": "Sabor original",
+    "quantity": 6,
+    "cost": 1.78,
+    "price": 2.25,
+    "price_becoin": 45,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127712/CocaCola_xbth2i.jpg"
+  },
+  {
+    "category": "Snacks",
+    "name": "RUFFLES 245gr",
+    "description": "Crema y Cebolla",
+    "quantity": 4,
+    "cost": 2.27,
+    "price": 3.0,
+    "price_becoin": 60,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127718/papas-ruffles-crema-y-cebolla-245-gr_zunxms.jpg"
+  },
+  {
+    "category": "Despensa",
+    "name": "HUEVOS EL ARTESANAL",
+    "description": "15 huevos grandes de campo",
+    "quantity": 6,
+    "cost": 1.47,
+    "price": 1.95,
+    "price_becoin": 39,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127726/Huevos_el_Artesanal_ijxf3w.png"
+  },
+  {
+    "category": "Despensa",
+    "name": "ATUN ISABEL TRIPACK",
+    "description": "3 latas de atun en aceite de girasol (80gr)",
+    "quantity": 4,
+    "cost": 2.07,
+    "price": 2.8,
+    "price_becoin": 56,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127712/Isabel_Tripack_vhm5i6.jpg"
+  },
+  {
+    "category": "Snacks",
+    "name": "NATUCHIPS 250gr",
+    "description": "Chifles sabor limon",
+    "quantity": 4,
+    "cost": 1.99,
+    "price": 2.6,
+    "price_becoin": 52,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127718/Natuchips_chifles_limon_ouibac.png"
+  },
+  {
+    "category": "Despensa",
+    "name": "QUESO FRESCO LA ORIGINAL",
+    "description": "Queso fresco 400gr",
+    "quantity": 3,
+    "cost": 2.23,
+    "price": 2.8,
+    "price_becoin": 56,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127718/Queso_Fresco_LO_afkw4i.jpg"
+  },
+  {
+    "category": "Snacks",
+    "name": "TOSTIDIPPAS 285gr",
+    "description": "Tortillas de mais con sal marina",
+    "quantity": 3,
+    "cost": 1.98,
+    "price": 2.6,
+    "price_becoin": 52,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127725/Tosti_Dipas_nhozrv.jpg"
+  },
+  {
+    "category": "Despensa",
+    "name": "CAFE ARTESANAL ESY 250gr",
+    "description": "Cafe artesanal ecuatoriano tostado y molido",
+    "quantity": 3,
+    "cost": 1.74,
+    "price": 2.25,
+    "price_becoin": 45,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127712/IMG_1630_h3kqpd.jpg"
+  },
+  {
+    "category": "Despensa",
+    "name": "MIX SANDUCHERO LA CASTILLA",
+    "description": "Jamon familiar tipo III y queso americano",
+    "quantity": 3,
+    "cost": 1.65,
+    "price": 2.1,
+    "price_becoin": 42,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770128397/IMG_1631_pzgbw0.heic"
+  },
+  {
+    "category": "Bebidas",
+    "name": "GUITIG 1.5L",
+    "description": "Agua mineral con gas natural",
+    "quantity": 6,
+    "cost": 0.82,
+    "price": 1.1,
+    "price_becoin": 22,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127711/Gu%CC%88itig_1lt_jgfuos.jpg"
+  },
+  {
+    "category": "Higiene",
+    "name": "PAPEL HIGIENICO FAMILIA",
+    "description": "3 rollos triple hoja extra suave",
+    "quantity": 6,
+    "cost": 0.78,
+    "price": 1.0,
+    "price_becoin": 20,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127712/Familia_triple_hoja_aqto2m.png"
+  },
+  {
+    "category": "Despensa",
+    "name": "FIDEOS MR. NOODLES",
+    "description": "Fideos tipo ramen sabor a pollo 64gr",
+    "quantity": 6,
+    "cost": 0.67,
+    "price": 1.0,
+    "price_becoin": 20,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127717/Mr_noodels_ulwym3.jpg"
+  },
+  {
+    "category": "Despensa",
+    "name": "MANTEQUILLA CON SAL LA ORIGINAL",
+    "description": "Mantequilla con sal 120gr",
+    "quantity": 3,
+    "cost": 1.03,
+    "price": 1.4,
+    "price_becoin": 28,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127713/Mantequilla_La_Original_sbbuvz.jpg"
+  },
+  {
+    "category": "Despensa",
+    "name": "ACEITE LA FAVORITA",
+    "description": "Aceite de cocina 360ml",
+    "quantity": 3,
+    "cost": 0.81,
+    "price": 1.1,
+    "price_becoin": 22,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127711/Aceite_la_favorita_dqovrv.webp"
+  },
+  {
+    "category": "Limpieza",
+    "name": "LAVA VAJILLAS LIQUIDO LA ORIGINAL",
+    "description": "Jabon liquido para vajilla aroma limon 500ml",
+    "quantity": 3,
+    "cost": 0.66,
+    "price": 1.0,
+    "price_becoin": 20,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127712/Lavavajillas_La_original_limon_flz8ir.jpg"
+  },
+  {
+    "category": "Higiene",
+    "name": "SERVILLETAS LA ORIGINAL",
+    "description": "100Unidades 24X24cm",
+    "quantity": 4,
+    "cost": 0.45,
+    "price": 0.65,
+    "price_becoin": 13,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127718/Servilletas_La_Original_jzbogg.jpg"
+  },
+  {
+    "category": "Snacks",
+    "name": "GALLETAS SALTICAS",
+    "description": "Galletas saladitas 63gr",
+    "quantity": 4,
+    "cost": 0.38,
+    "price": 0.5,
+    "price_becoin": 10,
+    "image_url": "https://res.cloudinary.com/dbfboc8cm/image/upload/v1770127718/salticas_zjd57v.png"
   }
 ]
