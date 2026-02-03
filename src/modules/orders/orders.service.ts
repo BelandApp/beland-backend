@@ -3,9 +3,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
-  NotAcceptableException,
   NotFoundException,
-  NotImplementedException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { OrdersRepository } from './orders.repository';
@@ -30,6 +28,7 @@ import { NotificationsGateway } from '../notification-socket/notification-socket
 import { OrderFilterDto } from './dto/order-filter.dto';
 import { GroupMember } from '../group-members/entities/group-member.entity';
 import { User } from '../users/entities/users.entity';
+import { Product } from '../products/entities/product.entity';
 
 @Injectable()
 export class OrdersService {
@@ -140,87 +139,131 @@ export class OrdersService {
     }
   }
 
-  async createOrderByCart(cart_id:string): Promise<Order> {
-    // 0) Preparar transacción
+  async createOrderByCart(cart_id: string): Promise<Order> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction(); // opcional: pasar aislamiento
+    await queryRunner.startTransaction();
 
     try {
-
-      // 2) Traer el carrito con sus ítems
+      // 2) Traer carrito
       const cart = await queryRunner.manager.findOne(Cart, {
         where: { id: cart_id },
-        relations: {items:true, group: {members:true}}
+        relations: { items: true, group: { members: true } },
       });
       if (!cart) throw new NotFoundException('Carrito no encontrado');
-
-      if (!cart.items || cart.items.length === 0) {
+      if (!cart.items || cart.items.length === 0)
         throw new BadRequestException('El carrito esta vacio');
-      }
 
-      // 3) Validar forma de pago
-      let paymentType: PaymentType; 
+      // 3) Forma de pago
+      let paymentType: PaymentType;
       if (!cart.group_id) {
         paymentType = await queryRunner.manager.findOne(PaymentType, {
           where: { code: PaymentTypeCode.FULL },
         });
       } else {
-        if (cart.group) {
-          paymentType = await queryRunner.manager.findOne(PaymentType, {
-            where: { id: cart.group.payment_type_id },
-          });
-        } else {
-            throw new BadRequestException('No se encontro el metodo de pago en el grupo ni en el carrito. Debe ingresar un metodo de pago');
-          }
-        }
-      
-      if (!paymentType) {
-        throw new ConflictException('Forma de pago no disponible. Pruebe otra o intente luego.');
+        if (!cart.group)
+          throw new BadRequestException(
+            'No se encontro el metodo de pago en el grupo ni en el carrito',
+          );
+
+        paymentType = await queryRunner.manager.findOne(PaymentType, {
+          where: { id: cart.group.payment_type_id },
+        });
       }
 
-      // HASTA ACA TODO EN CONDICIONES PARA HACER LA TRANSACCION
+      if (!paymentType)
+        throw new ConflictException('Forma de pago no disponible');
 
-      // 5) Crear la orden desde el carrito (copiando campos necesarios)
-      // a) busco el status id del delivery order
+      // 5) Status de orden
       const statusOrder = await queryRunner.manager.findOne(DeliveryStatus, {
         where: { code: DeliveryStatusCode.PENDING },
       });
       if (!statusOrder)
-        throw new ConflictException("No se encuentra el estado de la orden ", DeliveryStatusCode.PENDING);
+        throw new ConflictException(
+          'No se encuentra el estado de la orden',
+          DeliveryStatusCode.PENDING,
+        );
 
-      //    - Tomamos algunos campos del carrito
+      // 5b) Crear orden
+      const {
+        id: _cartId,
+        created_at: _c1,
+        updated_at: _c2,
+        items: _items,
+        user_id,
+        payment_type_id,
+        payment_type,
+        address,
+        total_amount,
+        total_becoin,
+        ...createOrder
+      } = cart as Cart;
 
-      const { id: _cartId, created_at: _c1, updated_at: _c2, items: _items, user_id, payment_type_id, payment_type, address, total_amount, total_becoin, ...createOrder } = cart as Cart;
       const order = queryRunner.manager.create(Order, {
         ...createOrder,
         user_id,
         subtotal_amount: +total_amount,
         subtotal_becoin: +total_becoin,
         total_amount: +total_amount + +createOrder.delivery_cost,
-        total_becoin: +total_becoin + (+createOrder.delivery_cost/+this.superadminService.getPriceOneBecoin()),
+        total_becoin:
+          +total_becoin +
+          +createOrder.delivery_cost /
+            +this.superadminService.getPriceOneBecoin(),
         payment_type_id: paymentType.id,
         status_id: statusOrder.id,
       });
+
       const savedOrder = await queryRunner.manager.save(Order, order);
-      if (!savedOrder) {
+      if (!savedOrder)
         throw new ConflictException('No se pudo crear la orden');
+
+      // 🔥 6) VALIDAR STOCK + DESCONTAR + CREAR ORDER ITEMS
+      const orderItemsPayload = [];
+
+      for (const cartItem of cart.items as CartItem[]) {
+        const orderedQuantity = cartItem.quantity;
+
+        const product = await queryRunner.manager.findOne(Product, {
+          where: { id: cartItem.product_id },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!product)
+          throw new NotFoundException(
+            `Producto no encontrado (id: ${cartItem.product_id})`,
+          );
+
+        if (product.quantity < orderedQuantity) {
+          throw new BadRequestException(
+            `Stock insuficiente para ${product.name}. Disponible: ${product.quantity}`,
+          );
+        }
+
+        // descontar stock
+        product.quantity = +product.quantity - orderedQuantity;
+        await queryRunner.manager.save(Product, product);
+
+        const { id, created_at, cart_id, ...rest } = cartItem;
+
+        orderItemsPayload.push({
+          ...rest,
+          ordered_quantity: orderedQuantity,
+          order_id: savedOrder.id,
+        });
       }
 
-      // 6) Crear ítems de la orden a partir de los ítems del carrito
-      const orderItemsPayload = (cart.items as CartItem[]).map(({ id, created_at, cart_id, ...rest }) => ({
-        ...rest,
-        ordered_quantity: rest.quantity,
-        order_id: savedOrder.id,
-      }));
-
-      const orderItems = queryRunner.manager.create(OrderItem, orderItemsPayload);
+      const orderItems = queryRunner.manager.create(
+        OrderItem,
+        orderItemsPayload,
+      );
       const itemsCreated = await queryRunner.manager.save(OrderItem, orderItems);
-      if (!itemsCreated || itemsCreated.length === 0) {
-        throw new ConflictException('No se pudieron crear los ítems asociados a la orden');
-      }
 
-       // 11) Resetear el carrito
+      if (!itemsCreated || itemsCreated.length === 0)
+        throw new ConflictException(
+          'No se pudieron crear los ítems asociados a la orden',
+        );
+
+      // 11) Reset carrito
       cart.address_id = null;
       cart.delivery_at = null;
       cart.payment_type_id = null;
@@ -229,20 +272,19 @@ export class OrdersService {
       cart.total_becoin = 0;
 
       await queryRunner.manager.save(Cart, cart);
-      await queryRunner.manager.delete(CartItem, {cart_id : cart.id})
+      await queryRunner.manager.delete(CartItem, { cart_id: cart.id });
 
+      // 11b) Pagos en grupo
       const statusPayment = await queryRunner.manager.findOne(TransactionState, {
-        where: {code: StatusCode.PENDING}
-      })
-      
+        where: { code: StatusCode.PENDING },
+      });
+
       if (cart.group_id && cart.group?.members?.length) {
-        let sumTotal = 0
+        let sumTotal = 0;
+
         for (const member of cart.group.members) {
           const amount = Number(member.pendingAmount);
-
-          if (!amount || amount <= 0) {
-            continue;
-          }
+          if (!amount || amount <= 0) continue;
 
           await queryRunner.manager.save(Payment, {
             amount_paid: amount,
@@ -254,27 +296,31 @@ export class OrdersService {
 
           sumTotal += amount;
         }
-        
-        if (sumTotal !== Number(order.total_becoin)) throw new ConflictException(`Hay una diferencia entre los compromisos de pago y el total de la orden. Total Orden $${order.total_becoin}. Total a Cobrar $${sumTotal}`)
+
+        if (sumTotal !== Number(order.total_becoin))
+          throw new ConflictException(
+            `Diferencia entre compromisos y total. Orden: ${order.total_becoin}, Cobros: ${sumTotal}`,
+          );
       }
-      // 12) Confirmar transacción
+
+      // 12) Commit
       await queryRunner.commitTransaction();
 
-      // 12Bis) Emiten un mensaje al Superadmin por socket
-      this.notificationsGateway.notifyOrders(this.superadminService.getSuperadminId(), {
-            order_id: savedOrder.id,
-            total_becoin: savedOrder.total_becoin,
-            items: +savedOrder.items,
-          });
+      // 12Bis) Notificación
+      this.notificationsGateway.notifyOrders(
+        this.superadminService.getSuperadminId(),
+        {
+          order_id: savedOrder.id,
+          total_becoin: savedOrder.total_becoin,
+          items: +savedOrder.items,
+        },
+      );
 
-      // 13) Devolver la orden creada (podés cargar relaciones si querés)
       return savedOrder;
     } catch (err) {
-      // Revertir todo si falla algo
       await queryRunner.rollbackTransaction();
       throw err;
     } finally {
-      // Liberar recursos
       await queryRunner.release();
     }
   }

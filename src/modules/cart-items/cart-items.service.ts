@@ -96,7 +96,7 @@ export class CartItemsService {
       }
 
       // Si la cantidad viene en la petición...
-      if (body.quantity !== undefined) {
+      if (body.quantity !== undefined ) {
         const newQuantity = Number(body.quantity);
 
         // Si la cantidad es 0 → eliminar el ítem
@@ -105,6 +105,9 @@ export class CartItemsService {
           return { message: 'Item eliminado porque la cantidad es 0' };
         }
 
+        if (item.product.quantity < newQuantity) {
+          throw new ConflictException(`Stock insuficiente. Solo quedan ${item.product.quantity}`);
+        }
         // Si la cantidad es mayor a 0 → recalcular totales
         body.total_price = Number(item.unit_price) * newQuantity;
         body.total_becoin = Number(item.unit_becoin) * newQuantity;

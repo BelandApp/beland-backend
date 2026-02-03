@@ -102,6 +102,7 @@ export class CartItemsRepository {
       // Importante usar el manager del queryRunner para estar dentro de la transacción
       const item = await queryRunner.manager
         .createQueryBuilder(CartItem, 'item')
+        .leftJoinAndSelect('item.product', 'product')
         .where('item.cart_id = :cartId', { cartId: body.cart_id })
         .andWhere('item.product_id = :productId', { productId: body.product_id })
         .andWhere(
@@ -113,13 +114,11 @@ export class CartItemsRepository {
         .getOne();
 
       let itemSave: CartItem;
-      console.log("llegamos hasta aca 1");
       if (!item) {
         // 2. Si no existe, buscamos el producto para obtener precios y pesos
-        console.log("llegamos hasta aca 2");
         const product = await queryRunner.manager.findOneBy(Product, { id: body.product_id });
         if (!product) throw new NotFoundException('Producto no encontrado');
-
+        if (product.quantity < body.quantity) throw new ConflictException(`Stock insuficiente. Solo quedan ${product.quantity}`);
         // Crear nueva instancia de CartItem
         const newItem = queryRunner.manager.create(CartItem, {
           ...body,
@@ -132,38 +131,32 @@ export class CartItemsRepository {
         });
 
         itemSave = await queryRunner.manager.save(newItem);
-        console.log("llegamos hasta aca 3");
       } else {
         // 3. Si ya existe, actualizamos cantidades y totales
-        console.log("llegamos hasta aca 4");
         const newQuantity = +item.quantity + +body.quantity;
         
+        if (item.product.quantity < newQuantity) throw new ConflictException(`Stock insuficiente. Solo quedan ${item.product.quantity}`);
+
         item.quantity = newQuantity;
         item.total_price = +item.unit_price * newQuantity;
         item.total_becoin = +item.unit_becoin * newQuantity;
         item.total_weight = +item.unit_weight * newQuantity;
 
         itemSave = await queryRunner.manager.save(item);
-        console.log("llegamos hasta aca 5");
       }
 
       // 4. Recalcular balances usando las funciones obligatorias con el queryRunner
       // Usamos itemSave.cart_id para asegurar que tenemos el ID correcto
       if (itemSave.user_id) {
         // Caso Personal: Solo afecta a este usuario
-        console.log("llegamos hasta aca 6");
         await this.recalculateUserPersonalBalance(itemSave.cart_id, itemSave.user_id, queryRunner);
-        console.log("llegamos hasta aca 7");
       } else {
         // Caso General: Afecta a todos (Shared Items)
-        console.log("llegamos hasta aca 8");
         await this.recalculateSharedBalances(itemSave.cart_id, queryRunner);
-        console.log("llegamos hasta aca 9");
       }
 
       // Si todo salió bien, confirmamos la transacción
       await queryRunner.commitTransaction();
-      console.log("llegamos hasta aca 10");
       return itemSave;
 
     } catch (error) {
