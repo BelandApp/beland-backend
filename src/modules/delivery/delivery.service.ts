@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 export class DeliveryService {
   private readonly mapboxToken = process.env.MAPBOX_TOKEN;
   private readonly baseUrl = process.env.MAPBOX_URL;
+  private readonly costBaseDelivery = 1;
 
   constructor(private readonly http: HttpService) {}
 
@@ -40,20 +41,20 @@ export class DeliveryService {
   }
 
   calculateDeliveryPrice (distanceKm: number): number {
-    if (distanceKm <= 3) return 2.5;
+    if (distanceKm <= 3) return this.costBaseDelivery;
 
     if (distanceKm <= 5) {
       const extra = distanceKm - 3;
-      return 2.5 + extra * 0.40;
+      return this.costBaseDelivery + extra * 0.40;
     }
 
     if (distanceKm <= 10) {
-      const tier1 = 2.5 + (5 - 3) * 0.40; // hasta 5 km
+      const tier1 = this.costBaseDelivery + (5 - 3) * 0.40; // hasta 5 km
       const extra = distanceKm - 5;
       return tier1 + extra * 0.30;
     }
 
-    const tier1 = 2.5 + (5 - 3) * 0.40;
+    const tier1 = this.costBaseDelivery + (5 - 3) * 0.40;
     const tier2 = (10 - 5) * 0.30;
     const extra = distanceKm - 10;
 
