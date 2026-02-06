@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -450,7 +451,16 @@ export class OrdersService {
       return savedOrder;
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      throw err;
+
+      // ✅ si ya es un HttpException, mantenerlo
+      if (err instanceof HttpException) {
+        throw err;
+      }
+
+      // ❌ si es error inesperado
+      throw new InternalServerErrorException(
+        'Error interno al crear la orden',
+      );
     } finally {
       await queryRunner.release();
     }

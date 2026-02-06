@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, HttpException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeleteResult, IsNull, QueryRunner, Repository, UpdateResult } from 'typeorm';
 import { CartItem } from './entities/cart-item.entity';
@@ -160,10 +160,20 @@ export class CartItemsRepository {
       return itemSave;
 
     } catch (error) {
-      // Si algo falla, revertimos todos los cambios (el item no se crea y el balance no se toca)
       await queryRunner.rollbackTransaction();
-      console.error("error: ", JSON.stringify(error))
-      throw new ConflictException('No se pudo procesar la creación del item', JSON.stringify(error));
+
+      // 🔴 CLAVE: si ya es una HttpException, devolverla tal cual
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // log opcional para errores inesperados
+      console.error(error);
+
+      // solo errores realmente inesperados
+      throw new InternalServerErrorException(
+        'No se pudo procesar la creación del item',
+      );
     } finally {
       // Siempre liberamos el queryRunner
       await queryRunner.release();
