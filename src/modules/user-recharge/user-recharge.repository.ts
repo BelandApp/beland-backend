@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository, UpdateResult } from 'typeorm';
+import { DeleteResult, IsNull, Not, Repository, UpdateResult } from 'typeorm';
 import { RechargeTransfer } from './entities/user-recharge.entity';
 
 @Injectable()
@@ -13,19 +13,26 @@ export class UserRechargeRepository {
   async findAll(
     page: number,
     limit: number,
-    status_id?:string,
+    status_id?: string,
   ): Promise<[RechargeTransfer[], number]> {
-    
-    const where = status_id ? {status_id} : {}
-    
+
+    const where: any = {};
+
+    if (status_id) {
+      where.status_id = status_id;
+    }
+
     return this.repository.findAndCount({
-        where,
-        order: { created_at: 'DESC' },
-        skip: (page - 1) * limit,
-        take: limit,
-        relations: {user:true, status:true},
+      where,
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: {
+        user: true,
+        status: true,
+      },
     });
-  } 
+  }
 
   async findOne(id: string): Promise<RechargeTransfer> {
     return this.repository.findOne({

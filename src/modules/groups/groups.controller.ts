@@ -142,12 +142,6 @@ export class GroupsController {
 
   @Post()
   @UseGuards(FlexibleAuthGuard) 
-  @UseInterceptors(
-      FileFieldsInterceptor([
-        { name: 'image', maxCount: 1 },
-      ]),
-    )
-  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Crear un nuevo grupo',
     description:'Crea un nuevo grupo y asigna al usuario autenticado como su líder y primer miembro.',
@@ -161,35 +155,11 @@ export class GroupsController {
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() createGroupDto: CreateGroupDto,
-    @UploadedFiles() 
-        files: {
-          image?: Express.Multer.File[];
-        },
     @Req() req: Request,
   ): Promise<Group> {
 
-      // ✅ Validación manual
-      const allFiles = [
-        ...(files.image || []),
-      ];
-    
-      for (const file of allFiles) {
-        if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)) {
-          throw new BadRequestException(
-            `Formato de archivo inválido (${file.originalname}). Solo se permiten JPG, PNG o WEBP.`,
-          );
-        }
-    
-        if (file.size > 10_000_000) {
-          throw new BadRequestException(
-            `El archivo ${file.originalname} supera los 10 MB permitidos.`,
-          );
-        }
-      }
-
     return await this.groupsService.createGroup(
         createGroupDto,
-        files,
         req.user?.id,
       );
 
