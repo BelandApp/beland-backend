@@ -303,6 +303,137 @@ export class OrdersService {
           );
       }
 
+      if (!cart.group_id && cart.user_id) {
+        // ===== PAGO INMEDIATO (COMPRA INDIVIDUAL) =====
+
+        // wallet usuario
+        const userWallet = await queryRunner.manager.findOne(Wallet, {
+          where: { user_id: cart.user_id },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!userWallet)
+          throw new BadRequestException('Billetera del usuario no encontrada');
+
+        let becoinOrangeUsed = 0;
+
+        // ---------- APLICAR ORANGE ----------
+        if (Number(userWallet.becoin_orange) > 0) {
+          const items = await queryRunner.manager.find(OrderItem, {
+            where: { order_id: savedOrder.id, user_id: cart.user_id },
+            relations: { product: true },
+          });
+
+          let profit = 0;
+          for (const item of items) {
+            profit += Number(item.product.price) - Number(item.product.cost);
+          }
+
+          if (profit > 0) {
+            const priceOneBecoin = this.superadminService.getPriceOneBecoin();
+            const profitBecoin = profit / priceOneBecoin;
+            const maxRecoverable = Math.floor(profitBecoin * 0.8);
+
+            if (maxRecoverable > 0) {
+              becoinOrangeUsed = Math.min(
+                Math.floor(Number(userWallet.becoin_orange)),
+                maxRecoverable,
+              );
+
+              if (becoinOrangeUsed > 0) {
+                userWallet.becoin_orange -= becoinOrangeUsed;
+                userWallet.becoin_balance += becoinOrangeUsed;
+
+                const orangeTxType = await queryRunner.manager.findOne(TransactionType,{
+                  where:{code: TransactionCode.ORANGE_CREDIT_USED}
+                });
+
+                const txStatus = await queryRunner.manager.findOne(TransactionState,{
+                  where:{code: StatusCode.COMPLETED}
+                });
+
+                await queryRunner.manager.save(Transaction,{
+                  wallet_id:userWallet.id,
+                  amount_becoin:becoinOrangeUsed,
+                  post_balance:userWallet.becoin_balance,
+                  type_id:orangeTxType.id,
+                  status_id:txStatus.id,
+                  reference:`ORDER-${savedOrder.id}`
+                });
+              }
+            }
+          }
+        }
+
+        // ---------- VALIDAR SALDO ----------
+        if (Number(userWallet.becoin_balance) < Number(savedOrder.total_becoin))
+          throw new BadRequestException('Saldo insuficiente para completar la compra');
+
+        // ---------- DEBITAR USUARIO ----------
+        userWallet.becoin_balance -= Number(savedOrder.total_becoin);
+        await queryRunner.manager.save(userWallet);
+
+        // tipos y estados
+        const txStatus = await queryRunner.manager.findOne(TransactionState,{
+          where:{code: StatusCode.COMPLETED}
+        });
+
+        const txTypePurchase = await queryRunner.manager.findOne(TransactionType,{
+          where:{code: TransactionCode.PURCHASE_BELAND}
+        });
+
+        // transaction cliente
+        const userTx = await queryRunner.manager.save(Transaction,{
+          wallet_id:userWallet.id,
+          amount_becoin:Number(savedOrder.total_becoin),
+          post_balance:userWallet.becoin_balance,
+          type_id:txTypePurchase.id,
+          status_id:txStatus.id,
+          reference:`ORDER-${savedOrder.id}`
+        });
+
+        // ---------- CREAR PAYMENT COMPLETED ----------
+        const paymentCompleted = await queryRunner.manager.save(Payment,{
+          amount_paid:Number(savedOrder.total_becoin),
+          order_id:savedOrder.id,
+          payment_type_id:savedOrder.payment_type_id,
+          user_id:cart.user_id,
+          status_id:txStatus.id,
+          transaction_id:userTx.id
+        });
+
+        // ---------- SUPER ADMIN ----------
+        const superAdminWallet = await queryRunner.manager.findOne(Wallet,{
+          where:{id:this.superadminService.getWalletId()},
+          lock:{mode:'pessimistic_write'}
+        });
+
+        if(!superAdminWallet)
+          throw new InternalServerErrorException('Billetera del superadmin no encontrada');
+
+        superAdminWallet.becoin_balance += Number(savedOrder.total_becoin);
+        await queryRunner.manager.save(superAdminWallet);
+
+        const txTypeSale = await queryRunner.manager.findOne(TransactionType,{
+          where:{code:TransactionCode.SALE_BELAND}
+        });
+
+        await queryRunner.manager.save(Transaction,{
+          wallet_id:superAdminWallet.id,
+          amount_becoin:Number(savedOrder.total_becoin),
+          post_balance:superAdminWallet.becoin_balance,
+          type_id:txTypeSale.id,
+          status_id:txStatus.id,
+          reference:`PAYMENT-${paymentCompleted.id}`
+        });
+
+        // ---------- MARCAR ORDEN PAGA ----------
+        savedOrder.paied = true;
+        savedOrder.total_becoin_paied = Number(savedOrder.total_becoin);
+        await queryRunner.manager.save(savedOrder);
+
+      }
+
       // 12) Commit
       await queryRunner.commitTransaction();
 

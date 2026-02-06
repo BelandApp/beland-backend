@@ -29,9 +29,6 @@ export class RechargeTransfer {
   @Column({ type: 'varchar', length: 100, unique: true })
   transfer_id: string; // identificador bancario
 
-  @Column({ type: 'varchar', nullable: true })
-  ticket_image_url: string
-
   @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;

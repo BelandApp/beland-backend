@@ -91,9 +91,6 @@ async getInfoCreate(): Promise<{
 
   async createGroup(
     createGroupDto: Partial<Group>,
-    files: {
-      image?: Express.Multer.File[];
-    },
     user_id: string): Promise<Group> {
     this.logger.debug(
       `createGroup(): Intentando crear grupo para el líder ID: ${user_id}`,
@@ -119,18 +116,9 @@ async getInfoCreate(): Promise<{
         createGroupDto.privacy_id = privacy.id;
       }
 
-      let image_url: string;
-      if (files?.image?.length > 0) {
-        image_url = await this.cloudinaryService.uploadImage(files.image[0]) as string;
-      } else {
-        const groupType = await queryRunner.manager.findOne(GroupType, {where: {id: createGroupDto.group_type_id}})
-        image_url = groupType?.image_url ?? null;
-      }
-
       // Guardar la nueva entidad de grupo
       const savedGroup = await queryRunner.manager.save(Group, {
         ...createGroupDto,
-        image_url,
         user_id
       });
 

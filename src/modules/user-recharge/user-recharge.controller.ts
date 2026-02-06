@@ -44,7 +44,7 @@ export class UserRechargeController {
   async findAll(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
-    @Query('status_id') status_id?,
+    @Query('status_id') status_id?: string,
   ): Promise<[RechargeTransfer[], number]> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
