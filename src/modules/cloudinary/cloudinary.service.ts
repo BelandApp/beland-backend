@@ -32,7 +32,7 @@ export class CloudinaryService {
     const results = await Promise.all(
       file.map(async (f) => {
         const res = await this.uploadSingle(f);
-        return res.secure_url; // o res.url si querés
+        return res.secure_url; // o res.url si querés 
       }),
     );
 
