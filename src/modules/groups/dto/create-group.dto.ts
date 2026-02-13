@@ -19,6 +19,12 @@ export class CreateGroupDto {
   @Length(3, 255)
   name: string;
 
+  @ApiPropertyOptional({ description: 'URL Imagen de grupo' })
+  @IsString()
+  @IsOptional()
+  @Length(3, 255)
+  image_url: string;
+
   @ApiPropertyOptional({ description: 'Descripción del grupo' })
   @IsOptional()
   @IsString()

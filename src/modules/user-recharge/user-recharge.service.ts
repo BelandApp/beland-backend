@@ -90,6 +90,7 @@ export class UserRechargeService {
         payment_account_id: dto.payment_account_id,
         transfer_id: dto.transfer_id,
         transaction_id: transaction.id,
+        ticket_image_url: dto.ticket_image_url,
       })
       const rechargeTransfer = await queryRunner.manager.save(rechargeTransferCreated);
     
