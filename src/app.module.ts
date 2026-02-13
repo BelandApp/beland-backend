@@ -116,7 +116,7 @@ const isTs = process.env.NODE_ENV !== 'production';
         url: process.env.DATABASE_URL,
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-        logging: false,
+        logging: true,
         ssl: isTs ? false : { rejectUnauthorized: false },
 
         extra: {

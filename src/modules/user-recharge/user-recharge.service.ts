@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -118,16 +119,18 @@ export class UserRechargeService {
       if (!status) throw new NotFoundException('No se encontro el estado de transaccion ', StatusCode.COMPLETED)
 
       const rechargeTransfer = await queryRunner.manager.findOne(RechargeTransfer, {
-        where: {id: rechargeTransferId}
+        where: {id: rechargeTransferId},
+        relations: {status: true},
       })
       if (!rechargeTransfer) throw new NotFoundException('No se encontro la recarga por transferencia');
+      if (rechargeTransfer.status.name !== StatusCode.PENDING) throw new BadRequestException('La recarga ya no esta en estado pendiente.');
 
       const wallet = await queryRunner.manager.findOne(Wallet, {
         where: {user_id : rechargeTransfer.user_id}
       });
       if (!wallet) throw new NotFoundException('No se encontro la Billetera del usuario');
 
-      rechargeTransfer.status_id = status.id;
+      rechargeTransfer.status = status;
       await queryRunner.manager.save(rechargeTransfer);
 
       wallet.becoin_balance= +wallet.becoin_balance + rechargeTransfer.amount_usd/ +this.superadminConfig.getPriceOneBecoin()
@@ -142,6 +145,12 @@ export class UserRechargeService {
       await queryRunner.manager.save(transaction);
     
       await queryRunner.commitTransaction();
+
+      const check = await this.dataSource.getRepository(RechargeTransfer).findOne({
+  where: { id: rechargeTransferId }
+});
+
+console.log('estado real DB:', check.status_id);
 
       return rechargeTransfer;
     } catch (error) {
@@ -165,11 +174,13 @@ export class UserRechargeService {
       if (!status) throw new NotFoundException('No se encontro el estado de transaccion ', StatusCode.FAILED)
     
       const rechargeTransfer = await queryRunner.manager.findOne(RechargeTransfer, {
-        where: {id: rechargeTransferId}
+        where: {id: rechargeTransferId},
+        relations: {status: true}
       })
       if (!rechargeTransfer) throw new NotFoundException('No se encontro la recarga por transferencia');
+      if (rechargeTransfer.status.name !== StatusCode.PENDING) throw new BadRequestException('La recarga ya no esta en estado pendiente.');
 
-      rechargeTransfer.status_id = status.id;
+      rechargeTransfer.status = status;
       await queryRunner.manager.save(rechargeTransfer);
 
       const transaction = await queryRunner.manager.findOne(Transaction, {
