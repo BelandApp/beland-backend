@@ -28,13 +28,16 @@ import { PaymentAccount } from './entities/payment-account.entity';
 import { Request } from 'express';
 import { CreatePaymentAccountDto } from './dto/create-payment-account.dto';
 import { UpdatePaymentAccountDto } from './dto/update-payment-account.dto';
+import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 
 @ApiTags('payment-account')
 @Controller('payment-account')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(FlexibleAuthGuard)
 export class PaymentAccountController {
-  constructor(private readonly service: PaymentAccountService) {}
+  constructor(private readonly service: PaymentAccountService,
+    private readonly superadminService: SuperadminConfigService,
+  ) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -67,6 +70,23 @@ export class PaymentAccountController {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     return await this.service.findAllUser(req.user.id, pageNumber, limitNumber);
+  }
+
+  @Get("at-recharge")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar cuantas de pago para recarga de saldo con paginación y filtrado por usuario' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+  @ApiResponse({ status: 200, description: 'Listado de cuantas de recarga retornado correctamente' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async atRecharge(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ): Promise<[PaymentAccount[], number]> {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const superadmin_id = this.superadminService.getSuperadminId();
+    return await this.service.findAllUser(superadmin_id, pageNumber, limitNumber);
   }
 
   @Get("user-active")

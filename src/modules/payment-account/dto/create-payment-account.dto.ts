@@ -1,71 +1,106 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
-  IsNotEmpty,
-  IsOptional,
-  Length,
-  Matches,
   IsBoolean,
+  IsOptional,
+  IsEnum,
+  Length,
+  IsEmail,
 } from 'class-validator';
+import { TypeAccountEnum } from '../enums/account.enum';
 
 export class CreatePaymentAccountDto {
+
   @ApiProperty({
-    example: 'Cuenta Principal',
-    description: 'Nombre identificador de la cuenta',
-    maxLength: 100,
+    example: 'Cuenta principal',
+    description: 'Nombre identificador de la cuenta'
   })
   @IsString()
-  @IsNotEmpty()
   @Length(1, 100)
   name: string;
 
+
   @ApiProperty({
     example: 'Juan Pérez',
-    description: 'Titular legal de la cuenta',
-    maxLength: 150,
+    description: 'Titular de la cuenta'
   })
   @IsString()
-  @IsNotEmpty()
   @Length(1, 150)
   accountHolder: string;
 
-  @ApiProperty({
-    example: '2850590940090418135201',
-    description: 'CBU de 22 dígitos',
-  })
-  @IsString()
-  @IsNotEmpty()
-  @Matches(/^\d{22}$/, { message: 'El CBU debe tener exactamente 22 dígitos' })
-  cbu: string;
 
   @ApiProperty({
-    example: 'mi.alias.cuenta',
-    description: 'Alias único de la cuenta',
-    maxLength: 50,
+    example: 'Banco Pichincha',
+    description: 'Banco asociado'
   })
   @IsString()
-  @IsNotEmpty()
   @Length(1, 50)
-  alias: string;
+  bank: string;
 
-  @ApiProperty({
-    example: 'Banco Nación',
-    description: 'Banco asociado (opcional)',
-    maxLength: 50,
-    required: false,
+
+  @ApiPropertyOptional({
+    example: 'juan@mail.com',
+    description: 'Email asociado a la cuenta'
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 50)
-  bank?: string;
+  @IsEmail()
+  email?: string;
 
-  @ApiProperty({
+
+  @ApiPropertyOptional({
     example: true,
-    description: 'Indica si la cuenta está activa',
-    default: true,
+    description: 'Estado de la cuenta'
   })
   @IsOptional()
   @IsBoolean()
-  isActive?: boolean;
+  is_active?: boolean;
 
+
+  // ---------- ECUADOR ----------
+  @ApiPropertyOptional({
+    example: '1790012345001',
+    description: 'RUC ecuatoriano'
+  })
+  @IsOptional()
+  @IsString()
+  ruc?: string;
+
+
+  @ApiPropertyOptional({
+    example: '220123456789',
+    description: 'Número de cuenta bancaria'
+  })
+  @IsOptional()
+  @IsString()
+  nro_account?: string;
+
+
+  // ---------- ARGENTINA ----------
+  @ApiPropertyOptional({
+    example: '2850590940090418135201',
+    description: 'CBU argentino (22 dígitos)'
+  })
+  @IsOptional()
+  @IsString()
+  @Length(22, 22)
+  cbu?: string;
+
+
+  @ApiPropertyOptional({
+    example: 'juan.perez.mp',
+    description: 'Alias bancario'
+  })
+  @IsOptional()
+  @IsString()
+  @Length(3, 50)
+  alias?: string;
+
+
+  @ApiProperty({
+    enum: TypeAccountEnum,
+    example: TypeAccountEnum.AHORRO,
+    description: 'Tipo de cuenta'
+  })
+  @IsEnum(TypeAccountEnum)
+  type_account: TypeAccountEnum;
 }
