@@ -785,10 +785,7 @@ export class OrdersService {
   }
 
   async collected (order_id: string, is_collected: boolean = true): Promise<{ success: boolean; code: string }> {
-    const qr = this.dataSource.createQueryRunner();
-
-    await qr.connect();
-    await qr.startTransaction();
+    const qr = this.dataSource.createQueryRunner(); 
 
     try {      
       /* =======================================================
@@ -823,17 +820,23 @@ export class OrdersService {
 
       if (is_collected) {
         /* =======================================================
-        * 6️⃣ BECOIN GREEN AL USUARIO
+        * 6️⃣ BECOIN GREEN AL USUARIO (PORCENTAJE POR RECICLAR)
         * ======================================================= */
         const userWallet = await qr.manager.findOne(Wallet, {
           where: { user_id: order.user_id },
         });
+
         if (!userWallet)
           throw new NotFoundException('Wallet del usuario no encontrada');
 
-        userWallet.becoin_green = +userWallet.becoin_green + Number(
-          this.superadminService.recicled_becoin,
+        const percentage = Number(this.superadminService.recicled_becoin);
+
+        const becoinGreenToAdd = Math.ceil(
+          Number(order.subtotal_becoin) * (percentage / 100)
         );
+
+        userWallet.becoin_green =
+          Number(userWallet.becoin_green) + becoinGreenToAdd;
 
         await qr.manager.save(userWallet);
       }
