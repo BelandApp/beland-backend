@@ -784,7 +784,7 @@ export class OrdersService {
     }
   }
 
-  async collected (order_id: string, is_collected: boolean = true): Promise<{ success: boolean; code: string }> {
+  async collected (order_id: string): Promise<{ success: boolean; code: string }> {
     const qr = this.dataSource.createQueryRunner(); 
 
     try {      
@@ -809,48 +809,38 @@ export class OrdersService {
           throw new BadRequestException('La orden ya fue recolectada');
       const oldStatus = order.status_id;
 
-      if (is_collected) {
+      order.status_id = statusCollected.id;
+      order.collected_at = new Date();
+      order.recycled_code = await this.generateUniqueCode();
+      await qr.manager.save(order);
 
-        order.status_id = statusCollected.id;
-        order.collected_at = new Date();
-        order.recycled_code = await this.generateUniqueCode();
 
-        await qr.manager.save(order);
-      }
+      const userWallet = await qr.manager.findOne(Wallet, {
+        where: { user_id: order.user_id },
+      });
 
-      if (is_collected) {
-        /* =======================================================
-        * 6️⃣ BECOIN GREEN AL USUARIO (PORCENTAJE POR RECICLAR)
-        * ======================================================= */
-        const userWallet = await qr.manager.findOne(Wallet, {
-          where: { user_id: order.user_id },
-        });
+      if (!userWallet)
+        throw new NotFoundException('Wallet del usuario no encontrada');
 
-        if (!userWallet)
-          throw new NotFoundException('Wallet del usuario no encontrada');
+      const percentage = Number(this.superadminService.recicled_becoin);
 
-        const percentage = Number(this.superadminService.recicled_becoin);
+      const becoinGreenToAdd = Math.ceil(
+        Number(order.subtotal_becoin) * (percentage / 100)
+      );
 
-        const becoinGreenToAdd = Math.ceil(
-          Number(order.subtotal_becoin) * (percentage / 100)
-        );
+      userWallet.becoin_green =
+        Number(userWallet.becoin_green) + becoinGreenToAdd;
 
-        userWallet.becoin_green =
-          Number(userWallet.becoin_green) + becoinGreenToAdd;
-
-        await qr.manager.save(userWallet);
-      }
+      await qr.manager.save(userWallet);
       /* =======================================================
       * 7️⃣ COMMIT + NOTIFICACIÓN
       * ======================================================= */
       await qr.commitTransaction();
 
-      if (is_collected) {
         this.notificationsGateway.notifyStatusOrders(order.user_id, {
           status_old_id: oldStatus,
           status_new_id: statusCollected.id,
         });
-      }
 
       return { success: true, code: order.recycled_code ?? "NO RECYCLE-NO CODE " };
 
