@@ -1,6 +1,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -161,17 +162,40 @@ export class UserAddressService {
     }
   }
 
-
   async remove(id: string) {
     try {
       const res = await this.repository.remove(id);
-      if (res.affected === 0)
+
+      console.log('DELETE RESULT:', res);
+
+      if (!res.affected || res.affected < 1) {
         throw new NotFoundException(
           `No se encontró ${this.completeMessage}`,
         );
+      }
+
       return res;
-    } catch (error) {
-      throw new ConflictException(`No se puede eliminar ${this.completeMessage}`);
+    } catch (error: unknown) {
+
+      // 🔎 Log completo en Railway
+      console.error('ERROR EN REMOVE:', error);
+
+      // ✅ Si ya es una HttpException, no la transformes
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // ✅ Si es Error real
+      if (error instanceof Error) {
+        throw new InternalServerErrorException(
+          `Error inesperado al eliminar ${this.completeMessage}: ${error.message}`,
+        );
+      }
+
+      // 🔥 fallback extremo
+      throw new InternalServerErrorException(
+        `Error desconocido al eliminar ${this.completeMessage}`,
+      );
     }
   }
 }

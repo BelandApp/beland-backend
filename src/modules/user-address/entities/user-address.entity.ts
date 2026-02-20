@@ -10,7 +10,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity'; 
-import { Order } from '../../orders/entities/order.entity';
+import { Order } from '../../orders/entities/order.entity'; 
 
 @Entity('user_addresses')
 export class UserAddress {
