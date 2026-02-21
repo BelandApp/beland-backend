@@ -537,7 +537,6 @@ export class OrdersService {
         relations: {
           group: { members: true },
         },
-        lock: { mode: 'pessimistic_write' },
       });
 
       if (!order) throw new NotFoundException('Orden no encontrada');
@@ -926,7 +925,6 @@ export class OrdersService {
       const order = await qr.manager.findOne(Order, {
         where: { id: order_id },
         relations: ['status'],
-        lock: { mode: 'pessimistic_write' },
       });
 
       if (!order) throw new NotFoundException('Orden no encontrada');
