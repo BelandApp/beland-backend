@@ -937,7 +937,7 @@ export class OrdersService {
 
       const oldStatusId = order.status_id;
 
-      order.status_id = cancelledStatus.id;
+      order.status = cancelledStatus;
       order.observation = observation;
       await qr.manager.save(order);
 
@@ -994,7 +994,7 @@ export class OrdersService {
 
         // 🔹 PAYMENT PENDING → solo cancelar
         if (payment.status_id !== statusCompleted.id) {
-          payment.status_id = statusCancelled.id;
+          payment.status = statusCancelled;
           await qr.manager.save(payment);
           continue;
         }
@@ -1020,14 +1020,14 @@ export class OrdersService {
           wallet_id: userWallet.id,
           amount_becoin: amount,
           post_balance: userWallet.becoin_balance,
-          type_id: txCancel.id,
-          status_id: statusCompleted.id,
+          type: txCancel,
+          status: statusCompleted,
           reference: `CANCELLED-ORDER-${order.id}`,
         });
 
         // 🧾 Cancelar payment
-        payment.status_id = statusCancelled.id;
-        payment.transaction_id = userTx.id;
+        payment.status = statusCancelled;
+        payment.transaction = userTx;
         await qr.manager.save(payment);
 
         // 🏦 Superadmin
@@ -1044,8 +1044,8 @@ export class OrdersService {
           wallet_id: superAdminWallet.id,
           amount_becoin: amount,
           post_balance: superAdminWallet.becoin_balance,
-          type_id: txCancel.id,
-          status_id: statusCompleted.id,
+          type: txCancel,
+          status: statusCompleted,
           reference: `CANCELLED-ORDER-${order.id}`,
         });
       }
