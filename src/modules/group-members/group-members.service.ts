@@ -41,6 +41,7 @@ export class GroupMembersService {
         where: { id: group_id },
         relations: { 
           payment_type: true,
+          cart: true,
         }
       });
 
@@ -78,6 +79,8 @@ export class GroupMembersService {
 
     } catch (error: any) {
       await queryRunner.rollbackTransaction();
+
+      console.error('ERROR CREATE GROUP MEMBER:', error);
       
       if (error instanceof NotFoundException || error instanceof ConflictException) {
         throw error;
