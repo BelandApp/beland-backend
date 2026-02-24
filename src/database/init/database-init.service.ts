@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 
 // Seeders
@@ -113,6 +113,18 @@ export class DatabaseInitService {
         `Error al cargar Productos: ${JSON.stringify(error)}`,
       );
     }
+  }
+
+  async updateAllStock(quantity: number) {
+    if (quantity < 0) {
+      throw new BadRequestException('La cantidad no puede ser negativa');
+    }
+
+    return await this.dataSource
+      .createQueryBuilder()
+      .update(Product)
+      .set({ quantity })
+      .execute();
   }
 
   async addBecoinProd(): Promise<void> {

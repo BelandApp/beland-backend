@@ -27,6 +27,10 @@ export class CreateProductDto {
   @IsNumber()
   cost: number;
 
+  @ApiProperty({ description: 'Cantidad del producto en stock' })
+  @IsNumber()
+  quantity: number;
+
   @ApiProperty({ description: 'Precio del producto en USD' })
   @IsNumber()
   price: number;
