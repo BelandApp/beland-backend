@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -33,6 +34,19 @@ export class CreateServiceDto {
   @IsNumber()
   @Min(0)
   cost?: number;
+
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  day_limit_cancelled?: number;
+  
+  @ApiPropertyOptional({ example: 50 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  porcent_cancelled?: number; 
 
   @ApiPropertyOptional({ example: 8000 })
   @IsOptional()

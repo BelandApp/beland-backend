@@ -50,6 +50,11 @@
     "description": "Compra de servicios con BECOIN en BELAND"
   },
   {
+    "code": "SERVICE_PENALITY",
+    "name": "Penalidad Cancelación de Servicios",
+    "description": "Cancelación de servicios fuera de limites"
+  },
+  {
     "code": "PURCHASE_RESOURCE",
     "name": "Compra de Recursos",
     "description": "Adquisicion de recursos BELAND"
