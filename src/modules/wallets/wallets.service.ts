@@ -205,6 +205,15 @@ export class WalletsService {
           TransactionCode.RECHARGE,
         );
 
+      const typeOrange = await queryRunner.manager.findOne(TransactionType, {
+        where: { code: TransactionCode.ORANGE_CREDIT },
+      });
+      if (!type)
+        throw new ConflictException(
+          'No se encuentra el tipo ',
+          TransactionCode.ORANGE_CREDIT,
+        );
+
       // 3) Certificar que exista el estado 'COMPLETED'
       const status = await queryRunner.manager.findOne(TransactionState, {
         where: { code: 'COMPLETED' },
@@ -225,22 +234,52 @@ export class WalletsService {
         );
       }
 
-      const becoinAmount = amountUsd / priceOneBecoin;
+      // 1) Calcular BeCoins totales (sin redondear todavía)
+      const rawBecoinAmount = amountUsd / priceOneBecoin;
 
-      // 5) Actualizar saldo de la wallet
-      wallet.becoin_balance = Number(wallet.becoin_balance) + +becoinAmount;
-      if (isNaN(wallet.becoin_balance)) {
-        wallet.becoin_balance = 0;
-      }
+      // 2) Redondear BeCoins totales
+      const totalBeCoins = Math.floor(rawBecoinAmount);
+
+      // 3) Calcular 5% para orange
+      const orangeFee = Math.floor(totalBeCoins * 0.06);
+
+      // 4) BeCoins finales para el usuario
+      const userBeCoins = totalBeCoins - orangeFee;
+
+      // 5) Actualizar wallet
+      wallet.becoin_balance =
+        Number(wallet.becoin_balance) + userBeCoins;
+
+      wallet.becoin_orange =
+        Number(wallet.becoin_orange) + orangeFee;
+
+      // 6) Fallback de seguridad
+      if (isNaN(wallet.becoin_balance)) wallet.becoin_balance = 0;
+      if (isNaN(wallet.becoin_orange)) wallet.becoin_orange = 0;
+
+      // 7) Guardar
       const walletUpdated = await queryRunner.manager.save(wallet);
 
-      // 6) Registrar la transacción
+
+      // 6) Registrar la transacción del balance general
       await queryRunner.manager.save(Transaction, {
         wallet_id: wallet.id,
-        type,
-        status,
-        amount_becoin: +becoinAmount,
+        type_id: type.id,
+        status_id: status.id,
+        amount_becoin: +userBeCoins,
         post_balance: wallet.becoin_balance,
+        reference: dto.referenceCode,
+        payphone_transactionId: dto.payphone_transactionId?.toString(),
+        clientTransactionId: dto.clientTransactionId,
+      });
+
+      // 6) Registrar la transacción de las becoin_orange
+      await queryRunner.manager.save(Transaction, {
+        wallet_id: wallet.id,
+        type_id: typeOrange.id,
+        status,
+        amount_becoin: +orangeFee,
+        post_balance: wallet.becoin_orange,
         reference: dto.referenceCode,
         payphone_transactionId: dto.payphone_transactionId?.toString(),
         clientTransactionId: dto.clientTransactionId,

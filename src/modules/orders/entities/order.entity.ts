@@ -20,7 +20,7 @@ import { DeliveryStatus } from '../../delivery-status/entities/delivery-status.e
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id: string; 
 
   @Column({
     type: 'bigint',
@@ -31,6 +31,15 @@ export class Order {
 
   @Column({ type: 'integer', nullable:true})
   code: number;
+
+  @Column({ type: 'boolean', nullable:true, default:false})
+  paied: boolean;
+
+  @Column({ type: 'boolean', nullable:true, default:false})
+  returned_paied: boolean;
+
+  @Column({ type: 'boolean', nullable:true})
+  returned_split: boolean;
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
   subtotal_amount: number;
@@ -43,6 +52,12 @@ export class Order {
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
   total_becoin: number;
+
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
+  total_becoin_returned: number;
+
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
+  total_becoin_paied: number;
 
   @Column({ type: 'int', default: 0 })
   total_items: number;
@@ -80,6 +95,9 @@ export class Order {
   @Column({ type: 'timestamptz', nullable: true })
   delivered_at: Date;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  cancelled_at: Date;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
@@ -110,7 +128,7 @@ export class Order {
   @ManyToOne(() => User)
   @JoinColumn({name:'user_id'})
   user: User;
-  @Column('uuid')
+  @Column('uuid', { nullable:true })
   user_id: string;
 
   // payments_type: 'FULL' | 'EQUAL_SPLIT' | 'SPLIT';

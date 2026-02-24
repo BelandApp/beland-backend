@@ -5,10 +5,16 @@ import {
   Repository,
   DeleteResult,
   UpdateResult,
+  DataSource,
+  FindOptionsWhere,
+  ILike,
 } from 'typeorm'; 
 import { Group } from './entities/group.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { OrderDto } from 'src/common/dto/order.dto';
+import { GroupPrivacy } from './entities/group-privacy.entity';
+import { RespGetTypeDto } from 'src/dto/resp-app.dto';
+import { GetGroupsQueryDto } from './dto/filters-groups.dto';
 
 @Injectable()
 export class GroupsRepository {
@@ -17,26 +23,97 @@ export class GroupsRepository {
   constructor(
     @InjectRepository(Group)
     private readonly repository: Repository<Group>,
+    private readonly dataSurce: DataSource,
   ) {}
+
+  async findAllWithFilters(
+    query: GetGroupsQueryDto,
+  ): Promise<[Group[], number]> {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'created_at',
+      order = 'DESC',
+      name,
+      is_active,
+      user_id,
+      privacy_id,
+      is_delete = false,
+    } = query;
+
+    const where: FindOptionsWhere<Group> = {};
+
+    // 🔹 Soft delete
+    if (!is_delete) {
+      where.is_delete = false;
+    }
+
+    // 🔹 Filtros simples
+    if (typeof is_active === 'boolean') {
+      where.is_active = is_active;
+    }
+
+    if (user_id) {
+      where.user_id = user_id;
+    }
+
+    if (privacy_id) {
+      where.privacy_id = privacy_id;
+    }
+
+    // 🔹 Filtro por nombre (LIKE)
+    if (name) {
+      where.name = ILike(`%${name}%`);
+    }
+
+    return this.repository.findAndCount({
+      where,
+      relations: {
+        user: true,
+        group_type: true,
+        privacy: true,
+        cart:true
+      },
+      order: {
+        [sortBy]: order,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+  }
 
   async findOneById( id: string ): Promise<Group | null> {
     return await this.repository.findOne({
       where: {id},
-      relations: {group_type:true}
+      relations: {group_type:true, privacy:true, payment_type:true, user_address:true, cart:true}
     })
+  }
+
+  async findAllGroupPrivacy(): Promise<RespGetTypeDto<GroupPrivacy>> {
+    const [data, total] = await this.dataSurce.manager.findAndCount(GroupPrivacy, {
+      where: {is_active: true}
+    })
+    return {data, total}
   }
 
   async getGroupsByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {
     return await this.repository.find({
+      where: {members: {user_id}, is_active},
+      relations: {group_type:true, privacy:true, payment_type:true, cart:true},
+    })
+  }
+
+  async getGroupsCreatedByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {
+    return await this.repository.find({
       where: {user_id, is_active},
-      relations: {group_type:true},
+      relations: {group_type:true, privacy:true, payment_type:true, cart:true},
     })
   }
 
   async findOneByName(name: string): Promise<Group | null> {
     return this.repository.findOne({
       where: { name: name },
-      relations: ['user', 'members.user'], // Eager load relations for completeness
+      relations: ['user', 'members.user', 'cart'], // Eager load relations for completeness
     });
   }
 
@@ -86,7 +163,7 @@ export class GroupsRepository {
     return { groups, total };
   }
 
-  async create(group: Group): Promise<Group> {
+  async create(group: Partial<Group>): Promise<Group> {
     
     return await this.repository.save(group);
   }

@@ -23,7 +23,6 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { Request } from 'express'; // Import Request from express for req.user
-import { User } from 'src/modules/users/entities/users.entity'; // Import User entity for type casting req.user
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { GroupMember } from './entities/group-member.entity';
 
@@ -81,9 +80,9 @@ export class GroupMembersController {
   @Post()
   @ApiOperation({ summary: 'Agregar un miembro a un grupo' })
   @ApiResponse({ status: 201, description: 'Miembro agregado exitosamente.' })
-  async create(@Body() createDto: CreateGroupMemberDto, @Req() req: Request): Promise<GroupMember> {
+  async create(@Body() createDto: CreateGroupMemberDto): Promise<GroupMember> {
     // Assuming createDto is valid (CreateGroupMemberDto)
-    return await this.service.createGroupMember(createDto, req.user?.id)
+    return await this.service.createGroupMember(createDto)
   }
 
   @Post('many')
@@ -92,13 +91,6 @@ export class GroupMembersController {
   async createMany(@Body() createDto: CreateManyGroupMemberDto, @Req() req: Request): Promise<{ message: string; success: true }> {
     // Assuming createDto is valid (CreateGroupMemberDto)
     return await this.service.createMany(createDto, req.user?.id)
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar un miembro del grupo por ID. Solo Creador o mismo miembro a eliminar pueden realizar esta acción.' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string, @Req() req: Request): Promise<{message: string, success: boolean}> {
-    return await this.service.deleteGroupMember(id, req.user?.id);
   }
 
   @Delete('group-and-user')
@@ -112,5 +104,12 @@ export class GroupMembersController {
     @Req() req: Request
   ): Promise<{message: string, success: boolean}> {
     return await this.service.removeMemberByGroupAndUser(groupId, userId, req.user?.id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar un miembro del grupo por ID. Solo Creador o mismo miembro a eliminar pueden realizar esta acción.' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id') id: string, @Req() req: Request): Promise<{message: string, success: boolean}> {
+    return await this.service.deleteGroupMember(id, req.user?.id);
   }
 }

@@ -19,23 +19,19 @@ export class WithdrawAccount {
   id: string;
 
   // Pais
-  @Column({ type: 'enum', enum: CountryEnum })
+  @Column({ type: 'enum', enum: CountryEnum, nullable:true })
   country: CountryEnum;
 
-  @Column({ type: 'enum', enum: Currency })
+  @Column({ type: 'enum', enum: Currency, nullable:true })
   currency: Currency;
 
-  //Banco
-  @Column({ length: 50 })
-  bankCode: string;
-
-  @Column({ length: 150 })
+  @Column({ length: 150, nullable:true })
   bankName: string;
 
   @ManyToOne(() => WithdrawAccountType, { eager: true })
-  @JoinColumn({ name: 'withdraw_account_type_id' })
+  @JoinColumn({ name: 'withdraw_account_type_id'})
   withdraw_account_type: WithdrawAccountType;
-  @Column('uuid')
+  @Column('uuid',{ nullable:true})
   withdraw_account_type_id: string;
 
   // Ecuador / Colombia
@@ -50,13 +46,13 @@ export class WithdrawAccount {
   alias: string | null;
 
   // Datos del titular
-  @Column({ length: 150 })
+  @Column({ length: 150, nullable:true })
   holderName: string;
 
-  @Column({ length: 30 })
+  @Column({ length: 30, nullable:true })
   holderDocument: string;
 
-  @Column({ type: 'enum', enum: HolderDocumentType })
+  @Column({ type: 'enum', enum: HolderDocumentType, nullable:true })
   holderDocumentType: HolderDocumentType;
 
   @ManyToOne(() => User, (user) => user.withdraw_accounts, { onDelete: 'CASCADE' })

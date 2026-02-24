@@ -13,25 +13,25 @@ export class Cart {
   @OneToOne(() => User, user => user.cart, { cascade: true, onDelete: 'CASCADE' })
   @JoinColumn({name:'user_id'})
   user: User;
-  @Column('uuid')
+  @Column('uuid', {nullable:true})
   user_id:string
 
   @ManyToOne(() => UserAddress, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'address_id' })
   address: UserAddress;
   @Column('uuid', {nullable:true})
-  address_id: string;
+  address_id: string; 
 
-  @ManyToOne(() => Group, {
+  @OneToOne(() => Group, {
     nullable: true,
     onDelete: 'SET NULL',
   })
-  @JoinColumn({name:'group_ip'})
+  @JoinColumn({name:'group_id'})
   group: Group;
   @Column('uuid', { nullable:true })
   group_id: string;
 
-  // payments_type: 'FULL' | 'EQUAL_SPLIT';
+  // payments_type: 'FULL' | 'EQUAL_SPLIT' | 'SPLIT';
   @ManyToOne(() => PaymentType, (type) => type.carts, { eager: true })
   @JoinColumn({ name: 'payment_type_id' })
   payment_type: PaymentType;
@@ -46,9 +46,6 @@ export class Cart {
 
   @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
   total_weight: number;
-
-  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
-  total_weight_recycled: number;
 
   @Column({ type: 'int', default: 0 })
   total_items: number;

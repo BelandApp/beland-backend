@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -35,6 +36,7 @@ export class UserRechargeService {
         pageNumber,
         limitNumber,
         status_id,
+
       );
       return response;
     } catch (error) {
@@ -75,8 +77,8 @@ export class UserRechargeService {
 
       const transaction = await queryRunner.manager.save (Transaction, {
         wallet_id: wallet.id,
-        type_id: type.id,
-        status_id: status.id,
+        type: type,
+        status: status,
         amount_becoin: +dto.amount_usd / +this.superadminConfig.getPriceOneBecoin(),
         post_balance: +wallet.becoin_balance,
         reference: dto.transfer_id,
@@ -84,11 +86,12 @@ export class UserRechargeService {
 
       const rechargeTransferCreated = queryRunner.manager.create(RechargeTransfer, {
         user_id,
-        status_id:status.id,
+        status:status,
         amount_usd: dto.amount_usd,
         payment_account_id: dto.payment_account_id,
         transfer_id: dto.transfer_id,
-        transaction_id: transaction.id,
+        transaction: transaction,
+        ticket_image_url: dto.ticket_image_url,
       })
       const rechargeTransfer = await queryRunner.manager.save(rechargeTransferCreated);
     
@@ -116,16 +119,19 @@ export class UserRechargeService {
       if (!status) throw new NotFoundException('No se encontro el estado de transaccion ', StatusCode.COMPLETED)
 
       const rechargeTransfer = await queryRunner.manager.findOne(RechargeTransfer, {
-        where: {id: rechargeTransferId}
+        where: {id: rechargeTransferId},
+        relations: {status: true},
       })
       if (!rechargeTransfer) throw new NotFoundException('No se encontro la recarga por transferencia');
+      if (rechargeTransfer.status.name === StatusCode.COMPLETED) throw new BadRequestException('La recarga ya esta en estado COMPLETADA.');
+      if (rechargeTransfer.status.name === StatusCode.FAILED) throw new BadRequestException('La recarga ya fue registrada como FALLIDA.');
 
       const wallet = await queryRunner.manager.findOne(Wallet, {
         where: {user_id : rechargeTransfer.user_id}
       });
       if (!wallet) throw new NotFoundException('No se encontro la Billetera del usuario');
 
-      rechargeTransfer.status_id = status.id;
+      rechargeTransfer.status = status;
       await queryRunner.manager.save(rechargeTransfer);
 
       wallet.becoin_balance= +wallet.becoin_balance + rechargeTransfer.amount_usd/ +this.superadminConfig.getPriceOneBecoin()
@@ -140,6 +146,12 @@ export class UserRechargeService {
       await queryRunner.manager.save(transaction);
     
       await queryRunner.commitTransaction();
+
+      const check = await this.dataSource.getRepository(RechargeTransfer).findOne({
+  where: { id: rechargeTransferId }
+});
+
+console.log('estado real DB:', check.status_id);
 
       return rechargeTransfer;
     } catch (error) {
@@ -163,11 +175,14 @@ export class UserRechargeService {
       if (!status) throw new NotFoundException('No se encontro el estado de transaccion ', StatusCode.FAILED)
     
       const rechargeTransfer = await queryRunner.manager.findOne(RechargeTransfer, {
-        where: {id: rechargeTransferId}
+        where: {id: rechargeTransferId},
+        relations: {status: true}
       })
       if (!rechargeTransfer) throw new NotFoundException('No se encontro la recarga por transferencia');
+      if (rechargeTransfer.status.name === StatusCode.COMPLETED) throw new BadRequestException('La recarga ya esta en estado COMPLETADA.');
+      if (rechargeTransfer.status.name === StatusCode.FAILED) throw new BadRequestException('La recarga ya fue registrada como FALLIDA.');
 
-      rechargeTransfer.status_id = status.id;
+      rechargeTransfer.status = status;
       await queryRunner.manager.save(rechargeTransfer);
 
       const transaction = await queryRunner.manager.findOne(Transaction, {

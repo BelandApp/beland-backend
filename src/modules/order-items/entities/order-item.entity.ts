@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
 import { Product } from '../../products/entities/product.entity';
+import { User } from '../../users/entities/users.entity';
 
 @Entity('order_items')
 export class OrderItem {
@@ -38,6 +39,9 @@ export class OrderItem {
   total_becoin: number;
 
   @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
+  unit_weight: number;
+
+  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
   total_weight: number;
 
   @CreateDateColumn({ type: 'timestamptz' })
@@ -46,9 +50,14 @@ export class OrderItem {
   @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'order_id' })
   order: Order;
-
   @Column('uuid')
   order_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+  @Column('uuid', { nullable:true })
+  user_id: string;
 
   @ManyToOne(() => Product, (product) => product.order_items)
   @JoinColumn({ name: 'product_id' })
@@ -74,9 +83,13 @@ export class OrderItem {
       const price = Number(this.unit_price ?? 0);
       this.total_price = this.quantity * price;
 
-      // Calcular total_becoin si aplica
+      // Calcular total_becoin
       const becoin = Number(this.unit_becoin ?? 0);
       this.total_becoin = this.unit_becoin ? this.quantity * becoin : null;
+
+      // Calcular total_weight
+      const weight = Number(this.unit_weight ?? 0);
+      this.total_weight = this.unit_weight ? this.quantity * weight : null;
 
     }
   }

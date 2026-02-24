@@ -14,13 +14,20 @@ export class PaymentTypesService {
   constructor(private readonly repository: PaymentTypesRepository) {}
 
   async findAll(
-    pageNumber: number,
-    limitNumber: number,
   ): Promise<[PaymentType[], number]> {
     try {
       const response = await this.repository.findAll(
-        pageNumber,
-        limitNumber,
+      );
+      return response;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async findAtServices(
+  ): Promise<[PaymentType[], number]> {
+    try {
+      const response = await this.repository.findAtServices(
       );
       return response;
     } catch (error) {

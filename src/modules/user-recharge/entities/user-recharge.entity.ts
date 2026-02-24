@@ -26,8 +26,11 @@ export class RechargeTransfer {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount_usd: number;
 
-  @Column({ type: 'varchar', length: 100, unique: true })
+  @Column({ type: 'varchar', length: 100 })
   transfer_id: string; // identificador bancario
+
+  @Column({ type: 'varchar'})
+  ticket_image_url:string
 
   @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })

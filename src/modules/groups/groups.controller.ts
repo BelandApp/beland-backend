@@ -12,7 +12,12 @@ import {
   HttpStatus,
   UseGuards,
   ParseUUIDPipe, // Para validar IDs como UUIDs automáticamente
-  Put, // Importar ValidationPipe
+  Put,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
+  UploadedFile,
+  Patch, // Importar ValidationPipe
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -25,12 +30,20 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
-  ApiBody, // Para documentar el cuerpo de la solicitud en Swagger
+  ApiBody,
+  ApiConsumes, // Para documentar el cuerpo de la solicitud en Swagger
 } from '@nestjs/swagger';
 // Rutas absolutas para guards y decoradores
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { Request } from 'express'; 
 import { Group } from './entities/group.entity';
+import { GetGroupsQueryDto } from './dto/filters-groups.dto';
+import { RespGetTypeDto } from 'src/dto/resp-app.dto';
+import { GroupPrivacy } from './entities/group-privacy.entity';
+import { UserAddress } from '../user-address/entities/user-address.entity';
+import { GroupType } from '../group-type/entities/group-type.entity';
+import { PaymentType } from '../payment-types/entities/payment-type.entity';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('groups') // Etiqueta para la documentación de Swagger
 @Controller('groups')
@@ -41,10 +54,65 @@ export class GroupsController {
     private readonly groupsService: GroupsService,
   ) {}
 
+  // src/groups/groups.controller.ts
+
+  @Get()
+  @UseGuards(FlexibleAuthGuard)
+  @ApiOperation({
+    summary: 'Listar grupos con filtros, paginación y orden',
+  })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({
+    status: 200,
+    description: 'Listado paginado de grupos',
+    type: [Group],
+  })
+  async findAll(
+    @Query() query: GetGroupsQueryDto,
+  ): Promise<{
+    data: Group[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.groupsService.findAll(query);
+  }
+
+  @Get('privacy-type')
+  @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
+  @ApiOperation({
+    summary:'Obtener todos tipos de provacidad de grupo'
+  })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({status: 200,description:'Lista de tipos de ´rivacidad de grupos'})
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  async getGroupsPrivacy(): Promise<RespGetTypeDto<GroupPrivacy>> {
+    return await this.groupsService.getGroupPrivacy();
+  }
+
+  @Get('info-create')
+  @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
+  @ApiOperation({
+    summary:'Todas las relaciones para crear un grupo'
+  })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({status: 200,description:'Listas de campos necesarios para la creacion'})
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  async getInfoCreate(): Promise<{
+    user_address: UserAddress[],
+    group_types: GroupType[],
+    group_privacies: GroupPrivacy[],
+    payment_types: PaymentType[]
+  }> {
+    return await this.groupsService.getInfoCreate();
+  }
+
   @Get('by-user')
   @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
   @ApiOperation({
-    summary:'Obtener todos los grupos a los que pertenece el usuario autenticado',
+    summary:'Obtener todos los grupos a los que pertenece el usuario autenticado como miembro.',
     description:'Recupera una lista de todos los grupos de los que el usuario autenticado es miembro o líder. Requiere autenticación.',
   })
   @ApiBearerAuth('JWT-auth')
@@ -55,6 +123,21 @@ export class GroupsController {
   @ApiQuery({name: 'is_active', required: false, type: Boolean, description:'Filtrar grupos activos'})
   async getGroupsByUserId(@Req() req: Request, @Query('is_active') is_active: boolean): Promise<Group[]> {
     return await this.groupsService.getGroupsByUserId(req.user?.id, is_active);
+  }
+
+  @Get('user-created')
+  @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
+  @ApiOperation({
+    summary:'Obtener todos los grupos creados por el usuario.',
+  })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({status: 200,description:'Lista de grupos creados por el usuario.'})
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({status: 403,description: 'Prohibido (ID de usuario no encontrado).'})
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  @ApiQuery({name: 'is_active', required: false, type: Boolean, description:'Filtrar grupos activos'})
+  async getGroupsCreatedByUserId(@Req() req: Request, @Query('is_active') is_active: boolean): Promise<Group[]> {
+    return await this.groupsService.getGroupsCreatedByUserId(req.user?.id, is_active);
   }
 
   @Post()
@@ -74,6 +157,7 @@ export class GroupsController {
     @Body() createGroupDto: CreateGroupDto,
     @Req() req: Request,
   ): Promise<Group> {
+
     return await this.groupsService.createGroup(
         createGroupDto,
         req.user?.id,
@@ -97,6 +181,40 @@ export class GroupsController {
     @Param('groupId', ParseUUIDPipe) groupId: string, 
   ): Promise<Group> {
       return await this.groupsService.findGroupById(groupId);
+  }
+
+  @Patch('image/:id')
+  @UseGuards(FlexibleAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('image')
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Actualizar imagen del grupo' })
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  async updateGroupImage(
+    @Param('id') groupId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ): Promise<Group> {
+
+    if (!file) {
+      throw new BadRequestException('Debe enviar una imagen');
+    }
+
+    if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)) {
+      throw new BadRequestException('Formato de imagen inválido');
+    }
+
+    if (file.size > 10_000_000) {
+      throw new BadRequestException('La imagen supera los 10 MB');
+    }
+
+    return this.groupsService.updateGroupImage(
+      groupId,
+      file,
+      req.user.id,
+    );
   }
 
   @Put('soft-delete/:groupId')

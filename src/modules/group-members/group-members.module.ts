@@ -5,10 +5,12 @@ import { GroupMembersService } from './group-members.service';
 import { GroupMembersController } from './group-members.controller';
 import { GroupMember } from './entities/group-member.entity';
 import { GroupMembersRepository } from './group-members.repository';
+import { CartItemsRepository } from '../cart-items/cart-items.repository';
+import { CartItem } from '../cart-items/entities/cart-item.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GroupMember])],
+  imports: [TypeOrmModule.forFeature([GroupMember, CartItem])],
   controllers: [GroupMembersController], 
-  providers: [GroupMembersService, GroupMembersRepository]
+  providers: [GroupMembersService, GroupMembersRepository,CartItemsRepository]
 })
 export class GroupMembersModule { }

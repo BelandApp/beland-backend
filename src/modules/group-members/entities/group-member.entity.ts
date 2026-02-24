@@ -19,13 +19,13 @@ export class GroupMember {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-@Column({
-  type: 'enum',
-  enum: RoleGroupEnum,
-  enumName: 'group_member_role_enum',
-  default: RoleGroupEnum.MEMBER,
-})
-role: RoleGroupEnum;
+  @Column({
+    type: 'enum',
+    enum: RoleGroupEnum,
+    enumName: 'group_member_role_enum',
+    default: RoleGroupEnum.MEMBER,
+  })
+  role: RoleGroupEnum;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
@@ -35,7 +35,7 @@ role: RoleGroupEnum;
 
   // ManyToOne relationship with Group
   @ManyToOne(() => Group, (group) => group.members, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'group_id', referencedColumnName: 'id' })
+  @JoinColumn({ name: 'group_id'})
   group: Group;
   @Column('uuid')
   group_id:string;
@@ -48,4 +48,17 @@ role: RoleGroupEnum;
   user: User;
   @Column('uuid')
   user_id:string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true })
+  pending_amount_group: number; 
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true })
+  pending_amount_personal: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true, insert: false, update:false })
+  pendingAmount: number;
+
+  @Column({ type: 'boolean', default: false, nullable: true })
+  paied: boolean; 
+
 }

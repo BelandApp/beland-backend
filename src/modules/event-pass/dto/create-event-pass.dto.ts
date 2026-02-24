@@ -37,7 +37,7 @@ export class CreateEventPassDto {
     description: 'Imagen principal del EventPass',
     type: 'string',
     format: 'binary',
-    required: false,
+    required: false, 
   })
   @IsOptional()
   image_url?: any;

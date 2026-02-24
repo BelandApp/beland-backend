@@ -85,44 +85,69 @@ export class EventPassService {
     this.logger.log(`Iniciando creación de EventPass para el evento: ${dto.name}`);
 
     try {
-      // --- 1️⃣ Validaciones previas ---
-      if (files.image_url.length === 0) {
+      // --- 1️⃣ Validaciones seguras ---
+      if (!files?.image_url || files.image_url.length === 0) {
         throw new BadRequestException('Debe subir al menos una imagen principal');
       }
 
-      // --- 2️⃣ Separar la imagen principal de las adicionales ---
       const mainImageFile = files.image_url[0];
-      const additionalFiles = files.images_urls;
-      this.logger.debug(`Archivos recibidos: principal (${mainImageFile?.originalname}), adicionales: ${additionalFiles.length}`);
+      const additionalFiles: Express.Multer.File[] = files?.images_urls ?? [];
 
-      // --- 3️⃣ Subir imágenes a Cloudinary ---
+      this.logger.debug(
+        `Archivos recibidos: principal (${mainImageFile?.originalname}), adicionales: ${additionalFiles.length}`,
+      );
+
+      // --- 2️⃣ Subir imágenes a Cloudinary ---
       this.logger.log('Subiendo imágenes a Cloudinary...');
-      const mainImage = await this.cloudinaryService.uploadImage(mainImageFile) as string;
-      const additionalImages = additionalFiles.length > 0 ? await this.cloudinaryService.uploadImage(additionalFiles) as string[] : [] as string[];
 
-      // --- 4️⃣ Calcular el precio total con descuento ---
+      const mainImage = (await this.cloudinaryService.uploadImage(
+        mainImageFile,
+      )) as string;
+
+      const additionalImages: string[] =
+        additionalFiles.length > 0
+          ? ((await this.cloudinaryService.uploadImage(
+              additionalFiles,
+            )) as string[])
+          : [];
+
+      // --- 3️⃣ Calcular precio con descuento ---
       const discount = Number(dto.discount ?? 0);
-      const totalPrice = +dto.price_becoin - (+dto.price_becoin * discount) / 100;
+      const price = Number(dto.price_becoin);
 
-      this.logger.debug(`Precio base: ${dto.price_becoin}, descuento: ${discount}%, total final: ${totalPrice}`);
+      const totalPrice = price - (price * discount) / 100;
 
-      // --- 5️⃣ Crear la entidad EventPass ---
+      this.logger.debug(
+        `Precio base: ${price}, descuento: ${discount}%, total final: ${totalPrice}`,
+      );
+
+      // --- 4️⃣ Crear entidad ---
       const eventPass = await this.repository.create({
         ...dto,
         image_url: mainImage,
         images_urls: additionalImages,
         total_becoin: totalPrice,
-        created_by_id: user_id, // o user.id según tu entidad
+        created_by_id: user_id,
       });
 
+      // --- 5️⃣ Generar QR ---
       const qr = await QRCode.toDataURL(eventPass.id);
-      const saveEventPass = await this.repository.create({...eventPass, qr});
+      eventPass.qr = qr;
 
-      this.logger.log(`EventPass creado con éxito: ID ${eventPass.id}`);
-      return eventPass;
-    } catch (error) {
-  console.error('Error al subir a Cloudinary:', error); // 🔹 así vemos todo
-  throw new InternalServerErrorException('Error al crear el evento: ' + JSON.stringify(error));
+      // --- 6️⃣ Guardar en DB ---
+      const savedEventPass = await this.repository.create(eventPass);
+
+      this.logger.log(`EventPass creado con éxito: ID ${savedEventPass.id}`);
+
+      return savedEventPass;
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+
+      this.logger.error('Error al crear EventPass', err.stack);
+
+      throw new InternalServerErrorException(
+        'Error al crear el evento: ' + err.message,
+      );
     }
   }
 

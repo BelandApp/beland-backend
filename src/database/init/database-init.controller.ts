@@ -10,6 +10,7 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { DatabaseInitService } from './database-init.service';
+import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
 
 @ApiTags('database-init')
 @Controller('database-init')
@@ -54,5 +55,16 @@ export class DatabaseIntiController {
   async loadSuperAdminAndRole(): Promise<void> {
     return await this.service.loadSuperAdminAndRole();
   }
+
+  /*@Post('quemar-becoin-manual')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ 
+    summary: 'Quema 4000 becoin a Richard Gomez', })
+  @ApiResponse({ status: 201, description: 'Creacion exitosa' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 500, description: 'No se pudo crear' })
+  async quemaMAnual(): Promise<{wallet: Wallet, message: string}> {
+    return await this.service.retiroManual();
+  }*/
 
 }

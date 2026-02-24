@@ -11,4 +11,12 @@ export class CreateGroupTypeDto {
   @IsNotEmpty()
   @MaxLength(255)
   name: string;
+
+  @ApiProperty({
+    description: 'Imagen por defecto del tipo de grupo',
+    maxLength: 255,
+  })
+  @IsString()
+  @IsNotEmpty()
+  image_url: string;
 }

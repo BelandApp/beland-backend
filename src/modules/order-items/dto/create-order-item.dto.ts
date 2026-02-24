@@ -31,7 +31,7 @@ export class CreateOrderItemDto {
   @IsNumber()
   total_becoin: number;
 
-  @ApiProperty({ description: 'Precio total de la línea del pedido en becoin' })
+  @ApiProperty({ description: 'Fecha y hora de entrega' })
   @IsNumber()
   delivery_at: Date;
 }

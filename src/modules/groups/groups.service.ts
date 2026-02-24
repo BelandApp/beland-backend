@@ -6,6 +6,7 @@ import {
   ConflictException,
   Logger,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { GroupsRepository } from './groups.repository';
 import { Group } from './entities/group.entity';
@@ -14,16 +15,83 @@ import { plainToInstance } from 'class-transformer';
 import { DataSource } from 'typeorm';
 import { GetGroupsQueryDto } from './dto/filters-groups.dto';
 import { RoleGroupEnum } from '../group-members/enums/role-group.enum';
+import { RespGetTypeDto } from 'src/dto/resp-app.dto';
+import { GroupPrivacy } from './entities/group-privacy.entity';
+import { UserAddress } from '../user-address/entities/user-address.entity';
+import { GroupType } from '../group-type/entities/group-type.entity';
+import { PaymentType } from '../payment-types/entities/payment-type.entity';
+import { GroupPrivacyCode } from './enums/group-privacy.enum';
+import { Cart } from '../cart/entities/cart.entity';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 @Injectable()
 export class GroupsService {
+  
   private readonly logger = new Logger(GroupsService.name);
 
   constructor(
     private readonly groupsRepository: GroupsRepository,
     private readonly dataSource: DataSource,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  async createGroup(createGroupDto: Partial<Group>,user_id: string): Promise<Group> {
+  async findAll(
+    query: GetGroupsQueryDto,
+  ): Promise<{
+    data: Group[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const {
+      page = 1,
+      limit = 10,
+    } = query;
+
+    const [data, total] =
+      await this.groupsRepository.findAllWithFilters(query);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+async getInfoCreate(): Promise<{
+    user_address: UserAddress[];
+    group_types: GroupType[];
+    group_privacies: GroupPrivacy[];
+    payment_types: PaymentType[];
+  }> {
+    const [
+      user_address,
+      group_types,
+      group_privacies,
+      payment_types,
+    ] = await Promise.all([
+      this.dataSource.getRepository(UserAddress).find({ where: { is_active: true } }),
+      this.dataSource.getRepository(GroupType).find(),
+      this.dataSource.getRepository(GroupPrivacy).find({ where: { is_active: true } }),
+      this.dataSource.getRepository(PaymentType).find({ where: { is_active: true } }),
+    ]);
+
+    return {
+      user_address,
+      group_types,
+      group_privacies,
+      payment_types,
+    };
+  }
+
+  async getGroupPrivacy(): Promise<RespGetTypeDto<GroupPrivacy>> {
+    const [data, total] = await this.dataSource.manager.findAndCount(GroupPrivacy)
+    return {data, total}
+  }
+
+  async createGroup(
+    createGroupDto: Partial<Group>,
+    user_id: string): Promise<Group> {
     this.logger.debug(
       `createGroup(): Intentando crear grupo para el líder ID: ${user_id}`,
     );
@@ -43,6 +111,11 @@ export class GroupsService {
         );
       }
 
+      if (!createGroupDto.privacy_id) {
+        const privacy = await this.dataSource.manager.findOne(GroupPrivacy, {where: {code: GroupPrivacyCode.PRIVATE}})
+        createGroupDto.privacy_id = privacy.id;
+      }
+
       // Guardar la nueva entidad de grupo
       const savedGroup = await queryRunner.manager.save(Group, {
         ...createGroupDto,
@@ -50,11 +123,13 @@ export class GroupsService {
       });
 
       // Guardar la membresía del grupo para el líder
-      const leaderMembership = await queryRunner.manager.save(GroupMember, {
-        group: savedGroup, // Asociar con el grupo recién creado
+      await queryRunner.manager.save(GroupMember, {
+        group_id: savedGroup.id, // Asociar con el grupo recién creado
         user_id, // Asociar con el usuario líder
         role: RoleGroupEnum.LEADER, // Establecer el rol como LÍDER
       });
+
+      await queryRunner.manager.save (Cart, {group_id:savedGroup.id, payment_type_id: savedGroup.payment_type_id})
 
       await queryRunner.commitTransaction();
 
@@ -87,6 +162,14 @@ export class GroupsService {
   async getGroupsByUserId(user_id: string, is_active?:boolean): Promise<Group[]> {
     try {
     return await this.groupsRepository.getGroupsByUserId(user_id, is_active);
+    } catch (error) {
+      throw new InternalServerErrorException('Error interno: ', error)
+    }
+  }
+  // falta incluir paginacion en todos los que devuvlen array
+  async getGroupsCreatedByUserId(user_id: string, is_active?:boolean): Promise<Group[]> {
+    try {
+    return await this.groupsRepository.getGroupsCreatedByUserId(user_id, is_active);
     } catch (error) {
       throw new InternalServerErrorException('Error interno: ', error)
     }
@@ -134,6 +217,54 @@ export class GroupsService {
       throw new InternalServerErrorException('Error al Recuperar Grupo: ', error)
     }
     
+  }
+
+  async updateGroupImage(
+    groupId: string,
+    file: Express.Multer.File,
+    requesterId: string,
+  ): Promise<Group> {
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const group = await queryRunner.manager.findOne(Group, {
+        where: { id: groupId },
+      });
+
+      if (!group) {
+        throw new NotFoundException('Grupo no encontrado');
+      }
+
+      // 🔐 Permisos: solo líder
+      if (group.user_id !== requesterId) {
+        throw new ForbiddenException(
+          'Solo el líder del grupo puede actualizar la imagen',
+        );
+      }
+
+      // (opcional) borrar imagen anterior
+      if (group.image_url) {
+        await this.cloudinaryService.deleteImage(group.image_url);
+      }
+
+      // subir nueva
+      const newImageUrl = await this.cloudinaryService.uploadImage(file) as string;
+
+      group.image_url = newImageUrl;
+      const savedGroup = await queryRunner.manager.save(Group, group);
+
+      await queryRunner.commitTransaction();
+      return savedGroup;
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async update(id: string,body: Partial<Group>, user_id:string): Promise<{success: boolean, message: string}> {

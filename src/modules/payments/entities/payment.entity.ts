@@ -18,21 +18,9 @@ export class Payment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // 💰 Monto total que este usuario debía pagar
-  @Column({ type: 'numeric', precision: 14, scale: 2, nullable:true  })
-  total_due: number;
-
   // 💸 Monto efectivamente pagado por el usuario
   @Column({ type: 'numeric', precision: 14, scale: 2, default: 0 })
   amount_paid: number;
-
-  // ❗ Monto pendiente de pago (total_due - amount_paid)
-  @Column({ type: 'numeric', precision: 14, scale: 2, default: 0, nullable:true  })
-  outstanding_amount: number;
-
-  // ✅ Flag rápido para saber si completó el pago
-  @Column({ type: 'boolean', default: false, nullable:true })
-  is_fully_paid: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

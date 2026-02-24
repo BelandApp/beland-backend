@@ -10,7 +10,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity'; 
-import { Order } from '../../orders/entities/order.entity';
+import { Order } from '../../orders/entities/order.entity'; 
 
 @Entity('user_addresses')
 export class UserAddress {
@@ -49,6 +49,9 @@ export class UserAddress {
 
   @Column({ default: false })
   isDefault: boolean; // Marcar dirección principal
+
+  @Column({ default: true , nullable:true})
+  is_active: boolean; 
 
   @CreateDateColumn()
   created_at: Date;

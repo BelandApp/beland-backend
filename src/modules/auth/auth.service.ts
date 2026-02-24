@@ -270,20 +270,29 @@ export class AuthService {
       throw new ConflictException('Este email ya está registrado.');
     }
 
-    const existingVerification =
-      await this.authVerificationRepository.findOneBy({
-        email: userDto.email,
-        is_verified: false,
-      });
+const existingVerification = await this.authVerificationRepository.findOneBy({
+  email: userDto.email,
+  is_verified: false,
+});
 
-    if (existingVerification) {
-      this.logger.warn(
-        `signupVerification(): Ya existe una verificación pendiente para el email: ${userDto.email}.`,
-      );
-      throw new ConflictException(
-        'Ya existe una verificación pendiente para este email. Por favor, revisa tu bandeja de entrada o espera para solicitar una nueva.',
-      );
-    }
+if (existingVerification) {
+  // Verificar si expiró
+  if (
+    existingVerification.expires_at &&
+    existingVerification.expires_at < new Date()
+  ) {
+    // Eliminar verificación expirada
+    await this.authVerificationRepository.delete({
+      id: existingVerification.id,
+    });
+    // Permitir nuevo registro
+  } else {
+    // Código todavía válido
+    throw new ConflictException(
+      'Ya tienes una verificación pendiente. Revisa tu correo o usa "Reenviar código".'
+    );
+  }
+}
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();

@@ -14,6 +14,8 @@ import { TransactionCode } from '../transaction-type/enum/transaction-code';
 import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { PurchaseWhitRechargeDto } from './dto/purchaseWhitRecarge.dto';
 import { WalletsService } from '../wallets/wallets.service';
+import { GroupMember } from '../group-members/entities/group-member.entity';
+import { RoleGroupEnum } from '../group-members/enums/role-group.enum';
 
 @Injectable()
 export class UserEventPassRepository {
@@ -86,6 +88,7 @@ async findAll(
   ): Promise<UserEventPass> {
     return await this.dataSource.transaction(async (manager) => {
       const walletRepo = manager.getRepository(Wallet);
+      const groupMembersRepo = manager.getRepository(GroupMember);
       const eventRepo = manager.getRepository(EventPass);
       const transRepo = manager.getRepository(Transaction);
       const statusRepo = manager.getRepository(TransactionState);
@@ -94,7 +97,7 @@ async findAll(
 
       // 1️⃣ Buscar usuario y evento
       const [event, walletUser, status, typePurchase, typeSale] = await Promise.all([
-        eventRepo.findOne({ where: { id: event_pass_id, is_active: true } }),
+        eventRepo.findOne({ where: { id: event_pass_id, is_active: true }, relations: {group:true} }),
         walletRepo.findOne({where: {user_id}}),
         statusRepo.findOne({where: {code: StatusCode.COMPLETED}}),
         typeRepo.findOne({where: {code: TransactionCode.PURCHASE_EVENTPASS}}),
@@ -176,6 +179,15 @@ async findAll(
       });
       const savedPass = await passRepo.save(newPass);
 
+      if (event.group) {
+        const newMembers = groupMembersRepo.create({
+          group_id: event.group.id,
+          user_id,
+          role: RoleGroupEnum.MEMBER
+        });
+        await groupMembersRepo.save(newMembers);
+      }
+
       return savedPass;
     });
   }
@@ -249,20 +261,19 @@ async findAll(
         throw new BadRequestException(`Solo se permiten devoluciones hasta ${event.refund_days_limit} días antes del evento.`);
 
         // 4️⃣ Repositorios relacionados
-        const [walletUser, walletOrganizer, status, typeRefund, typeDevolution] =
+        const [walletUser, walletOrganizer, status, typeRefund] =
         await Promise.all([
             walletRepo.findOne({ where: { user_id } }),
             walletRepo.findOne({ where: { user_id: event.created_by_id } }),
             statusRepo.findOne({ where: { code: StatusCode.COMPLETED } }),
-            typeRepo.findOne({ where: { code: TransactionCode.REFUND_EVENTPASS } }),
-            typeRepo.findOne({ where: { code: TransactionCode.DEVOLUTION_EVENTPASS } }),
+            typeRepo.findOne({ where: { code: TransactionCode.REFUND_EVENTPASS } })
         ]);
 
         if (!walletUser)
         throw new NotFoundException('Billetera del usuario no encontrada.');
         if (!walletOrganizer)
         throw new NotFoundException('Billetera del organizador no encontrada.');
-        if (!status || !typeRefund || !typeDevolution)
+        if (!status || !typeRefund )
         throw new NotFoundException('Datos de tipo o estado de transacción incompletos.');
 
         // 5️⃣ Validar que el organizador tenga fondos suficientes para devolver
@@ -288,7 +299,7 @@ async findAll(
 
         const devolutionTx = transRepo.create({
         wallet_id: walletOrganizer.id,
-        type_id: typeDevolution.id,
+        type_id: typeRefund.id,
         status_id: status.id,
         related_wallet_id: walletUser.id,
         post_balance: +walletOrganizer.becoin_balance,

@@ -6,8 +6,11 @@ import {
   Length,
   IsLatitude,
   IsLongitude,
+  IsDateString,
+  IsDate,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateGroupDto {
   @ApiProperty({ description: 'Nombre del grupo', example: 'Juntada Histórica' })
@@ -16,30 +19,51 @@ export class CreateGroupDto {
   @Length(3, 255)
   name: string;
 
-  @ApiPropertyOptional({ description: 'Descripción del grupo', example: 'Grupo de voluntarios del barrio San Martín' })
+  @ApiPropertyOptional({ description: 'URL Imagen de grupo' })
+  @IsString()
+  @IsOptional()
+  @Length(3, 255)
+  image_url: string;
+
+  @ApiPropertyOptional({ description: 'Descripción del grupo' })
   @IsOptional()
   @IsString()
-  @Length(3, 200)
+  @Length(3, 255)
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Latitud geográfica', example: -34.603722 })
+  @ApiPropertyOptional({ description: 'Mensaje para invitación del grupo' })
   @IsOptional()
-  @IsLatitude()
-  latitude?: number;
+  @IsString()
+  @Length(3, 1000)
+  message_invitation?: string;
 
-  @ApiPropertyOptional({ description: 'Longitud geográfica', example: -58.381592 })
-  @IsOptional()
-  @IsLongitude()
-  longitude?: number;
-
-  @ApiPropertyOptional({ description: 'ID de la dirección por defecto asociada del usuario', example: '8e4d9c44-0f0c-4d77-b8fd-4b9c25c3c999' })
+  @ApiPropertyOptional({ description: 'ID de la dirección del usuario' })
   @IsOptional()
   @IsUUID()
   user_address_id?: string;
 
-  @ApiPropertyOptional({ description: 'ID del tipo de grupo', example: 'c1a7f0d2-1b43-4f69-9e63-3c2c6b2e7777' })
+  @ApiPropertyOptional({ description: 'ID del tipo de grupo' })
   @IsOptional()
   @IsUUID()
   group_type_id?: string;
 
+  @ApiPropertyOptional({ description: 'ID del tipo de privacidad' })
+  @IsOptional()
+  @IsUUID()
+  privacy_id?: string;
+
+  @ApiPropertyOptional({ description: 'ID del tipo de pago' })
+  @IsOptional()
+  @IsUUID()
+  payment_type_id?: string;
+
+ @ApiProperty({
+    description: 'Fecha y hora en la que se realiza el evento',
+    type: 'string',
+    format: 'date-time',
+    example: '2026-03-15T22:00:00-03:00',
+  })
+  @Type(() => Date)
+  @IsDate({ message: 'event_at must be a valid date-time' })
+  event_at: Date;
 }

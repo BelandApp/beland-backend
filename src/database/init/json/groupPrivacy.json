@@ -1,0 +1,16 @@
+[
+  {
+    "code": "PUBLIC",
+    "name": "Público",
+    "description": "Cualquiera puede ver el grupo y unirse libremente. El creador puede quitar al que quiera",
+    "is_visible": true,
+    "allow_free_join": true
+  },
+  {
+    "code": "PRIVATE",
+    "name": "Privado",
+    "description": "Solo el creador del grupo agrega personas.",
+    "is_visible": false,
+    "allow_free_join": false
+  }
+]

@@ -56,6 +56,28 @@ export class CartItemsController {
     return await this.service.findAll(cart_id, pageNumber, limitNumber);
   }
 
+  @Get('user')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar items de Carrito con paginación y filtrado por orden y usuario' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+  @ApiQuery({ name: 'cart_id', required: true, type: String, description: 'Filtrar items de carrito por ID de carrito' })
+  @ApiQuery({ name: 'user_id', required: false, type: String, description: 'Filtrar items de carrito por ID de usuario, si no se envia retorna la compra general' })
+  @ApiResponse({ status: 200, description: 'Listado de items de carrito retornado correctamente' })
+  @ApiResponse({ status: 400, description: 'Debe enviar el identificador del Carrito' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async findAllUserOrGeneral(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('cart_id') cart_id,
+    @Query('user_id') user_id,
+  ): Promise<[CartItem[], number]> {
+    if (!cart_id) throw new BadRequestException('Debe enviar el identificador del Carrito');
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.service.findAllUserOrGeneral(cart_id,  user_id, pageNumber, limitNumber,);
+  }
+
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obtener un item de carrito por su ID' })
@@ -70,12 +92,21 @@ export class CartItemsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear un nuevo item de carrito' })
+  @ApiQuery({ name: 'is_general', required: false, type: Boolean, example: true, description: '¿Es item general o particular de un usuario?' })
   @ApiResponse({ status: 201, description: 'item de carrito creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear el item de carrito' })
   @ApiResponse({ status: 500, description: 'No se pudo crear el item de carrito' })
-  async create(@Body() body: CreateCartItemDto): Promise<CartItem> {
+  async create(
+    @Body() body: CreateCartItemDto,
+    @Query('is_general') is_general:boolean = true,
+    @Req() req:Request,
+  ): Promise<CartItem> {
     const total_price = +body.unit_price * +body.quantity;
-    return await this.service.create({...body, total_price});
+    return await this.service.create({
+      ...body,
+      total_price,
+      user_id: is_general ? null : req.user?.id,
+    });
   }
 
   @Put('quantity/:id')
@@ -98,6 +129,7 @@ export class CartItemsController {
   @ApiOperation({ summary: 'Actualizar la cantidad de un item de carrito existente' })
   @ApiParam({ name: 'product_id', description: 'UUID del producto' })
   @ApiQuery({ name: 'quantity', required: true, type: Number, example: 1, description: 'Cantidad a reemplazar' })
+  @ApiQuery({ name: 'user_id', required: false, type: String, description: 'UUID del user que incluyo el item, si no se envia es item general' })
   @ApiResponse({ status: 200, description: 'item de carrito actualizado correctamente' })
   @ApiResponse({ status: 404, description: 'No se encontró el item de carrito a actualizar' })
   @ApiResponse({ status: 500, description: 'Error al actualizar el item de carrito' })
@@ -105,8 +137,9 @@ export class CartItemsController {
     @Param('product_id', ParseUUIDPipe) product_id: string,
     @Query('quantity') quantity: number,
     @Req () req:Request,
+    @Query('user_id', ParseUUIDPipe) user_id?: string | null,
   ) {
-    return this.service.updateQuantityProduct(product_id, req.user?.cart_id, quantity);
+    return this.service.updateQuantityProduct(product_id, req.user?.cart_id, quantity, user_id);
   }
 
   @Put(':id')
@@ -123,18 +156,18 @@ export class CartItemsController {
     return this.service.update(id, body);
   }
 
-  @Delete('product/:product_id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar un item de carrito por su ID' })
-  @ApiParam({ name: 'product_id', description: 'UUID del productos a eliminar' })
-  @ApiResponse({ status: 204, description: 'item de carrito eliminado correctamente' })
-  @ApiResponse({ status: 404, description: 'No se encontró el item de carrito a eliminar' })
-  @ApiResponse({ status: 409, description: 'No se puede eliminar el item de carrito (conflicto)' })
-  async removeProduct(
-    @Param('product_id', ParseUUIDPipe) product_id: string, 
-    @Req() req:Request): Promise<void> {
-    await this.service.removeProduct(product_id, req.user?.cart_id);
-  }
+  // @Delete('product/:product_id')
+  // @HttpCode(HttpStatus.NO_CONTENT)
+  // @ApiOperation({ summary: 'Eliminar un item de carrito por su ID' })
+  // @ApiParam({ name: 'product_id', description: 'UUID del productos a eliminar' })
+  // @ApiResponse({ status: 204, description: 'item de carrito eliminado correctamente' })
+  // @ApiResponse({ status: 404, description: 'No se encontró el item de carrito a eliminar' })
+  // @ApiResponse({ status: 409, description: 'No se puede eliminar el item de carrito (conflicto)' })
+  // async removeProduct(
+  //   @Param('product_id', ParseUUIDPipe) product_id: string, 
+  //   @Req() req:Request): Promise<void> {
+  //   await this.service.removeProduct(product_id, req.user?.cart_id);
+  // }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)

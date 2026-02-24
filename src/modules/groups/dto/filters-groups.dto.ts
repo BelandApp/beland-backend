@@ -55,6 +55,11 @@ export class GetGroupsQueryDto extends PaginationDto implements OrderDto {
   @IsUUID()
   user_id?: string; // Added leaderId filter
 
+  @ApiPropertyOptional({ description: 'ID del tipo de privacidad' })
+  @IsOptional()
+  @IsUUID()
+  privacy_id?: string;
+
   @ApiPropertyOptional({
     description:
       'Si se deben incluir grupos eliminados lógicamente (soft-deleted).',
