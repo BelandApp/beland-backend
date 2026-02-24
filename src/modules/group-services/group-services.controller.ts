@@ -38,20 +38,6 @@ export class GroupServicesController {
   ) {}
 
   /* ======================================================
-   * CREATE
-   * ====================================================== */
-  @Post()
-  @ApiOperation({ summary: 'Crear un servicio para un grupo' })
-  @ApiResponse({ status: 201, type: GroupService })
-  async create(
-    @Body() dto: CreateGroupServiceDto,
-    @Req() req: Request,
-  ): Promise<GroupService> {
-    const user_id = req.user.id;
-    return this.groupServicesService.create(dto, user_id);
-  }
-
-  /* ======================================================
    * FIND ALL
    * ====================================================== */
   @Get()
@@ -105,17 +91,43 @@ export class GroupServicesController {
   }
 
   /* ======================================================
+   * CREATE
+   * ====================================================== */
+  @Post()
+  @ApiOperation({ summary: 'Crear un servicio para un grupo' })
+  @ApiResponse({ status: 201, type: GroupService })
+  async create(
+    @Body() dto: CreateGroupServiceDto,
+    @Req() req: Request,
+  ): Promise<GroupService> {
+    const user_id = req.user.id;
+    return this.groupServicesService.create(dto, user_id);
+  }
+
+  /* ======================================================
    * COMPLETE SERVICE
    * ====================================================== */
   @Post('complete/:id')
   @ApiOperation({
     summary:
-      'Completar servicio y liberar saldos (cobra al grupo y paga al superadmin)',
+      'Completar servicio y liberar saldos (cobra al creador del grupo y paga al superadmin)',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   async completeService(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<GroupService> {
     return this.groupServicesService.completeService(id);
+  }
+
+  @Post('cancelled/:id')
+  @ApiOperation({
+    summary:
+      'Cancelar servicio y liberar saldos (cobra al grupo y paga al superadmin)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  async cancelledService(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{message: string, success: true}> {
+    return this.groupServicesService.cancelledService(id);
   }
 }

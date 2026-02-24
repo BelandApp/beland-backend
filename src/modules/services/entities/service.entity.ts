@@ -20,6 +20,12 @@ export class Service {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   price_becoin: number | null; // precio becoin
 
+  @Column({ type: 'int', nullable: true })
+  day_limit_cancelled: number | null; // cantidad de dias previos para cancelar sin consecuencias
+
+  @Column({ type: 'int', nullable: true })
+  porcent_cancelled: number | null; // cantidad de porcentaje del precio del servicio a retener en caso de cancelar fuera de tiempo 0-100
+
   @Column({ type: 'varchar', length: 500, nullable: true })
   image_url: string | null;
 

@@ -282,4 +282,144 @@ export class GroupServicesService {
       await qr.release();
     }
   }
+
+  /* ======================================================
+   * CANCELLED SERVICE → devuleve saldos. si tiene penalidad la acredita al superadmin
+   * ====================================================== */
+
+  async cancelledService(id: string): Promise<{message: string, success: true}> {
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+
+    try {
+      const groupService = await qr.manager.findOne(GroupService, {
+        where: { id },
+        relations: { group: true, service: true },
+      });
+
+      if (!groupService)
+        throw new NotFoundException('Servicio no encontrado');
+
+      if (groupService.is_completed)
+        throw new BadRequestException('No se puede cancelar un servicio completado');
+
+      if (!groupService.group.event_at)
+        throw new BadRequestException('El grupo no tiene fecha de evento');
+
+      const eventDate = new Date(groupService.group.event_at);
+      const now = new Date();
+
+      if (now >= eventDate)
+        throw new BadRequestException(
+          'No se puede cancelar un servicio cuyo evento ya ocurrió',
+        );
+
+      const txCancelled = await qr.manager.findOne(TransactionState, {
+        where: { code: StatusCode.CANCELLED },
+      });
+
+      const txCompleted = await qr.manager.findOne(TransactionState, {
+        where: { code: StatusCode.COMPLETED },
+      });
+
+      const txTypePenalty = await qr.manager.findOne(TransactionType, {
+        where: { code: TransactionCode.SERVICE_PENALITY },
+      });
+
+      const txs = await qr.manager.find(Transaction, {
+        where: { reference: `GROUP_SERVICE-${groupService.id}` },
+      });
+
+      if (!txs.length)
+        throw new BadRequestException('No hay transacciones asociadas');
+
+      /* ==============================
+        1️⃣ Determinar si aplica penalidad
+      ============================== */
+
+      const diffTime = eventDate.getTime() - now.getTime();
+      const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      const limit = groupService.service.day_limit_cancelled ?? 0;
+      const percent = groupService.service.porcent_cancelled ?? 0;
+
+      const applyPenalty = percent > 0 && daysRemaining < limit;
+
+      let totalPenalty = 0;
+
+      /* ==============================
+        2️⃣ Procesar cada transaction
+      ============================== */
+
+      for (const tx of txs) {
+        const wallet = await qr.manager.findOne(Wallet, {
+          where: { id: tx.wallet_id },
+        });
+
+        const originalAmount = Number(tx.amount_becoin);
+
+        let penalty = 0;
+        let refund = originalAmount;
+
+        if (applyPenalty) {
+          penalty = Number(((originalAmount * percent) / 100).toFixed(2));
+          refund = Number((originalAmount - penalty).toFixed(2));
+        }
+
+        wallet.locked_balance -= originalAmount;
+        wallet.becoin_balance += refund;
+
+        tx.status = txCancelled;
+
+        totalPenalty += penalty;
+
+        await qr.manager.save([wallet, tx]);
+      }
+
+      /* ==============================
+        3️⃣ Penalidad al superadmin
+      ============================== */
+
+      if (totalPenalty > 0) {
+        const superWallet = await qr.manager.findOne(Wallet, {
+          where: { user_id: this.superadminService.getSuperadminId() },
+        });
+
+        superWallet.becoin_balance += totalPenalty;
+
+        await qr.manager.save(superWallet);
+
+        const penaltyTx = qr.manager.create(Transaction, {
+          wallet_id: superWallet.id,
+          amount_becoin: totalPenalty,
+          status: txCompleted,
+          type: txTypePenalty,
+          reference: `GROUP_SERVICE-${groupService.id}`,
+          description: `Penalidad cancelación grupo ${groupService.group_id}`,
+        });
+
+        await qr.manager.save(penaltyTx);
+      }
+
+      /* ==============================
+        4️⃣ Eliminar GroupService
+      ============================== */
+
+      await qr.manager.remove(groupService);
+
+      await qr.commitTransaction();
+
+      return { 
+        message: 'Servicio cancelado con éxito', 
+        success: true 
+      };
+
+    } catch (error) {
+      await qr.rollbackTransaction();
+      throw error;
+    } finally {
+      await qr.release();
+    }
+  }
 }
