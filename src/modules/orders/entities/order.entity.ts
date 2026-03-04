@@ -8,6 +8,7 @@ import {
   OneToMany,
   JoinColumn,
   BeforeInsert,
+  Generated,
 } from 'typeorm';
 import { Group } from '../../groups/entities/group.entity';
 import { User } from '../../users/entities/users.entity';
@@ -22,11 +23,8 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string; 
 
-  @Column({
-    type: 'bigint',
-    generated: 'increment',   // ← esto crea autoincremental en el schema
-    unique: true
-  })
+  @Column({ type: 'bigint', unique: true })
+  @Generated('increment')
   order_number: number;
 
   @Column({ type: 'integer', nullable:true})
