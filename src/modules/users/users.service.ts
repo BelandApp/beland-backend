@@ -569,7 +569,7 @@ export class UsersService {
     }
 
     user.role_name = role.name;
-    user.role_id = role.role_id;
+    user.role = role;
     const userUpdate: User = await userRepo.save(user);
 
     const { password, ...safeUser } = userUpdate;

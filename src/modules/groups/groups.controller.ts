@@ -57,7 +57,6 @@ export class GroupsController {
   // src/groups/groups.controller.ts
 
   @Get()
-  @UseGuards(FlexibleAuthGuard)
   @ApiOperation({
     summary: 'Listar grupos con filtros, paginación y orden',
   })
@@ -79,7 +78,6 @@ export class GroupsController {
   }
 
   @Get('privacy-type')
-  @UseGuards(FlexibleAuthGuard) // Solo requiere autenticación
   @ApiOperation({
     summary:'Obtener todos tipos de provacidad de grupo'
   })

@@ -97,11 +97,20 @@ export class GroupsRepository {
   }
 
   async getGroupsByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {
-    return await this.repository.find({
-      where: {members: {user_id}, is_active},
-      relations: {group_type:true, privacy:true, payment_type:true, cart:true},
-    })
-  }
+    return await this.repository
+      .createQueryBuilder('group')
+      .leftJoinAndSelect('group.group_type', 'group_type')
+      .leftJoinAndSelect('group.privacy', 'privacy')
+      .leftJoinAndSelect('group.payment_type', 'payment_type')
+      .leftJoinAndSelect('group.cart', 'cart')
+      .leftJoin('group.members', 'member')
+      .leftJoin('member.user', 'user')
+      .addSelect(['member.role'])
+      .addSelect(['user.id', 'user.profile_picture_url', 'user.full_name'])
+      .where('member.user_id = :user_id', { user_id })
+      .andWhere('group.is_active = :is_active', { is_active })
+      .getMany();
+      }
 
   async getGroupsCreatedByUserId (user_id:string, is_active: boolean = true): Promise <Group[]> {
     return await this.repository.find({
