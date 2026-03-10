@@ -72,9 +72,6 @@ export class Order {
   @Column({ type: 'numeric', precision: 7, scale: 2, default: 0, nullable:true })
   duration_min: number
 
-  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
-  recycled_weight: number;
-
   @Column({ type: 'timestamptz', nullable: true })
   recycled_at: Date;
 

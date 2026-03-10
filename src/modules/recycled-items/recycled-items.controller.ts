@@ -12,6 +12,7 @@ import {
   HttpStatus,
   BadRequestException,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,6 +27,7 @@ import { RecycledItem } from './entities/recycled-item.entity';
 import { CreateRecycledItemDto } from './dto/create-recycled-item.dto';
 import { UpdateRecycledItemDto } from './dto/update-recycled-item.dto';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
+import { request } from 'express';
 
 @ApiTags('recycled-items')
 @Controller('recycled-items')
@@ -34,13 +36,12 @@ import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 export class RecycledItemsController {
   constructor(private readonly service: RecycledItemsService) {}
 
-  @Get()
+@Get()
 @HttpCode(HttpStatus.OK)
-@ApiOperation({ summary: 'Listar productos reciclados con paginación y filtro exclusivo' })
+@ApiOperation({ summary: 'Listar productos reciclados con paginación y filtro exclusivo para superadmin' })
 @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
 @ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
 @ApiQuery({ name: 'user_id', required: false, type: String, description: 'Filtrar por ID de usuario. No usar junto con product_id.' })
-@ApiQuery({ name: 'product_id', required: false, type: String, description: 'Filtrar por ID de producto. No usar junto con user_id.' })
 @ApiResponse({ status: 200, description: 'Listado de productos reciclados retornado correctamente' })
 @ApiResponse({ status: 400, description: 'Solo puede enviarse user_id o product_id, no ambos.' })
 @ApiResponse({ status: 500, description: 'Error interno del servidor' })
@@ -48,14 +49,28 @@ async findAll(
   @Query('page') page = '1',
   @Query('limit') limit = '10',
   @Query('user_id') user_id = '',
-  @Query('product_id') product_id = '',
 ): Promise<[RecycledItem[], number]> {
-  const hasUserId = user_id.trim() !== '';
-  const hasGroupId = product_id.trim() !== '';
-  if (hasUserId && hasGroupId) throw new BadRequestException('Solo puede buscar por usuario o producto pero no ambos al mismo tiempo.');
   const pageNumber = parseInt(page, 10);
   const limitNumber = parseInt(limit, 10);
-  return await this.service.findAll(product_id, user_id, pageNumber, limitNumber);
+  return await this.service.findAll(user_id, pageNumber, limitNumber);
+}
+
+@Get('user')
+@HttpCode(HttpStatus.OK)
+@ApiOperation({ summary: 'Listar productos reciclados con paginación y filtro exclusivo para el usuario que llama' })
+@ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+@ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Cantidad de elementos por página' })
+@ApiResponse({ status: 200, description: 'Listado de productos reciclados retornado correctamente' })
+@ApiResponse({ status: 400, description: 'Solo puede enviarse user_id o product_id, no ambos.' })
+@ApiResponse({ status: 500, description: 'Error interno del servidor' })
+async findAllUser(
+  @Query('page') page = '1',
+  @Query('limit') limit = '10',
+  @Req() req = request,
+): Promise<[RecycledItem[], number]> {
+  const pageNumber = parseInt(page, 10);
+  const limitNumber = parseInt(limit, 10);
+  return await this.service.findAll(req.user?.id, pageNumber, limitNumber);
 }
 
 @Get(':id')

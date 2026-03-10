@@ -7,7 +7,6 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Product } from '../../products/entities/product.entity';
 import { User } from '../../users/entities/users.entity';
 
 @Entity('recycled_items')
@@ -15,24 +14,15 @@ export class RecycledItem {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'boolean', default: false })
-  is_redeemed: boolean;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  redeemed_at: Date;
+  @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
+  weight: number;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @ManyToOne(() => Product, { nullable: false, onDelete: 'CASCADE' })
-  @JoinColumn({name: 'product_id'})
-  product: Product;
-  @Column('uuid')
-  product_id: string
-
-  @ManyToOne(() => User, (user) => user.scanned_items, { nullable: false })
-  @JoinColumn({name: 'scanned_by_user_id'})
-  scanned_by_user: User;
-  @Column('uuid')
-  scanned_by_user_id: string
+  @ManyToOne(() => User, (user) => user.recycledItems, { nullable: true })
+  @JoinColumn({name: 'user_id'})
+  user: User;
+  @Column('uuid', { nullable: true })
+  user_id: string
 }

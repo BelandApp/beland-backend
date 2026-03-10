@@ -214,16 +214,12 @@ export class MerchantsRepository {
 
         // 2. Eliminar relación user-profile
         if (profile) {
-          const userProfile = await queryRunner.manager.findOne(UserProfile, {
-            where: {
-              user_id: merchant.user_id,
-              profile_id: profile.id,
-            },
-          });
-
-          if (userProfile) {
-            await queryRunner.manager.delete(UserProfile, userProfile.id);
-          }
+          // 2. Remover perfil MERCHANT
+          await removeProfileFromUser(
+          queryRunner,
+          merchant.user_id,
+          ProfileEnum.MERCHANT,
+          );
         }
 
         // 3. Eliminar Merchant

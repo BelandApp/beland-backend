@@ -30,6 +30,7 @@ import { OrderFilterDto } from './dto/order-filter.dto';
 import { GroupMember } from '../group-members/entities/group-member.entity';
 import { User } from '../users/entities/users.entity';
 import { Product } from '../products/entities/product.entity';
+import { RecycledItem } from '../recycled-items/entities/recycled-item.entity';
 
 @Injectable()
 export class OrdersService {
@@ -734,7 +735,7 @@ export class OrdersService {
     return orderSave;
   }
 
-  async delivered (order_id: string, code: number): Promise<Order> {
+  async delivered (order_id: string, code: number, weight:number = 0): Promise<Order> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -765,6 +766,8 @@ export class OrdersService {
       order.delivered_at = new Date();
 
       const savedOrder = await queryRunner.manager.save(order);
+
+      if (weight !== 0) await queryRunner.manager.save (RecycledItem, {user_id:order.user_id, weight})
 
       await queryRunner.commitTransaction();
 
@@ -876,7 +879,6 @@ export class OrdersService {
       const statusOld = order.status_id;
 
       order.status_id = statusOrder.id;
-      order.recycled_weight = recycled_weight;
       order.recycled_at = new Date();
 
       const orderSaved = await manager.save(Order, order);
@@ -891,6 +893,8 @@ export class OrdersService {
 
       user.total_weight_recycled =
         Number(user.total_weight_recycled) + recycled_weight;
+
+      await manager.save (RecycledItem, {user_id:order.user_id, weight: recycled_weight})
 
       await manager.save(User, user);
 
