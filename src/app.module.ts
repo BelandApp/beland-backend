@@ -32,7 +32,6 @@ import { DataSourceOptions } from 'typeorm';
 //import typeormConfig from './config/typeorm'; // Asegúrate de que este archivo exista y exporte la configuración
 import { RequestLoggerMiddleware } from './middlleware/request-logger.middleware'; // Asegúrate de que este archivo exista
 import { TransactionsModule } from './modules/transactions/transactions.module';
-import { RecyclePricesModule } from './modules/recycle_prices/recycle_prices.module';
 import { TransactionTypeModule } from './modules/transaction-type/transaction-type.module';
 import { TransactionStateModule } from './modules/transaction-state/transaction-state.module';
 import { DatabaseInitModule } from './database/init/database-init.module';
@@ -148,7 +147,6 @@ const isTs = process.env.NODE_ENV !== 'production';
     AuthModule,
     CommonModule,
     TransactionsModule,
-    RecyclePricesModule,
     TransactionTypeModule,
     TransactionStateModule,
     AdminsModule,

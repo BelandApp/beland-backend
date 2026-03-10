@@ -153,14 +153,16 @@ export class OrdersController {
   @ApiOperation({ summary: 'Confirma Entrega de la orden por admin' })
   @ApiQuery({ name: 'order_id', required: true, description: 'UUID de la orden' })
   @ApiQuery({ name: 'code', required: true, description: 'Codigo de orden dado por el usuario, debe cohincidir con el de la orden' })
+  @ApiQuery({ name: 'weight', required: false, description: 'Peso total del residuo que entrego el usuario' })
   @ApiResponse({ status: 201, description: 'Confirmacion de entrega exitosa' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para la confirmacion' })
   @ApiResponse({ status: 500, description: 'No se pudo realizar la confirmacion' })
   async delivered(
     @Query('order_id', ParseUUIDPipe) order_id:string,
     @Query('code') code:number,
+    @Query('weight') weight:number,
    ): Promise<Order> {
-    return await this.service.delivered(order_id, code);
+    return await this.service.delivered(order_id, code, weight);
   }
 
   @Put('collected')

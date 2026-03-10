@@ -138,8 +138,8 @@ export class User {
   @OneToMany(() => Action, (action) => action.user)
   actions: Action[];
 
-  @OneToMany(() => RecycledItem, (item) => item.scanned_by_user)
-  scanned_items: RecycledItem[];
+  @OneToMany(() => RecycledItem, (item) => item.user)
+  recycledItems: RecycledItem[];
 
   @OneToMany(() => PrizeRedemption, (redemption) => redemption.user)
   prize_redemptions: PrizeRedemption[];
