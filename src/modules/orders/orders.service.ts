@@ -156,6 +156,7 @@ export class OrdersService {
       if (!cart.items || cart.items.length === 0)
         throw new BadRequestException('El carrito esta vacio');
 
+      console.log ('este es el cart a convertir en order: ', cart);
       // 3) Forma de pago
       let paymentType: PaymentType;
       if (!cart.group_id) {
@@ -307,7 +308,7 @@ export class OrdersService {
 
       if (!cart.group_id && cart.user_id) {
         // ===== PAGO INMEDIATO (COMPRA INDIVIDUAL) =====
-
+        console.log('entoro a hacer el pago de la orden por ser compra individual')
         // wallet usuario
         const userWallet = await queryRunner.manager.findOne(Wallet, {
           where: { user_id: cart.user_id },
@@ -343,8 +344,8 @@ export class OrdersService {
               );
 
               if (becoinOrangeUsed > 0) {
-                userWallet.becoin_orange -= becoinOrangeUsed;
-                userWallet.becoin_balance += becoinOrangeUsed;
+                userWallet.becoin_orange = +userWallet.becoin_orange- becoinOrangeUsed;
+                userWallet.becoin_balance = +userWallet.becoin_balance + becoinOrangeUsed;
 
                 const orangeTxType = await queryRunner.manager.findOne(TransactionType,{
                   where:{code: TransactionCode.ORANGE_CREDIT_USED}
@@ -372,7 +373,7 @@ export class OrdersService {
           throw new BadRequestException('Saldo insuficiente para completar la compra');
 
         // ---------- DEBITAR USUARIO ----------
-        userWallet.becoin_balance -= Number(savedOrder.total_becoin);
+        userWallet.becoin_balance = +userWallet.becoin_balance - Number(savedOrder.total_becoin);
         await queryRunner.manager.save(userWallet);
 
         // tipos y estados
@@ -413,7 +414,7 @@ export class OrdersService {
         if(!superAdminWallet)
           throw new InternalServerErrorException('Billetera del superadmin no encontrada');
 
-        superAdminWallet.becoin_balance += Number(savedOrder.total_becoin);
+        superAdminWallet.becoin_balance = +superAdminWallet.becoin_balance + Number(savedOrder.total_becoin);
         await queryRunner.manager.save(superAdminWallet);
 
         const txTypeSale = await queryRunner.manager.findOne(TransactionType,{
