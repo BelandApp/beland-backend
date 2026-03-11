@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
@@ -41,6 +41,8 @@ export class DeliveryService {
   }
 
   calculateDeliveryPrice (distanceKm: number): number {
+    console.log("esta es la distancia Calculada en km: ", distanceKm)
+
     if (distanceKm <= 3) return this.costBaseDelivery;
 
     if (distanceKm <= 5) {
@@ -68,6 +70,8 @@ export class DeliveryService {
     const { distanceKm, durationMin } = await this.getRouteData(driver, customer);
 
     const cost = this.calculateDeliveryPrice(distanceKm);
+
+    console.log('Este es el costo del delivery: ', cost)
 
     return {
       distanceKm,
