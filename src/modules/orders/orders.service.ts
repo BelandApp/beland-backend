@@ -768,7 +768,27 @@ export class OrdersService {
 
       const savedOrder = await queryRunner.manager.save(order);
 
-      if (weight !== 0) await queryRunner.manager.save (RecycledItem, {user_id:order.user_id, weight})
+      if (weight !== 0) {
+        await queryRunner.manager.save (RecycledItem, {user_id:order.user_id, weight})
+        const userWallet = await queryRunner.manager.findOne(Wallet, {
+          where: { user_id: order.user_id },
+        });
+
+        if (!userWallet)
+          throw new NotFoundException('Wallet del usuario no encontrada');
+
+        const percentage = Number(this.superadminService.recicled_becoin);
+
+        const becoinGreenToAdd = Math.ceil(
+          Number(order.subtotal_becoin) * (percentage / 100)
+        );
+
+        userWallet.becoin_green =
+          Number(userWallet.becoin_green) + becoinGreenToAdd;
+
+        await queryRunner.manager.save(userWallet);
+      } 
+        
 
       await queryRunner.commitTransaction();
 
