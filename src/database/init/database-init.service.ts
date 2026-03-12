@@ -146,6 +146,48 @@ export class DatabaseInitService {
     }
   }
 
+  async updateTransactionUX(): Promise<{ updatedTypes: number; updatedStates: number }> {
+    const typeRepo = this.getRepo<TransactionType>(TransactionType);
+    const stateRepo = this.getRepo<TransactionState>(TransactionState);
+
+    let updatedTypes = 0;
+    let updatedStates = 0;
+
+    // actualizar tipos
+    for (const item of preloadTT) {
+      const existing = await typeRepo.findOne({
+        where: { code: item.code },
+      });
+
+      if (existing) {
+        existing.icon = item.icon;
+        existing.color = item.color;
+
+        await typeRepo.save(existing);
+        updatedTypes++;
+      }
+    }
+
+    // actualizar estados
+    for (const item of preloadTS) {
+      const existing = await stateRepo.findOne({
+        where: { code: item.code },
+      });
+
+      if (existing) {
+        existing.color = item.color;
+
+        await stateRepo.save(existing);
+        updatedStates++;
+      }
+    }
+
+    return {
+      updatedTypes,
+      updatedStates,
+    };
+  }
+
   async loadUser(): Promise<void> {
 
   }

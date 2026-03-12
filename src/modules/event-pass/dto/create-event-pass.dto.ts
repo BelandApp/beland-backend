@@ -158,12 +158,13 @@ export class CreateEventPassDto {
   limit_tickets: number;
 
   // 💰 DATOS ECONÓMICOS
+
   @ApiProperty({
-    example: 150.5,
-    description: 'Precio en BECOIN del evento.',
+    example: 10,
+    description: 'Precio en dolares del evento.',
   })
   @IsNumber()
-  price_becoin: number;
+  price_dollar: number;
 
   @ApiProperty({
     example: 10,

@@ -2,26 +2,31 @@
   {
     "code": "PENDING",
     "name": "Pendiente",
-    "description": "La transacción ha sido iniciada pero aún no finaliza"
+    "description": "La transacción ha sido iniciada pero aún no finaliza",
+    "color": "#ff9800"
   },
   {
     "code": "COMPLETED",
     "name": "Completada",
-    "description": "La transacción se procesó correctamente"
+    "description": "La transacción se procesó correctamente",
+    "color": "#4caf50"
   },
   {
     "code": "FAILED",
     "name": "Fallida",
-    "description": "La transacción no pudo ser procesada por un error"
+    "description": "La transacción no pudo ser procesada por un error",
+    "color": "#f44336"
   },
   {
     "code": "CANCELLED",
     "name": "Cancelada",
-    "description": "La transacción fue cancelada"
+    "description": "La transacción fue cancelada",
+    "color": "#f44336"
   },
   {
     "code": "PARTIAL",
     "name": "Parcial",
-    "description": "El Pago esta incompleto. Solo se cubrio parcialmente"
+    "description": "El Pago esta incompleto. Solo se cubrio parcialmente",
+    "color": "#666"
   }
 ]

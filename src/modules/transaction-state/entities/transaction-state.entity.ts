@@ -14,6 +14,10 @@ export class TransactionState {
   @Column({ type: 'varchar', length: 100 })
   name: string;
 
+  /** color para UX */
+  @Column({ type: 'varchar', length: 10, nullable:true })
+  color: string;
+
   /** Descripción opcional para la UI */
   @Column({ type: 'text', nullable: true })
   description?: string;
