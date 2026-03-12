@@ -113,7 +113,7 @@ export class EventPassService {
 
       // --- 3️⃣ Calcular precio con descuento ---
       const discount = Number(dto.discount ?? 0);
-      const price = Number(dto.price_becoin);
+      const price = Number(dto.price_dollar);
 
       const totalPrice = price - (price * discount) / 100;
 
@@ -126,7 +126,7 @@ export class EventPassService {
         ...dto,
         image_url: mainImage,
         images_urls: additionalImages,
-        total_becoin: totalPrice,
+        total_dollar: totalPrice,
         created_by_id: user_id,
       });
 

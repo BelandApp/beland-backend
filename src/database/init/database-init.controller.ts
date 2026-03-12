@@ -3,6 +3,11 @@ import {
   Post,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
+  Body,
+  Query,
+  BadRequestException,
+  Put,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -32,18 +37,6 @@ export class DatabaseIntiController {
     return await this.service.dataInitEntryUpdate();
   }
 
-  @Post('add-becoin-prod')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ 
-    summary: 'Agregar el precio en becoin a los productos', 
-    description: 'Actualiza todos los productos de la bd cargandole su precio en becoin segun el price' })
-  @ApiResponse({ status: 201, description: 'Actualizacion exitosa' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  @ApiResponse({ status: 500, description: 'No se pudo crear' })
-  async addBecoinProd(): Promise<void> {
-    return await this.service.addBecoinProd();
-  }
-
   @Post('load-superadmin-and-roles')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ 
@@ -55,6 +48,63 @@ export class DatabaseIntiController {
   async loadSuperAdminAndRole(): Promise<void> {
     return await this.service.loadSuperAdminAndRole();
   }
+
+  @Post('update-all-stock')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Actualizar stock global manualmente',
+    description:
+      'Actualiza el stock de todos los productos si la clave es correcta',
+  })
+  @ApiResponse({ status: 200, description: 'Stock actualizado correctamente' })
+  @ApiResponse({ status: 403, description: 'Clave inválida' })
+  async updateAllStock(
+    @Query('quantity') quantity: string,
+    @Query('secret') secret: string,
+  ): Promise<{ success: boolean; message: string }> {
+
+    if (secret !== 'ad12min345') {
+      throw new ForbiddenException('Clave inválida');
+    }
+
+    const qty = Number(quantity);
+
+    if (isNaN(qty) || qty < 0) {
+      throw new BadRequestException('Cantidad inválida');
+    }
+
+    await this.service.updateAllStock(qty);
+
+    return {
+      success: true,
+      message: 'Stock actualizado correctamente',
+    };
+  }
+
+  @Post('update-transaction-ux')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Actualizar iconos y colores de transacciones',
+    description:
+      'Actualiza los campos icon y color en transaction_types y color en transaction_states usando los valores del seed',
+  })
+  @ApiResponse({ status: 200, description: 'Actualización exitosa' })
+  @ApiResponse({ status: 500, description: 'Error en actualización' })
+  async updateTransactionUX(): Promise<{
+    success: boolean;
+    updatedTypes: number;
+    updatedStates: number;
+  }> {
+    const result = await this.service.updateTransactionUX();
+
+    return {
+      success: true,
+      updatedTypes: result.updatedTypes,
+      updatedStates: result.updatedStates,
+    };
+  }
+
+
 
   /*@Post('quemar-becoin-manual')
   @HttpCode(HttpStatus.CREATED)

@@ -3,6 +3,8 @@ import { NotFoundException } from '@nestjs/common';
 import { ProfileEnum } from 'src/modules/users/enums/profiles.enum';
 import { Profile } from 'src/modules/users/entities/profile.entity';
 import { UserProfile } from 'src/modules/users/entities/profile-user.entity';
+import { Role } from 'src/modules/roles/entities/role.entity';
+import { User } from 'src/modules/users/entities/users.entity';
 
 export async function assignProfileToUser(
   queryRunner: QueryRunner,
@@ -31,6 +33,14 @@ export async function assignProfileToUser(
       },
     },
   );
+
+  const role = await queryRunner.manager.findOne(Role, {where: {name: 'USER'}})
+  const user = await queryRunner.manager.findOne(User, {where: {id: userId}})
+
+  user.role_name = role.name;
+  user.role= role;
+
+  await queryRunner.manager.save(user)
 
   // 3. Crear relación si no existe
   if (!existingUserProfile) {

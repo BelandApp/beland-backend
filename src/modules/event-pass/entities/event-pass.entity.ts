@@ -80,14 +80,14 @@ export class EventPass {
   attended_count: number;
 
   // 💰 DATOS ECONÓMICOS
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
-  price_becoin: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  price_dollar: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, default: 0 })
   discount: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
-  total_becoin: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  total_dollar: number;
 
   // 💸 CONFIGURACIÓN DE DEVOLUCIÓN
   @Column({ type: 'boolean', default: false })

@@ -78,10 +78,10 @@ export class GroupServicesService {
 
       const cost = Number(service.price_becoin);
 
-      const groupService = await qr.manager.findOne(GroupService, {
-        where: {id:groupServiceSaved.id},
-        relations: {payment_type:true}
-      })
+      // const groupService = await qr.manager.findOne(GroupService, {
+      //   where: {id:groupServiceSaved.id},
+      //   relations: {payment_type:true}
+      // })
 
       /* ======================================================
        * 5️⃣ RETENCIÓN SEGÚN PAYMENT TYPE
@@ -102,11 +102,11 @@ export class GroupServicesService {
           await qr.manager.save(
             qr.manager.create(Transaction, {
               wallet_id: wallet.id,
-              type_id: txType.id,
-              status_id: txStatePending.id,
+              type: txType,
+              status: txStatePending,
               amount_becoin: cost,
               post_balance: wallet.becoin_balance,
-              reference: `GROUP_SERVICE-${service.id}`,
+              reference: `GROUP_SERVICE-${groupServiceSaved.id}`,
             }),
           );
 
@@ -160,7 +160,7 @@ export class GroupServicesService {
       }
 
       await qr.commitTransaction();
-      return groupService;
+      return groupServiceSaved;
     } catch (error) {
       await qr.rollbackTransaction();
       this.logger.error('create(): error', error);

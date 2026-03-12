@@ -78,7 +78,4 @@ export class Product {
 
   @OneToMany(() => OrderItem, (item) => item.product)
   order_items: OrderItem[];
-
-  @OneToMany(() => RecycledItem, (item) => item.product)
-  recycled_items: RecycledItem[];
 }

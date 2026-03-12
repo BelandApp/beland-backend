@@ -223,31 +223,31 @@ async findOne(id: string, deleted: boolean = false): Promise<User | null> {
       );
       try {
         // 1. Crear la nueva Wallet sin el QR ni el alias
+        const nombre = user.email.split('@')[0];
+        const random = Math.floor(100 + Math.random() * 900);
+        const alias = `${nombre}${random}`;
         const newWallet = queryRunner.manager.create(Wallet, {
           user: user,
+          alias: alias,
         });
   
         // 2. Guardar la Wallet para que se le asigne un ID de la base de datos
-        await queryRunner.manager.save(newWallet);
+        const walletCreated = await queryRunner.manager.save(newWallet);
         this.logger.debug(
           `createWalletAndCart(): Wallet creada con ID: ${newWallet.id} para el usuario ID: ${user.id}`,
         );
   
         // 3. Generar el QR y el alias usando el ID recién creado
         // Ahora el ID de la wallet existe y es seguro usarlo.
-        const qr = await QRCode.toDataURL(newWallet.id);
-        const nombre = user.email.split('@')[0];
-        const random = Math.floor(100 + Math.random() * 900);
-        const alias = `${nombre}${random}`;
+        const qr = await QRCode.toDataURL(walletCreated.id);
   
         // 4. Asignar el QR y el alias a la entidad
-        newWallet.alias = alias;
-        newWallet.qr = qr;
+        walletCreated.qr = qr;
   
         // 5. Volver a guardar la Wallet para persistir el QR y el alias
-        await queryRunner.manager.save(newWallet);
+        await queryRunner.manager.save(walletCreated);
         this.logger.debug(
-          `createWalletAndCart(): Wallet con ID: ${newWallet.id} actualizada con QR y alias.`,
+          `createWalletAndCart(): Wallet con ID: ${walletCreated.id} actualizada con QR y alias.`,
         );
   
         // 6. Crear y guardar el Cart

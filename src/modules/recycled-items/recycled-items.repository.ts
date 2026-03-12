@@ -11,16 +11,13 @@ export class RecycledItemsRepository {
   ) {}
 
   async findAll(
-    product_id: string, 
     user_id: string,
     page: number,
     limit: number,
   ): Promise<[RecycledItem[], number]> {
     let where: Object; 
-    if (product_id) {
-        where = {product_id} 
-    } else {
-        where = user_id ? {scanned_by_user_id: user_id} : {};
+    if (user_id) {
+        where = {user_id} 
     }
 
     return this.repository.findAndCount({
@@ -28,7 +25,7 @@ export class RecycledItemsRepository {
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: ['product', 'scanned_by_user'],
+        relations: [ 'user' ],
     });
   }
 

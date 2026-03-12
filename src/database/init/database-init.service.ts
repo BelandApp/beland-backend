@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 
 // Seeders
@@ -115,6 +115,18 @@ export class DatabaseInitService {
     }
   }
 
+  async updateAllStock(quantity: number) {
+    if (quantity < 0) {
+      throw new BadRequestException('La cantidad no puede ser negativa');
+    }
+
+    return await this.dataSource
+      .createQueryBuilder()
+      .update(Product)
+      .set({ quantity })
+      .execute();
+  }
+
   async addBecoinProd(): Promise<void> {
     try {
       const productRepo = this.getRepo<Product>(Product);
@@ -132,6 +144,48 @@ export class DatabaseInitService {
         `Error al cargar Productos: ${JSON.stringify(error)}`,
       );
     }
+  }
+
+  async updateTransactionUX(): Promise<{ updatedTypes: number; updatedStates: number }> {
+    const typeRepo = this.getRepo<TransactionType>(TransactionType);
+    const stateRepo = this.getRepo<TransactionState>(TransactionState);
+
+    let updatedTypes = 0;
+    let updatedStates = 0;
+
+    // actualizar tipos
+    for (const item of preloadTT) {
+      const existing = await typeRepo.findOne({
+        where: { code: item.code },
+      });
+
+      if (existing) {
+        existing.icon = item.icon;
+        existing.color = item.color;
+
+        await typeRepo.save(existing);
+        updatedTypes++;
+      }
+    }
+
+    // actualizar estados
+    for (const item of preloadTS) {
+      const existing = await stateRepo.findOne({
+        where: { code: item.code },
+      });
+
+      if (existing) {
+        existing.color = item.color;
+
+        await stateRepo.save(existing);
+        updatedStates++;
+      }
+    }
+
+    return {
+      updatedTypes,
+      updatedStates,
+    };
   }
 
   async loadUser(): Promise<void> {

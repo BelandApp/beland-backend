@@ -1,13 +1,13 @@
 // src/recycled-items/dto/create-recycled-item.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID } from 'class-validator';
+import { IsNumber, IsUUID } from 'class-validator';
 
 export class CreateRecycledItemDto {
-  @ApiProperty({ description: 'ID del producto reciclado' })
-  @IsUUID()
-  product_id: string;
+  @ApiProperty({ description: 'Peso del reciclado' })
+  @IsNumber()
+  weight: number;
 
-  @ApiProperty({ description: 'ID del usuario que lo escaneó' })
+  @ApiProperty({ description: 'ID del usuario que reciclo' })
   @IsUUID()
-  scanned_by_user_id: string;
+  user_id: string;
 }

@@ -30,6 +30,7 @@ import { OrderFilterDto } from './dto/order-filter.dto';
 import { GroupMember } from '../group-members/entities/group-member.entity';
 import { User } from '../users/entities/users.entity';
 import { Product } from '../products/entities/product.entity';
+import { RecycledItem } from '../recycled-items/entities/recycled-item.entity';
 
 @Injectable()
 export class OrdersService {
@@ -155,6 +156,7 @@ export class OrdersService {
       if (!cart.items || cart.items.length === 0)
         throw new BadRequestException('El carrito esta vacio');
 
+      console.log ('este es el cart a convertir en order: ', cart);
       // 3) Forma de pago
       let paymentType: PaymentType;
       if (!cart.group_id) {
@@ -306,7 +308,7 @@ export class OrdersService {
 
       if (!cart.group_id && cart.user_id) {
         // ===== PAGO INMEDIATO (COMPRA INDIVIDUAL) =====
-
+        console.log('entoro a hacer el pago de la orden por ser compra individual')
         // wallet usuario
         const userWallet = await queryRunner.manager.findOne(Wallet, {
           where: { user_id: cart.user_id },
@@ -342,8 +344,8 @@ export class OrdersService {
               );
 
               if (becoinOrangeUsed > 0) {
-                userWallet.becoin_orange -= becoinOrangeUsed;
-                userWallet.becoin_balance += becoinOrangeUsed;
+                userWallet.becoin_orange = +userWallet.becoin_orange- becoinOrangeUsed;
+                userWallet.becoin_balance = +userWallet.becoin_balance + becoinOrangeUsed;
 
                 const orangeTxType = await queryRunner.manager.findOne(TransactionType,{
                   where:{code: TransactionCode.ORANGE_CREDIT_USED}
@@ -371,7 +373,7 @@ export class OrdersService {
           throw new BadRequestException('Saldo insuficiente para completar la compra');
 
         // ---------- DEBITAR USUARIO ----------
-        userWallet.becoin_balance -= Number(savedOrder.total_becoin);
+        userWallet.becoin_balance = +userWallet.becoin_balance - Number(savedOrder.total_becoin);
         await queryRunner.manager.save(userWallet);
 
         // tipos y estados
@@ -412,7 +414,7 @@ export class OrdersService {
         if(!superAdminWallet)
           throw new InternalServerErrorException('Billetera del superadmin no encontrada');
 
-        superAdminWallet.becoin_balance += Number(savedOrder.total_becoin);
+        superAdminWallet.becoin_balance = +superAdminWallet.becoin_balance + Number(savedOrder.total_becoin);
         await queryRunner.manager.save(superAdminWallet);
 
         const txTypeSale = await queryRunner.manager.findOne(TransactionType,{
@@ -734,7 +736,7 @@ export class OrdersService {
     return orderSave;
   }
 
-  async delivered (order_id: string, code: number): Promise<Order> {
+  async delivered (order_id: string, code: number, weight:number = 0): Promise<Order> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -765,6 +767,28 @@ export class OrdersService {
       order.delivered_at = new Date();
 
       const savedOrder = await queryRunner.manager.save(order);
+
+      if (weight !== 0) {
+        await queryRunner.manager.save (RecycledItem, {user_id:order.user_id, weight})
+        const userWallet = await queryRunner.manager.findOne(Wallet, {
+          where: { user_id: order.user_id },
+        });
+
+        if (!userWallet)
+          throw new NotFoundException('Wallet del usuario no encontrada');
+
+        const percentage = Number(this.superadminService.recicled_becoin);
+
+        const becoinGreenToAdd = Math.ceil(
+          Number(order.subtotal_becoin) * (percentage / 100)
+        );
+
+        userWallet.becoin_green =
+          Number(userWallet.becoin_green) + becoinGreenToAdd;
+
+        await queryRunner.manager.save(userWallet);
+      } 
+        
 
       await queryRunner.commitTransaction();
 
@@ -876,7 +900,6 @@ export class OrdersService {
       const statusOld = order.status_id;
 
       order.status_id = statusOrder.id;
-      order.recycled_weight = recycled_weight;
       order.recycled_at = new Date();
 
       const orderSaved = await manager.save(Order, order);
@@ -891,6 +914,8 @@ export class OrdersService {
 
       user.total_weight_recycled =
         Number(user.total_weight_recycled) + recycled_weight;
+
+      await manager.save (RecycledItem, {user_id:order.user_id, weight: recycled_weight})
 
       await manager.save(User, user);
 

@@ -18,6 +18,14 @@ export class TransactionType {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
+  /** color de la transaccion. UX*/
+  @Column({ type: 'varchar', length: 10, nullable:true })
+  color: string;
+
+  /** icono. para UX. */
+  @Column({ type: 'varchar', length: 50, nullable:true })
+  icon: string;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 

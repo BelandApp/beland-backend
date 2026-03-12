@@ -14,14 +14,12 @@ export class RecycledItemsService {
   constructor(private readonly repository: RecycledItemsRepository) {}
 
   async findAll(
-    product_id: string, 
     user_id: string,
     pageNumber: number,
     limitNumber: number,
   ): Promise<[RecycledItem[], number]> {
     try {
       const response = await this.repository.findAll(
-        product_id,
         user_id,
         pageNumber,
         limitNumber,
