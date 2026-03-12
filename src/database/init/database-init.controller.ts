@@ -7,6 +7,7 @@ import {
   Body,
   Query,
   BadRequestException,
+  Put,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -79,6 +80,31 @@ export class DatabaseIntiController {
       message: 'Stock actualizado correctamente',
     };
   }
+
+  @Post('update-transaction-ux')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Actualizar iconos y colores de transacciones',
+    description:
+      'Actualiza los campos icon y color en transaction_types y color en transaction_states usando los valores del seed',
+  })
+  @ApiResponse({ status: 200, description: 'Actualización exitosa' })
+  @ApiResponse({ status: 500, description: 'Error en actualización' })
+  async updateTransactionUX(): Promise<{
+    success: boolean;
+    updatedTypes: number;
+    updatedStates: number;
+  }> {
+    const result = await this.service.updateTransactionUX();
+
+    return {
+      success: true,
+      updatedTypes: result.updatedTypes,
+      updatedStates: result.updatedStates,
+    };
+  }
+
+
 
   /*@Post('quemar-becoin-manual')
   @HttpCode(HttpStatus.CREATED)

@@ -17,13 +17,13 @@ export class EventPassFiltersDto {
   @IsUUID()
   created_by_id?: string;
 
-  @ApiPropertyOptional({ description: 'Precio mínimo en becoins'})
+  @ApiPropertyOptional({ description: 'Precio mínimo en dolares'})
   @IsOptional()
   @IsNumber()
   @Min(0)
   min_price?: number;
 
-  @ApiPropertyOptional({ description: 'Precio máximo en becoins'})
+  @ApiPropertyOptional({ description: 'Precio máximo en dolares'})
   @IsOptional()
   @IsNumber()
   @Min(0)
