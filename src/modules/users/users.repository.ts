@@ -201,7 +201,7 @@ async findOne(id: string, deleted: boolean = false): Promise<User | null> {
       const userCreated = await queryRunner.manager.save(User, user)
       if (!userCreated) throw new ConflictException ('No se pudo crear el usuario')
       
-      this.createWalletAndCart(queryRunner, userCreated);
+      await this.createWalletAndCart(queryRunner, userCreated);
 
       await queryRunner.commitTransaction();
 
