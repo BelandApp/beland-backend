@@ -386,7 +386,7 @@ export class WalletsService {
       const walletUpdate = await queryRunner.manager.save(from);
 
       // 5) registro egreso del origen
-      await queryRunner.manager.save(Transaction, {
+      const transactionSend = await queryRunner.manager.save(Transaction, {
         wallet_id: from.id,
         type,
         status,
@@ -440,7 +440,10 @@ export class WalletsService {
       });   
 
       // se debe eliminar del front el amount to payment eliminado
-      return { wallet: walletUpdate };
+      return await this.dataSource.manager.findOne (Transaction, {
+        where : {id:transactionSend.id},
+        relations: {related_wallet:{user:true}, type:true, status:true}
+      });
     } catch (error) {
       // ❌ Deshago todo si algo falla
       if (!queryRun) await queryRunner.rollbackTransaction();
