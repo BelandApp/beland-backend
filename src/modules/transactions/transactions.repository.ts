@@ -77,7 +77,7 @@ export class TransactionsRepository {
   async findOne(id: string): Promise<Transaction> {
     return this.repository.findOne({
       where: { id },
-      relations: ['status', 'type'],
+      relations: {status:true, related_wallet: {user:true}, type:true, wallet: {user:true}},
     });
   }
 
