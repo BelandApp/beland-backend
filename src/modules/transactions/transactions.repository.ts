@@ -39,7 +39,7 @@ export class TransactionsRepository {
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: ['status', 'type'],
+        relations: {status:true, related_wallet: {user:true}, type:true, wallet: {user:true}}
     });
   }
 
