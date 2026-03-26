@@ -52,8 +52,6 @@ import { plainToInstance } from 'class-transformer'; // Import plainToInstance
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
 import { Roles } from 'src/modules/auth/decorators/roles.decorator';
-import { PermissionsGuard } from 'src/modules/auth/guards/permissions.guard';
-import { RequiredPermissions } from 'src/modules/auth/decorators/permissions.decorator';
 import { Request } from 'express'; // Importar la interfaz Request de express para su correcto tipado
 import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
 import { Auth0LoginDto } from './dto/auth0-login.dto'; // Importar el nuevo DTO
@@ -149,7 +147,9 @@ export class UsersController {
       const { user, token } = await this.usersService.findOrCreateAuth0User(
         auth0LoginDto,
       );
-      const userDto = plainToInstance(UserDto, user); // Convertir la entidad a DTO
+      const userDto = plainToInstance(UserDto, user, {
+        excludeExtraneousValues: true,
+      }); // Convertir la entidad a DTO
       this.logger.log(
         `Usuario con ID ${user.id} (${user.email}) procesado exitosamente via Auth0.`,
       );
@@ -184,7 +184,7 @@ export class UsersController {
     try {
       const newUser = await this.usersService.create(createUserDto);
       this.logger.log(
-        `Usuario con ID ${newUser.id} y email ${newUser.email} registrado exitosamente.`,
+        `Usuario con email ${newUser.email} registrado exitosamente.`,
       );
       return newUser;
     } catch (error) {
@@ -275,19 +275,18 @@ export class UsersController {
     }
   }
 
-  // --- RUTAS PROTEGIDAS PARA ADMINISTRADORES (REQUIEREN ROL Y PERMISO ESPECÍFICO) ---
-  // Estas rutas requieren autenticación con FlexibleAuthGuard, y luego validación de Roles y Permissions.
+  // --- RUTAS PROTEGIDAS PARA ADMINISTRADORES ---
+  // Estas rutas requieren autenticación con FlexibleAuthGuard, y luego validación de Roles.
 
   @Get('by-email')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard) // Requiere autenticación, rol y permiso
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Permiso para gestionar usuarios
   @ApiOperation({
     summary:
-      'Buscar usuario por dirección de email (Solo Admin/Superadmin con permiso de usuario).',
+      'Buscar usuario por dirección de email (Solo Admin/Superadmin).',
     description:
-      'Permite a un **Admin/Superadmin** con `user_permission` buscar un usuario específico por su dirección de email.',
+      'Permite a un **Admin/Superadmin** buscar un usuario específico por su dirección de email.',
   })
   @ApiQuery({
     name: 'email',
@@ -318,7 +317,9 @@ export class UsersController {
     try {
       // Usar findUserEntityByEmail y transformar a DTO
       const userEntity = await this.usersService.findUserEntityByEmail(email);
-      const userDto = plainToInstance(UserDto, userEntity); // Transformar entidad a DTO
+      const userDto = plainToInstance(UserDto, userEntity, {
+        excludeExtraneousValues: true,
+      }); // Transformar entidad a DTO
       this.logger.log(
         `Usuario con email "${email}" encontrado exitosamente por Admin ID: ${adminUserId}.`,
       );
@@ -330,12 +331,11 @@ export class UsersController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard, RolesGuard/*, PermissionsGuard*/) // Requiere autenticación, rol y permiso
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  //@RequiredPermissions('user_permission') // Permiso para gestionar usuarios
   @ApiOperation({
     summary:
-      'Obtener lista de usuarios con paginación, filtrado y ordenación (Solo Admin/Superadmin con permiso de usuario).',
+      'Obtener lista de usuarios con paginación, filtrado y ordenación (Solo Admin/Superadmin).',
     description:
       'Lista todos los usuarios en el sistema. Soporta paginación, ordenación y filtrado por ID, email, rol y estado de bloqueo. Solo los usuarios **Admin/Superadmin** pueden ver usuarios desactivados.',
   })
@@ -398,12 +398,11 @@ export class UsersController {
 
   @Get('deactivated')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard) // Requiere autenticación, rol y permiso
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Permiso para gestionar usuarios
   @ApiOperation({
     summary:
-      'Obtener usuarios desactivados (Solo Admin/Superadmin con permiso de usuario).',
+      'Obtener usuarios desactivados (Solo Admin/Superadmin).',
     description:
       'Lista todos los usuarios que han sido marcados como desactivados (soft-deleted).',
   })
@@ -510,12 +509,11 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(FlexibleAuthGuard)
   @ApiOperation({
-    summary: 'Actualiza del estado USER a el estado COMMERCE.',
+    summary: 'Endpoint obsoleto. Las funciones de comercio ahora se manejan con profiles.',
   })
   async changeRoleToCommerce(@Req() req: Request): Promise<UserDto> {
-    return plainToInstance(
-      UserDto,
-      await this.usersService.updateUserCommerce(req.user.id, 'COMMERCE'),
+    throw new ConflictException(
+      'Este endpoint quedó obsoleto. Usa profiles para habilitar funciones de comercio.',
     );
   }
 
@@ -554,12 +552,11 @@ export class UsersController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard) // Requiere autenticación, rol y permiso
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Permiso para gestionar usuarios
   @ApiOperation({
     summary:
-      'Actualizar un usuario por ID (Solo para Admins/Superadmins con permiso de usuario).',
+      'Actualizar un usuario por ID (Solo para Admins/Superadmins).',
     description:
       'Permite a un **Admin/Superadmin** actualizar cualquier perfil de usuario, incluyendo nombre, foto, rol, estado de bloqueo y estado de activación/desactivación.',
   })
@@ -634,12 +631,11 @@ export class UsersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard) // Requiere autenticación, rol y permiso
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Permiso para gestionar usuarios
   @ApiOperation({
     summary:
-      'Desactivar (soft-delete) un usuario por ID (Solo Admin/Superadmin con permiso de usuario).',
+      'Desactivar (soft-delete) un usuario por ID (Solo Admin/Superadmin).',
     description:
       'Marca un usuario como desactivado en la base de datos (soft-delete). No elimina el registro físicamente.',
   })
@@ -684,12 +680,11 @@ export class UsersController {
 
   @Patch(':id/reactivate')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard) // Requiere autenticación, rol y permiso
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Permiso para gestionar usuarios
   @ApiOperation({
     summary:
-      'Reactivar un usuario por ID (Solo Admin/Superadmin con permiso de usuario).',
+      'Reactivar un usuario por ID (Solo Admin/Superadmin).',
     description: 'Marca un usuario previamente desactivado como activo.',
   })
   @ApiParam({
@@ -732,12 +727,11 @@ export class UsersController {
 
   @Patch(':id/block-status')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard) // Requiere autenticación, rol y permiso
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Permiso para gestionar usuarios
   @ApiOperation({
     summary:
-      'Bloquear o desbloquear un usuario por ID (Solo Admin/Superadmin con permiso de usuario).',
+      'Bloquear o desbloquear un usuario por ID (Solo Admin/Superadmin).',
     description:
       'Permite a un **Admin/Superadmin** cambiar el estado de bloqueo (`isBlocked`) de un usuario.',
   })

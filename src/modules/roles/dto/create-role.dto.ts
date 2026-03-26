@@ -11,24 +11,23 @@ import { RoleEnum, ValidRoleNames } from '../enum/role-validate.enum';
 export class CreateRoleDto {
   @ApiProperty({
     description: 'Nombre del rol',
-    // ¡ACTUALIZADO para incluir EMPRESA en el ejemplo y enum!
-    example: 'USER', // USER, LEADER, ADMIN, SUPERADMIN, COMMERCE, FUNDATION
+    example: 'USER',
     enum: RoleEnum,
   })
   @IsString()
   @IsNotEmpty()
-  @IsEnum(RoleEnum) // Asegurarse de que el valor sea uno de los roles válidos
-  name: ValidRoleNames; // Tipo literal para el nombre del rol
+  @IsEnum(RoleEnum)
+  name: ValidRoleNames;
 
   @ApiProperty({
     description: 'Descripción del rol',
     example: 'Usuario básico del sistema',
     required: false,
-    nullable: true, // Añadido nullable para coincidir con la entidad
+    nullable: true,
   })
   @IsOptional()
   @IsString()
-  description?: string | null; // Cambiado a string | null
+  description?: string | null;
 
   @ApiProperty({
     description: 'Si el rol está activo',

@@ -159,7 +159,7 @@ export class CreateUserDto {
 
   @ApiProperty({
     description: 'Rol del usuario. Por defecto, USER.',
-    enum: ['USER', 'LEADER', 'ADMIN', 'SUPERADMIN', 'COMMERCE', 'FUNDATION'],
+    enum: ['USER', 'ADMIN', 'SUPERADMIN'],
     default: 'USER',
     required: false,
   })

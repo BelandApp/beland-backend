@@ -250,7 +250,9 @@ export class UsersService {
       getUsersQueryDto,
     );
 
-    const usersDto = plainToInstance(UserDto, users);
+    const usersDto = plainToInstance(UserDto, users, {
+      excludeExtraneousValues: true,
+    });
     return { users: usersDto, total };
   }
 
@@ -276,7 +278,9 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
-    return plainToInstance(UserDto, user);
+    return plainToInstance(UserDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   /**
@@ -373,7 +377,9 @@ export class UsersService {
       'findDeactivatedUsers(): Buscando usuarios desactivados.',
     );
     const users = await this.usersRepository.findDeactivatedUsers();
-    return plainToInstance(UserDto, users);
+    return plainToInstance(UserDto, users, {
+      excludeExtraneousValues: true,
+    });
   }
 
   // MÉTODOS DE CREACIÓN/ACTUALIZACIÓN/ELIMINACIÓN
@@ -522,7 +528,9 @@ export class UsersService {
       this.logger.log(
         `create(): Usuario ${savedUser.email} creado exitosamente.`,
       );
-      return plainToInstance(UserDto, savedUser);
+      return plainToInstance(UserDto, savedUser, {
+        excludeExtraneousValues: true,
+      });
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error(
@@ -673,7 +681,9 @@ export class UsersService {
 
     const updatedUser = await this.usersRepository.save(userToUpdate);
     this.logger.log(`update(): Usuario ${id} actualizado exitosamente.`);
-    return plainToInstance(UserDto, updatedUser);
+    return plainToInstance(UserDto, updatedUser, {
+      excludeExtraneousValues: true,
+    });
   }
 
   /**
@@ -704,7 +714,9 @@ export class UsersService {
     this.logger.log(
       `updateBlockStatus(): Usuario ${id} estado de bloqueo actualizado a ${isBlocked}.`,
     );
-    return plainToInstance(UserDto, updatedUser);
+    return plainToInstance(UserDto, updatedUser, {
+      excludeExtraneousValues: true,
+    });
   }
 
   /**
@@ -756,7 +768,9 @@ export class UsersService {
     await this.usersRepository.reactivate(id);
     this.logger.log(`reactivateUser(): Usuario ${id} reactivado exitosamente.`);
     const reactivatedUser = await this.usersRepository.findOne(id);
-    return plainToInstance(UserDto, reactivatedUser);
+    return plainToInstance(UserDto, reactivatedUser, {
+      excludeExtraneousValues: true,
+    });
   }
 
   /**

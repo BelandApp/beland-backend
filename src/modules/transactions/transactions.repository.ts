@@ -55,7 +55,7 @@ export class TransactionsRepository {
     .innerJoinAndSelect('t.wallet', 'w') // wallet origen 
     .innerJoinAndSelect('t.related_wallet', 'rw') // wallet destino 
     .innerJoinAndSelect('rw.user', 'u') // user dueño del wallet destino 
-    .where('type.code = :code', { code: TransactionCode.TRANSFER_SEND }) 
+    .where('type.code = :code', { code: TransactionCode.GIFTCARD_SEND }) 
     .andWhere('w.user_id = :user_id', { user_id }) 
     .orderBy('t.related_wallet_id') 
     .addOrderBy('t.created_at', 'DESC') 

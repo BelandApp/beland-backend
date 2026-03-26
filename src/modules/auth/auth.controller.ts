@@ -22,16 +22,15 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { User } from 'src/modules/users/entities/users.entity';
-import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
+import { UserDto } from 'src/modules/users/dto/user.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { AuthService } from './auth.service';
 import { ConfirmAuthDto, RegisterAuthDto } from './dto/register-auth.dto';
 import { Request } from 'express';
 import { FlexibleAuthGuard } from './guards/flexible-auth.guard';
-import { Auth0ExchangeTokenDto } from './dto/auth0-exchange-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { plainToInstance } from 'class-transformer';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -47,15 +46,17 @@ export class AuthController {
     summary: 'Obtener perfil del usuario autenticado',
     description:'Retorna datos del usuario logueado. Requiere token JWT válido.',})
   @ApiBearerAuth('JWT-auth')
-  @ApiResponse({status: 200, description: 'Perfil del usuario obtenido exitosamente.', type: User})
+  @ApiResponse({status: 200, description: 'Perfil del usuario obtenido exitosamente.', type: UserDto})
   @ApiResponse({ status: 401, description: 'No autenticado.' })
   @ApiResponse({ status: 403, description: 'No autorizado.' })
-  async getProfile(@Req() req: Request): Promise<User> {
+  async getProfile(@Req() req: Request): Promise<UserDto> {
     const user = req.user;
     this.logger.log(
       `GET /auth/me: Solicitud de perfil para usuario ID: ${user.id}`,
     );
-    return await this.authService.getProfile(user.id);
+    return plainToInstance(UserDto, await this.authService.getProfile(user.id), {
+      excludeExtraneousValues: true,
+    });
   }
 
   @Post('login')

@@ -1,11 +1,12 @@
 export enum RoleEnum {
   USER = 'USER',
-  LEADER = 'LEADER',
   ADMIN = 'ADMIN',
   SUPERADMIN = 'SUPERADMIN',
-  COMMERCE = 'COMMERCE',
-  FUNDATION = 'FUNDATION',
 }
 
-// Definición de tipo para todos los roles válidos
 export type ValidRoleNames = `${RoleEnum}`;
+export const AUTHORITY_ROLES = Object.values(RoleEnum) as ValidRoleNames[];
+export const ADMIN_AUTHORITY_ROLES: ValidRoleNames[] = [
+  RoleEnum.ADMIN,
+  RoleEnum.SUPERADMIN,
+];

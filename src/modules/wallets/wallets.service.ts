@@ -21,6 +21,8 @@ import { AmountToPayment } from 'src/modules/amount-to-payment/entities/amount-t
 import { RespCobroDto } from './dto/resp-cobro.dto';
 import { NotificationsGateway } from 'src/modules/notification-socket/notification-socket.gateway';
 import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
+import { ProfileEnum } from 'src/modules/users/enums/profiles.enum';
+import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
 
 @Injectable()
 export class WalletsService {
@@ -341,28 +343,23 @@ export class WalletsService {
       if (!code_transaction_send) {
         const user: User = await queryRunner.manager.findOne(User, {
           where: { wallet: {id: to.id} },
+          relations: { profiles: { profile: true } },
         });
         if (!user) throw new NotFoundException('Usuario destino no existe');
-        switch (user.role_name) {
-          case 'COMMERCE':
-            code_transaction_send = TransactionCode.PURCHASE;
-            code_transaction_received = TransactionCode.SALE;
-            break;
+        const profiles = user.profiles?.map((p) => p.profile?.name) ?? [];
 
-          case 'FUNDATION':
-            code_transaction_send = TransactionCode.DONATION_SEND;
-            code_transaction_received = TransactionCode.DONATION_RECEIVED;
-            break;
-
-          case 'SUPERADMIN':
-            code_transaction_send = TransactionCode.PURCHASE_BELAND;
-            code_transaction_received = TransactionCode.SALE_BELAND;
-            break;
-
-          default:
-            code_transaction_send = TransactionCode.TRANSFER_SEND;
-            code_transaction_received = TransactionCode.TRANSFER_RECEIVED;
-          break;
+        if (profiles.includes(ProfileEnum.MERCHANT)) {
+          code_transaction_send = TransactionCode.PURCHASE;
+          code_transaction_received = TransactionCode.SALE;
+        } else if (profiles.includes(ProfileEnum.FOUNDATION)) {
+          code_transaction_send = TransactionCode.DONATION_SEND;
+          code_transaction_received = TransactionCode.DONATION_RECEIVED;
+        } else if (user.role_name === RoleEnum.SUPERADMIN) {
+          code_transaction_send = TransactionCode.PURCHASE_BELAND;
+          code_transaction_received = TransactionCode.SALE_BELAND;
+        } else {
+          code_transaction_send = TransactionCode.GIFTCARD_SEND;
+          code_transaction_received = TransactionCode.GIFTCARD_RECEIVED;
         }
       }
 

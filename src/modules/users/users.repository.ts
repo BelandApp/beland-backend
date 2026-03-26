@@ -32,7 +32,7 @@ async findOne(id: string, deleted: boolean = false): Promise<User | null> {
 
   return this.userORMRepository.findOne({
     where,
-    relations: { role: true, profiles:true },
+    relations: { role: true, profiles: { profile: true } },
   });
 }
 
@@ -47,26 +47,26 @@ async findOne(id: string, deleted: boolean = false): Promise<User | null> {
   async findByAuth0Id(auth0_id: string): Promise<User | null> {
     return this.userORMRepository.findOne({
       where: {auth0_id},
-      relations: {role:true, wallet:true, cart:true, profiles:true }
+      relations: {role:true, wallet:true, cart:true, profiles: { profile: true } }
     });
   }
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userORMRepository.findOne({
       where: { email },
-      relations: { wallet: true, cart: true, role: true, profiles:true },
+      relations: { wallet: true, cart: true, role: true, profiles: { profile: true } },
     });
   }
 
   async findByUsername(username: string): Promise<User | null> {
     return this.userORMRepository.findOne({
       where: { username },
-      relations: { wallet: true, cart: true, role: true, profiles:true },
+      relations: { wallet: true, cart: true, role: true, profiles: { profile: true } },
     });
   }
 
   async findByPhone(phone: string): Promise<User | null> {
-    return this.userORMRepository.findOne({ where: {phone}, relations: {role:true, profiles:true}});
+    return this.userORMRepository.findOne({ where: {phone}, relations: {role:true, profiles: { profile: true }}});
   }
 
 

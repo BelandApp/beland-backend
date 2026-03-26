@@ -1,23 +1,16 @@
 import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { RolesRepository } from '../modules/roles/roles.repository';
-// Eliminada la importación de SettingRepository, ya que no se usa o no existe en el contexto actual.
 
 @Injectable()
 export class DataSeederService implements OnApplicationBootstrap {
   private readonly logger = new Logger(DataSeederService.name);
   private readonly DEFAULT_ROLES = [
     { name: 'USER', description: 'Usuario básico del sistema' },
-    { name: 'LEADER', description: 'Usuario con privilegios de líder' },
     { name: 'ADMIN', description: 'Administrador del sistema' },
     { name: 'SUPERADMIN', description: 'Superadministrador con control total' },
-    { name: 'COMMERCE', description: 'Rol de usuario para comercios' },
-    { name: 'FUNDATION', description: 'Rol de usuario para fundaciones sin fines de lucro' },
   ];
 
-  constructor(
-    private readonly rolesRepository: RolesRepository,
-    // Eliminado SettingRepository del constructor
-  ) {}
+  constructor(private readonly rolesRepository: RolesRepository) {}
 
   async onApplicationBootstrap() {
     await this.seedDefaultRoles();
@@ -28,25 +21,22 @@ export class DataSeederService implements OnApplicationBootstrap {
 
     for (const roleData of this.DEFAULT_ROLES) {
       const existingRole = await this.rolesRepository.findByName(
-        roleData.name as 'USER' | 'LEADER' | 'ADMIN' | 'SUPERADMIN' | 'COMMERCE' | 'FUNDATION',
+        roleData.name as 'USER' | 'ADMIN' | 'SUPERADMIN',
       );
 
       if (!existingRole) {
         try {
-          // Asegurarse de que el objeto pasado a create sea compatible con DeepPartial<Role>
-          // y que se use 'await' para la creación
           const newRole = await this.rolesRepository.save(
-            await this.rolesRepository.create({
-              name: roleData.name as 'USER' | 'LEADER' | 'ADMIN' | 'SUPERADMIN' | 'COMMERCE' | 'FUNDATION',
+            this.rolesRepository.create({
+              name: roleData.name as 'USER' | 'ADMIN' | 'SUPERADMIN',
               description: roleData.description,
-              is_active: true, // Ahora la entidad Role tiene esta propiedad
+              is_active: true,
             }),
           );
           this.logger.log(
             `Rol "${newRole.name}" (ID: ${newRole.role_id}) sembrado exitosamente.`,
           );
         } catch (error: any) {
-          // Usar 'any' para acceder a 'error.message'
           this.logger.error(
             `Error creando rol "${roleData.name}": ${error.message}`,
           );
