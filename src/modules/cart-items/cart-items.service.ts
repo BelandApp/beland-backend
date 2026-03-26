@@ -105,9 +105,6 @@ export class CartItemsService {
           return { message: 'Item eliminado porque la cantidad es 0' };
         }
 
-        if (item.product.quantity < newQuantity) {
-          throw new ConflictException(`Stock insuficiente. Solo quedan ${item.product.quantity}`);
-        }
         // Si la cantidad es mayor a 0 → recalcular totales
         body.total_price = Number(item.unit_price) * newQuantity;
         body.total_becoin = Number(item.unit_becoin) * newQuantity;

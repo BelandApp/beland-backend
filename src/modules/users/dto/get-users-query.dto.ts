@@ -7,12 +7,10 @@ import {
   IsString,
   IsIn,
   IsBoolean,
-  IsNumber, // Asegurarse de importar IsNumber para 'phone'
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-// Definición de tipo para todos los roles válidos (debe coincidir con UsersService y Role Entity)
-type ValidRoleNames = 'USER' | 'LEADER' | 'ADMIN' | 'SUPERADMIN' | 'COMMERCE' | 'FUNDATION';
+import { RoleEnum, ValidRoleNames } from 'src/modules/roles/enum/role-validate.enum';
 
 export class GetUsersQueryDto {
   @ApiPropertyOptional({
@@ -50,8 +48,7 @@ export class GetUsersQueryDto {
   sortBy?: string = 'created_at';
 
   @ApiPropertyOptional({
-    description:
-      'Dirección de la ordenación (ASC para ascendente, DESC para descendente).',
+    description: 'Dirección de la ordenación (ASC o DESC).',
     enum: ['ASC', 'DESC'],
     default: 'DESC',
     type: String,
@@ -66,7 +63,7 @@ export class GetUsersQueryDto {
     type: Boolean,
   })
   @IsOptional()
-  @Type(() => Boolean) // Necesario para ParseBoolPipe si se usara directamente
+  @Type(() => Boolean)
   @IsBoolean()
   includeDeleted?: boolean = false;
 
@@ -88,12 +85,12 @@ export class GetUsersQueryDto {
 
   @ApiPropertyOptional({
     description: 'Filtrar por nombre de rol.',
-    enum: ['USER', 'LEADER', 'ADMIN', 'SUPERADMIN', 'EMPRESA'],
+    enum: RoleEnum,
     type: String,
   })
   @IsOptional()
   @IsString()
-  @IsIn(['USER', 'LEADER', 'ADMIN', 'SUPERADMIN', 'EMPRESA'])
+  @IsIn(Object.values(RoleEnum))
   roleName?: ValidRoleNames;
 
   @ApiPropertyOptional({

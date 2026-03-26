@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Body,
@@ -23,14 +24,17 @@ import {
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
-import { User } from 'src/modules/users/entities/users.entity'; // Import User entity
 import { CouponsService } from './coupons.service';
 import { Coupon } from './entities/coupon.entity';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { ApplyCouponDto } from './dto/apply-coupon.dto';
 import { ApplyResult } from './interfaces/apply-result.interface';
-
+import {
+  ADMIN_AUTHORITY_ROLES,
+  RoleEnum,
+} from 'src/modules/roles/enum/role-validate.enum';
+import { ProfileEnum } from 'src/modules/users/enums/profiles.enum';
 
 @ApiTags('coupons')
 @Controller('coupons')
@@ -43,7 +47,7 @@ export class CouponsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Listar cupones. ADMIN lista todos. COMMERCE lista los que ha creado.',
+      'Listar cupones. ADMIN lista todos. El resto ve los que ha creado.',
   })
   @ApiQuery({
     name: 'page',
@@ -66,14 +70,13 @@ export class CouponsController {
   ): Promise<[Coupon[], number]> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
-
-    // Si el usuario es un ADMIN, el user_id se pasa como vacío para listar todos.
-    const user_id = req.user.role_name === 'ADMIN' ? '' : req.user.id;
+    const user_id = ADMIN_AUTHORITY_ROLES.includes(req.user.role_name)
+      ? ''
+      : req.user.id;
 
     return await this.service.findAll(user_id, pageNumber, limitNumber);
   }
 
-  // Endpoint para listar cupones disponibles para un comercio específico
   @Get('available/:commerceId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -121,7 +124,8 @@ export class CouponsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Crear un nuevo cupón (requiere rol COMMERCE/ADMIN)',
+    summary:
+      'Crear un nuevo cupón (requiere perfil MERCHANT o rol ADMIN/SUPERADMIN)',
   })
   @ApiResponse({ status: 201, description: 'Cupón creado exitosamente' })
   @ApiResponse({
@@ -130,10 +134,16 @@ export class CouponsController {
   })
   @ApiResponse({ status: 500, description: 'No se pudo crear el cupón' })
   async create(
-    @Req() req: Request, // Añadido Req para obtener el ID del creador
+    @Req() req: Request,
     @Body() body: CreateCouponDto,
   ): Promise<Coupon> {
-    // Seguridad: Inyectar el ID del usuario creador desde el token de autenticación
+    const hasMerchantProfile = req.user.profiles?.includes(ProfileEnum.MERCHANT);
+    const isAdmin = ADMIN_AUTHORITY_ROLES.includes(req.user.role_name);
+
+    if (!hasMerchantProfile && !isAdmin) {
+      throw new ForbiddenException('No tienes permisos para crear cupones.');
+    }
+
     const couponData = { ...body, created_by_user_id: req.user.id };
     return await this.service.create(couponData);
   }
@@ -180,13 +190,13 @@ export class CouponsController {
   @ApiResponse({
     status: 409,
     description:
-      'Cupón expirado, ya redimido (límite alcanzado), o no válido para el comercio/monto',
+      'Cupón expirado, ya redimido, o no válido para el comercio/monto',
   })
   async applyCoupon(
     @Req() req: Request,
-    @Body() applyDto: ApplyCouponDto, // Usamos el DTO refactorizado
+    @Body() applyDto: ApplyCouponDto,
   ): Promise<ApplyResult> {
-    const user_id = req.user.id; // Seguridad: ID del usuario desde el token
+    const user_id = req.user.id;
     return await this.service.validateAndRedeemCoupon(
       applyDto.coupon_id,
       user_id,

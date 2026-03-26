@@ -35,16 +35,16 @@
     "color": "#4caf50"
   },
   {
-    "code": "TRANSFER_SEND",
-    "name": "Transferencia Enviada",
-    "description": "Transferencia de BECOIN entre usuarios",
+    "code": "GIFTCARD_SEND",
+    "name": "Enviaste una Gift Card",
+    "description": "Regalaste una Gift Card a otro usuario de Beland",
     "icon": "arrow-top-right",
     "color": "#2196f3"
   },
   {
-    "code": "TRANSFER_RECEIVED",
-    "name": "Transferencia Recibida",
-    "description": "Transferencia de BECOIN entre usuarios",
+    "code": "GIFTCARD_RECEIVED",
+    "name": "Recibiste una Gift Card",
+    "description": "Un usuario de Beland te regalo una Gift Card",
     "icon": "arrow-bottom-left",
     "color": "#2196f3"
   },

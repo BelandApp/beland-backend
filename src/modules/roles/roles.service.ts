@@ -14,11 +14,9 @@ import { UserDto } from '../users/dto/user.dto';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/entities/users.entity';
-import { Role } from './entities/role.entity'; // Importar la entidad Role
+import { Role } from './entities/role.entity';
 import { plainToInstance } from 'class-transformer';
-
-// Definición de tipo para todos los roles válidos
-type ValidRoleNames = 'USER' | 'LEADER' | 'ADMIN' | 'SUPERADMIN' | 'COMMERCE' | 'FUNDATION';
+import { RoleEnum, ValidRoleNames } from './enum/role-validate.enum';
 
 @Injectable()
 export class RolesService {
@@ -35,7 +33,6 @@ export class RolesService {
       `create(): Intentando crear rol con nombre: ${createRoleDto.name}`,
     );
 
-    // Casting a ValidRoleNames para findByName
     const existingRole = await this.rolesRepository.findByName(
       createRoleDto.name as ValidRoleNames,
     );
@@ -45,27 +42,26 @@ export class RolesService {
       );
     }
 
-    // Crear la entidad Role usando el método create del repositorio
     const role = this.rolesRepository.create({
-      name: createRoleDto.name as ValidRoleNames, // Casting explícito aquí
+      name: createRoleDto.name as ValidRoleNames,
       description: createRoleDto.description,
       is_active: createRoleDto.is_active,
     });
 
     const savedRole = await this.rolesRepository.save(role);
-    this.logger.log(`✅ Rol "${savedRole.name}" creado con éxito.`); // savedRole es un objeto Role, por lo que .name es accesible
-    return plainToInstance(RoleDto, savedRole); // Convertir una sola entidad a DTO
+    this.logger.log(`Rol "${savedRole.name}" creado con éxito.`);
+    return plainToInstance(RoleDto, savedRole);
   }
 
   async findAll(): Promise<RoleDto[]> {
     this.logger.debug('findAll(): Buscando todos los roles.');
     const roles = await this.rolesRepository.find();
-    return plainToInstance(RoleDto, roles); // Convertir un array de entidades a un array de DTOs
+    return plainToInstance(RoleDto, roles);
   }
 
   async findOne(id: string): Promise<RoleDto> {
     this.logger.debug(`findOne(): Buscando rol con ID: ${id}.`);
-    const role = await this.rolesRepository.findOne(id); // Usar el método findOne del repositorio
+    const role = await this.rolesRepository.findOne(id);
     if (!role) {
       this.logger.warn(`findOne(): Rol con ID "${id}" no encontrado.`);
       throw new NotFoundException(`Role with ID "${id}" not found.`);
@@ -77,15 +73,16 @@ export class RolesService {
     this.logger.debug(
       `findUsersByRoleId(): Buscando usuarios para rol con ID: ${roleId}.`,
     );
-    const role = await this.rolesRepository.findOne(roleId); // Usar el método findOne del repositorio
+    const role = await this.rolesRepository.findOne(roleId);
     if (!role) {
       this.logger.warn(
         `findUsersByRoleId(): Rol con ID "${roleId}" no encontrado.`,
       );
       throw new NotFoundException(`Role with ID "${roleId}" not found.`);
     }
+
     const users = await this.userRepository.find({
-      where: { role_name: role.name }, // role.name ahora es ValidRoleNames
+      where: { role_name: role.name },
     });
 
     if (!users || users.length === 0) {
@@ -96,19 +93,19 @@ export class RolesService {
         `No users found for role with ID "${roleId}".`,
       );
     }
+
     return plainToInstance(UserDto, users);
   }
 
   async update(id: string, updateRoleDto: UpdateRoleDto): Promise<RoleDto> {
     this.logger.debug(`update(): Actualizando rol con ID: ${id}.`);
-    const role = await this.rolesRepository.findOne(id); // Usar el método findOne del repositorio
+    const role = await this.rolesRepository.findOne(id);
     if (!role) {
       this.logger.warn(`update(): Rol con ID "${id}" no encontrado.`);
       throw new NotFoundException(`Role with ID "${id}" not found.`);
     }
 
     if (updateRoleDto.name && updateRoleDto.name !== role.name) {
-      // Casting a ValidRoleNames para findByName
       const existingRole = await this.rolesRepository.findByName(
         updateRoleDto.name as ValidRoleNames,
       );
@@ -117,8 +114,9 @@ export class RolesService {
           `Role with name "${updateRoleDto.name}" already exists.`,
         );
       }
-      role.name = updateRoleDto.name as ValidRoleNames; // Asignación con casting
+      role.name = updateRoleDto.name as ValidRoleNames;
     }
+
     if (updateRoleDto.description !== undefined) {
       role.description = updateRoleDto.description;
     }
@@ -128,27 +126,23 @@ export class RolesService {
 
     const updatedRole = await this.rolesRepository.save(role);
     this.logger.log(
-      `✅ Rol "${updatedRole.name}" (ID: ${updatedRole.role_id}) actualizado con éxito.`,
+      `Rol "${updatedRole.name}" (ID: ${updatedRole.role_id}) actualizado con éxito.`,
     );
     return plainToInstance(RoleDto, updatedRole);
   }
 
   async remove(id: string): Promise<void> {
     this.logger.debug(`remove(): Intentando eliminar rol con ID: ${id}.`);
-    const roleToDelete = await this.rolesRepository.findOne(id); // Usar el método findOne del repositorio
+    const roleToDelete = await this.rolesRepository.findOne(id);
     if (!roleToDelete) {
       this.logger.warn(`remove(): Rol con ID "${id}" no encontrado.`);
       throw new NotFoundException(`Role with ID "${id}" not found.`);
     }
 
-    // ¡ACTUALIZADO para incluir 'EMPRESA' en roles críticos!
     const CRITICAL_ROLES: ValidRoleNames[] = [
-      'USER',
-      'LEADER',
-      'ADMIN',
-      'SUPERADMIN',
-      'COMMERCE',
-      'FUNDATION'
+      RoleEnum.USER,
+      RoleEnum.ADMIN,
+      RoleEnum.SUPERADMIN,
     ];
 
     if (CRITICAL_ROLES.includes(roleToDelete.name)) {
@@ -160,11 +154,11 @@ export class RolesService {
       );
     }
 
-    const defaultRole = await this.rolesRepository.findByName('USER');
+    const defaultRole = await this.rolesRepository.findByName(RoleEnum.USER);
 
     if (!defaultRole) {
       this.logger.error(
-        `remove(): Rol "USER" por defecto no encontrado. Incapaz de reasignar usuarios.`,
+        'remove(): Rol "USER" por defecto no encontrado. Incapaz de reasignar usuarios.',
       );
       throw new InternalServerErrorException(
         'Cannot delete role: The default "USER" role is missing, unable to reassign users.',
@@ -179,7 +173,7 @@ export class RolesService {
       `Usuarios del rol "${roleToDelete.name}" reasignados al rol "${defaultRole.name}".`,
     );
 
-    await this.rolesRepository.remove(roleToDelete); // Usar el método remove del repositorio
-    this.logger.log(`✅ Rol con ID "${id}" eliminado exitosamente.`);
+    await this.rolesRepository.remove(roleToDelete);
+    this.logger.log(`Rol con ID "${id}" eliminado exitosamente.`);
   }
 }

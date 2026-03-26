@@ -37,9 +37,6 @@ import {
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
 import { Roles } from 'src/modules/auth/decorators/roles.decorator';
-import { PermissionsGuard } from 'src/modules/auth/guards/permissions.guard';
-import { RequiredPermissions } from 'src/modules/auth/decorators/permissions.decorator';
-import { User } from 'src/modules/users/entities/users.entity'; // Para el tipado del objeto de usuario en la request
 import { Request } from 'express'; // Importar la interfaz Request de express para su correcto tipado
 
 @ApiTags('products')
@@ -66,16 +63,16 @@ export class ProductsController {
     return user.id;
   }
 
-  // --- RUTAS DE ADMINISTRACIÓN/GESTIÓN DE PRODUCTOS (REQUIEREN AUTENTICACIÓN Y ROLES/PERMISOS) ---
+  // --- RUTAS DE ADMINISTRACIÓN/GESTIÓN DE PRODUCTOS (REQUIEREN AUTENTICACIÓN Y ROLES) ---
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  // Requerimos autenticación, rol ADMIN/SUPERADMIN y el permiso granular 'content_permission'.
+  // Requerimos autenticación y rol ADMIN/SUPERADMIN.
   @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiOperation({
     summary:
-      'Crear un nuevo producto (solo Admin/Superadmin con permiso de contenido).',
+      'Crear un nuevo producto (solo Admin/Superadmin).',
   })
   @ApiResponse({
     status: 201,
@@ -111,15 +108,12 @@ export class ProductsController {
 
   @Post('group-types/:id')
   @HttpCode(HttpStatus.OK)
-  // Requerimos autenticación, rol ADMIN/SUPERADMIN y el permiso granular 'content_permission'.
-  // NOTA: Si esta acción es más sobre "moderar" o "aprobar" categorías, 'moderation_permission' podría ser más adecuado.
-  // Por ahora, se asume 'content_permission'.
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard)
+  // Requerimos autenticación y rol ADMIN/SUPERADMIN.
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('content_permission') // <-- Usando 'content_permission'
   @ApiOperation({
     summary:
-      'Asociar tipos de grupo a un producto (solo Admin/Superadmin con permiso de contenido).',
+      'Asociar tipos de grupo a un producto (solo Admin/Superadmin).',
   })
   @ApiParam({ name: 'id', type: 'string', description: 'ID del producto' })
   @ApiBody({
@@ -178,13 +172,12 @@ export class ProductsController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  // Requerimos autenticación, rol ADMIN/SUPERADMIN y el permiso granular 'content_permission'.
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard)
+  // Requerimos autenticación y rol ADMIN/SUPERADMIN.
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('content_permission') // <-- Usando 'content_permission'
   @ApiOperation({
     summary:
-      'Actualizar un producto por ID (solo Admin/Superadmin con permiso de contenido).',
+      'Actualizar un producto por ID (solo Admin/Superadmin).',
   })
   @ApiParam({ name: 'id', description: 'UUID del producto' })
   @ApiResponse({
@@ -223,13 +216,12 @@ export class ProductsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  // Requerimos autenticación, rol ADMIN/SUPERADMIN y el permiso granular 'content_permission'.
-  @UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard)
+  // Requerimos autenticación y rol ADMIN/SUPERADMIN.
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('content_permission') // <-- Usando 'content_permission'
   @ApiOperation({
     summary:
-      'Eliminar un producto por ID (solo Admin/Superadmin con permiso de contenido).',
+      'Eliminar un producto por ID (solo Admin/Superadmin).',
   })
   @ApiParam({ name: 'id', description: 'UUID del producto' })
   @ApiResponse({ status: 204, description: 'Producto eliminado exitosamente.' })
