@@ -4,6 +4,13 @@ import { Expose, Transform } from 'class-transformer';
 export class UserDto {
   @Expose()
   @ApiProperty({
+    description: 'ID único del usuario',
+    example: 'uuid',
+  })
+  id: string;
+
+  @Expose()
+  @ApiProperty({
     description: 'Correo electrónico del usuario',
     example: 'usuario@example.com',
   })

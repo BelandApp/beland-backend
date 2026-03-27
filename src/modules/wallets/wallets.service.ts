@@ -191,6 +191,17 @@ export class WalletsService {
     await queryRunner.startTransaction();
 
     try {
+      const payphoneTransactionId = String(dto.payphone_transactionId);
+
+      const existingRecharge = await queryRunner.manager.findOne(Transaction, {
+        where: { payphone_transactionId: payphoneTransactionId },
+      });
+      if (existingRecharge) {
+        throw new ConflictException(
+          'La transacción de Payphone ya fue procesada anteriormente.',
+        );
+      }
+
       // 1) Certificar que exista la wallet
       const wallet = await queryRunner.manager.findOne(Wallet, {
         where: { user_id },
@@ -271,7 +282,7 @@ export class WalletsService {
         amount_becoin: +userBeCoins,
         post_balance: wallet.becoin_balance,
         reference: dto.referenceCode,
-        payphone_transactionId: dto.payphone_transactionId?.toString(),
+        payphone_transactionId: payphoneTransactionId,
         clientTransactionId: dto.clientTransactionId,
       });
 
