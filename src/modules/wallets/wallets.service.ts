@@ -27,6 +27,8 @@ import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
 @Injectable()
 export class WalletsService {
   private readonly completeMessage = 'la billetera virtual';
+  private readonly clientTransactionDuplicateConstraint =
+    'IDX_transactions_client_transaction_id_unique';
 
   constructor(
     private readonly repository: WalletsRepository,
@@ -192,9 +194,10 @@ export class WalletsService {
 
     try {
       const payphoneTransactionId = String(dto.payphone_transactionId);
+      const clientTransactionId = dto.clientTransactionId;
 
       const existingRecharge = await queryRunner.manager.findOne(Transaction, {
-        where: { payphone_transactionId: payphoneTransactionId },
+        where: { clientTransactionId },
       });
       if (existingRecharge) {
         throw new ConflictException(
@@ -283,7 +286,7 @@ export class WalletsService {
         post_balance: wallet.becoin_balance,
         reference: dto.referenceCode,
         payphone_transactionId: payphoneTransactionId,
-        clientTransactionId: dto.clientTransactionId,
+        clientTransactionId,
       });
 
       // 6) Registrar la transacción de las becoin_orange
@@ -294,8 +297,8 @@ export class WalletsService {
         amount_becoin: +orangeFee,
         post_balance: wallet.becoin_orange,
         reference: dto.referenceCode,
-        payphone_transactionId: dto.payphone_transactionId?.toString(),
-        clientTransactionId: dto.clientTransactionId,
+        payphone_transactionId: payphoneTransactionId,
+        clientTransactionId: null,
       });
 
       // ✅ Confirmar la transacción
@@ -306,6 +309,11 @@ export class WalletsService {
     } catch (error) {
       // ❌ Deshacer todo si algo falla
       await queryRunner.rollbackTransaction();
+      if (this.isClientTransactionDuplicateError(error)) {
+        throw new ConflictException(
+          'La transacción de Payphone ya fue procesada anteriormente.',
+        );
+      }
       throw error;
     } finally {
       // Cerrar el queryRunner
@@ -598,5 +606,22 @@ export class WalletsService {
       // Liberar el queryRunner
       await queryRunner.release();
     }
+  }
+
+  private isClientTransactionDuplicateError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+
+    const queryError = error as {
+      code?: string;
+      constraint?: string;
+      driverError?: { code?: string; constraint?: string };
+    };
+
+    return (
+      queryError.code === '23505' &&
+      (queryError.constraint === this.clientTransactionDuplicateConstraint ||
+        queryError.driverError?.constraint ===
+          this.clientTransactionDuplicateConstraint)
+    );
   }
 }

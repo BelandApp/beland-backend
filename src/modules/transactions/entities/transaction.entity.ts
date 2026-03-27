@@ -42,13 +42,13 @@ export class Transaction {
   @Column({ type: 'numeric', precision: 14, scale:2  })
   post_balance: number; // saldo resultante tras la operación
  
-  @Index('IDX_transactions_payphone_transaction_id_unique', {
-    unique: true,
-    where: `"payphone_transactionId" IS NOT NULL`,
-  })
   @Column({ type: 'text', nullable: true })
   payphone_transactionId: string | null; // para RECHARGE, id de la transaccion generada por Payphone
 
+  @Index('IDX_transactions_client_transaction_id_unique', {
+    unique: true,
+    where: `"clientTransactionId" IS NOT NULL`,
+  })
   @Column({ type: 'uuid', nullable: true })
   clientTransactionId: string | null; // para RECHARGE, id interno de seguimiento
   
