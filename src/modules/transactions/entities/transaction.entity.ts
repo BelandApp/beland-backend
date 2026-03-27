@@ -5,6 +5,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -41,6 +42,10 @@ export class Transaction {
   @Column({ type: 'numeric', precision: 14, scale:2  })
   post_balance: number; // saldo resultante tras la operación
  
+  @Index('IDX_transactions_payphone_transaction_id_unique', {
+    unique: true,
+    where: `"payphone_transactionId" IS NOT NULL`,
+  })
   @Column({ type: 'text', nullable: true })
   payphone_transactionId: string | null; // para RECHARGE, id de la transaccion generada por Payphone
 
