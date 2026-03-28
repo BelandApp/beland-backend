@@ -3,49 +3,49 @@
     "code": "RECHARGE",
     "name": "Recarga",
     "description": "Ingreso de dinero a la wallet desde tarjeta u otro medio",
-    "icon": "banknote-arrow-up",
+    "icon": "bank-transfer-in",
     "color": "#4caf50"
   },
   {
     "code": "ORANGE_CREDIT",
     "name": "Crédito BeCoin Orange",
     "description": "Crédito promocional otorgado al usuario para compensar comisiones de recarga y ser utilizado dentro de la app.",
-    "icon": "badge-percent",
+    "icon": "gift",
     "color": "#ff9800"
   },
   {
     "code": "ORANGE_CREDIT_USED",
     "name": "Uso de BeCoin Orange",
     "description": "Aplicación de BeCoin Orange en una compra para reducir el impacto de la comisión de recarga.",
-    "icon": "badge-minus",
+    "icon": "ticket-percent",
     "color": "#ff9800"
   },
   {
     "code": "WITHDRAW",
     "name": "Retiro",
     "description": "Conversión de BECOIN a USD y transferencia a cuenta bancaria",
-    "icon": "landmark",
+    "icon": "bank-transfer-out",
     "color": "#f44336"
   },
   {
     "code": "WITHDRAW_IN",
     "name": "Ingreso por Retiro de Usuario",
     "description": "Fondos recibidos en la wallet del superadmin por un retiro de usuario",
-    "icon": "banknote-arrow-down",
+    "icon": "bank-transfer-in",
     "color": "#4caf50"
   },
   {
-    "code": "TRANSFER_SEND",
-    "name": "Transferencia Enviada",
-    "description": "Transferencia de BECOIN entre usuarios",
-    "icon": "arrow-right",
+    "code": "GIFTCARD_SEND",
+    "name": "Enviaste una Gift Card",
+    "description": "Regalaste una Gift Card a otro usuario de Beland",
+    "icon": "arrow-top-right",
     "color": "#2196f3"
   },
   {
-    "code": "TRANSFER_RECEIVED",
-    "name": "Transferencia Recibida",
-    "description": "Transferencia de BECOIN entre usuarios",
-    "icon": "arrow-left",
+    "code": "GIFTCARD_RECEIVED",
+    "name": "Recibiste una Gift Card",
+    "description": "Un usuario de Beland te regalo una Gift Card",
+    "icon": "arrow-bottom-left",
     "color": "#2196f3"
   },
   {
@@ -59,49 +59,49 @@
     "code": "PURCHASE_BELAND",
     "name": "Compra Beland",
     "description": "Compra de productos con BECOIN en BELAND",
-    "icon": "shopping-cart",
+    "icon": "cart",
     "color": "#f44336"
   },
   {
     "code": "SERVICE_BELAND",
     "name": "Servicios Beland",
     "description": "Compra de servicios con BECOIN en BELAND",
-    "icon": "wrench",
+    "icon": "tools",
     "color": "#f44336"
   },
   {
     "code": "SERVICE_PENALITY",
     "name": "Penalidad Cancelación de Servicios",
     "description": "Cancelación de servicios fuera de limites",
-    "icon": "triangle-alert",
+    "icon": "alert-circle",
     "color": "#f44336"
   },
   {
     "code": "PURCHASE_RESOURCE",
     "name": "Compra de Recursos",
     "description": "Adquisicion de recursos BELAND",
-    "icon": "package-minus",
+    "icon": "package-down",
     "color": "#f44336"
   },
   {
     "code": "SALE_RESOURCE",
     "name": "Venta de Recursos",
     "description": "Otorgar recursos BELAND",
-    "icon": "package-plus",
+    "icon": "package-up",
     "color": "#4caf50"
   },
   {
     "code": "SALE",
     "name": "Venta",
     "description": "Venta de productos o servicios y recepción de BECOIN",
-    "icon": "badge-dollar-sign",
+    "icon": "cash-plus",
     "color": "#4caf50"
   },
   {
     "code": "SALE_BELAND",
     "name": "Venta Beland",
     "description": "Venta de productos o servicios y recepción de BECOIN",
-    "icon": "badge-dollar-sign",
+    "icon": "store",
     "color": "#4caf50"
   },
   {
@@ -115,7 +115,7 @@
     "code": "DONATION_RECEIVED",
     "name": "Donación Recibida",
     "description": "Recibimiento voluntario de BECOIN de otra cuenta sin esperar nada a cambio",
-    "icon": "heart-plus",
+    "icon": "heart",
     "color": "#4caf50"
   },
   {
@@ -129,36 +129,35 @@
     "code": "PURCHASE_EVENTPASS",
     "name": "Compra de entrada",
     "description": "El usuario adquiere una entrada para un evento, pagando con BECOIN.",
-    "icon": "ticket-plus",
+    "icon": "ticket",
     "color": "#f44336"
   },
   {
     "code": "SALE_EVENTPASS",
     "name": "Venta de entrada",
     "description": "El comerciante recibe BECOIN por la venta de una entrada a su evento.",
-    "icon": "ticket-check",
+    "icon": "ticket-confirmation",
     "color": "#4caf50"
   },
   {
     "code": "REFUND_EVENTPASS",
     "name": "Reembolso de entrada",
     "description": "El comerciante devuelve los BECOIN al usuario por una entrada reembolsada.",
-    "icon": "ticket-x",
+    "icon": "ticket-refund",
     "color": "#666"
   },
   {
     "code": "REFUND_ORDER",
     "name": "Reembolso de orden de compra",
     "description": "El superadmin devuelve los BECOIN al usuario por los productos devueltos de una orden de compra.",
-    "icon": "banknote-arrow-down",
+    "icon": "cash-refund",
     "color": "#666"
   },
   {
     "code": "CANCELLED_ORDER",
     "name": "Cancelación de orden de compra",
     "description": "Se cancela la orden de compra, se cancelan los payments y se devuelven los BECOIN.",
-    "icon": "shield-x",
+    "icon": "close-circle",
     "color": "#666"
   }
 ]
-

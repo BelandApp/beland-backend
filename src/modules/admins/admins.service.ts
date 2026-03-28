@@ -20,7 +20,7 @@ import { User } from '../users/entities/users.entity';
 import { plainToInstance } from 'class-transformer';
 
 // Definición de tipo para todos los roles válidos
-type ValidRoleNames = 'USER' | 'LEADER' | 'ADMIN' | 'SUPERADMIN' | 'COMMERCE' | 'FUNDATION';
+import { RoleEnum, ValidRoleNames } from '../roles/enum/role-validate.enum';
 
 @Injectable()
 export class AdminService {
@@ -77,7 +77,7 @@ export class AdminService {
 
     // Corrección: rolesRepository.findByName espera 1 argumento (el nombre)
     const adminRole = await this.rolesRepository.findByName(
-      'ADMIN' as ValidRoleNames,
+      RoleEnum.ADMIN as ValidRoleNames,
     );
     if (!adminRole) {
       this.logger.error(
@@ -369,7 +369,7 @@ export class AdminService {
     }
 
     const defaultRole = await this.rolesRepository.findByName(
-      'USER' as ValidRoleNames,
+      RoleEnum.USER as ValidRoleNames,
     );
 
     if (!defaultRole) {

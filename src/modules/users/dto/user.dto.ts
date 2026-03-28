@@ -1,33 +1,22 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
+import { Expose, Transform } from 'class-transformer';
 
 export class UserDto {
+  @Expose()
   @ApiProperty({
     description: 'ID único del usuario',
     example: 'uuid',
   })
-  id: string; // ID (UUID) como clave primaria
+  id: string;
 
-  @ApiProperty({
-    description: 'Proveedor de autenticación',
-    example: 'google',
-    nullable: true,
-  })
-  oauth_provider: string | null;
-
+  @Expose()
   @ApiProperty({
     description: 'Correo electrónico del usuario',
     example: 'usuario@example.com',
   })
   email: string;
 
-  @ApiProperty({
-    description: 'Nombre de usuario',
-    example: 'johndoe',
-    nullable: true,
-  })
-  username: string | null;
-
+  @Expose()
   @ApiProperty({
     description: 'Nombre completo del usuario',
     example: 'John Doe',
@@ -35,6 +24,7 @@ export class UserDto {
   })
   full_name: string | null;
 
+  @Expose()
   @ApiProperty({
     description: 'URL de la imagen de perfil',
     example: 'https://example.com/photo.jpg',
@@ -42,39 +32,16 @@ export class UserDto {
   })
   profile_picture_url: string | null;
 
+  @Expose()
   @ApiProperty({
-    description: 'Saldo actual del usuario',
-    example: 100.5,
-  })
-  current_balance: number;
-
-  @ApiProperty({
-    description: 'Rol del usuario',
+    description: 'Rol de autoridad del usuario',
     example: 'USER',
-  })
-  // Actualizado para usar los roles que me indicaste
-  role_name:
-    | 'USER'
-    | 'LEADER'
-    | 'ADMIN'
-    | 'SUPERADMIN'
-    | 'COMMERCE'
-    | 'FUNDATION'; // Tipo literal para los roles
-
-  @ApiProperty({
-    description: 'ID del rol del usuario (clave foránea)',
-    example: 'uuid',
     nullable: true,
   })
-  role_id: string | null; // ID del rol (FK)
+  @Transform(({ obj, value }) => value ?? obj.role?.name ?? null)
+  role_name: string | null;
 
-  @ApiProperty({
-    description: 'ID de Auth0 del usuario (opcional, si se usa Auth0)',
-    example: 'auth0|abcdef1234567890abcdef1234',
-    nullable: true,
-  })
-  auth0_id: string | null; // ID de Auth0
-
+  @Expose()
   @ApiProperty({
     description: 'Dirección del usuario',
     example: 'Calle 123, Ciudad',
@@ -82,49 +49,64 @@ export class UserDto {
   })
   address: string | null;
 
+  @Expose()
   @ApiProperty({
     description: 'Número de teléfono',
-    example: 1234567890,
+    example: '1234567890',
     nullable: true,
   })
-  phone: number | null;
+  phone: string | null;
 
+  @Expose()
   @ApiProperty({
     description: 'País del usuario',
-    example: 'Colombia',
+    example: 'Argentina',
     nullable: true,
   })
   country: string | null;
 
+  @Expose()
   @ApiProperty({
     description: 'Ciudad del usuario',
-    example: 'Bogotá',
+    example: 'Buenos Aires',
     nullable: true,
   })
   city: string | null;
 
+  @Expose()
   @ApiProperty({
-    description: 'Si el usuario está bloqueado',
+    description: 'Indica si el usuario está bloqueado',
     example: false,
   })
   isBlocked: boolean;
 
+  @Expose()
   @ApiProperty({
-    description: 'Fecha de eliminación (soft delete)',
-    example: null,
-    nullable: true,
-  })
-  deleted_at: Date | null;
-
-  @ApiProperty({
-    description: 'Fecha de creación',
+    description: 'Fecha de creación del usuario',
     example: '2024-01-01T00:00:00.000Z',
   })
   created_at: Date;
 
+  @Expose()
   @ApiProperty({
-    description: 'Fecha de última actualización',
-    example: '2024-01-01T00:00:00.000Z',
+    description: 'Peso total reciclado por el usuario',
+    example: 12.5,
+    nullable: true,
   })
-  updated_at: Date;
+  total_weight_recycled: number;
+
+  @Expose()
+  @ApiProperty({
+    description: 'Perfiles funcionales asignados al usuario',
+    example: ['MERCHANT', 'DRIVER'],
+    type: [String],
+  })
+  @Transform(({ value }) =>
+    Array.isArray(value)
+      ? value
+          .map((profile) => profile?.profile?.name ?? profile?.name ?? null)
+          .filter(Boolean)
+      : [],
+  )
+  profiles: string[];
 }

@@ -220,7 +220,7 @@ export class OrdersService {
       if (!savedOrder)
         throw new ConflictException('No se pudo crear la orden');
 
-      // 🔥 6) VALIDAR STOCK + DESCONTAR + CREAR ORDER ITEMS
+      // 🔥 6) DESCONTAR STOCK + CREAR ORDER ITEMS
       const orderItemsPayload = [];
 
       for (const cartItem of cart.items as CartItem[]) {
@@ -236,13 +236,7 @@ export class OrdersService {
             `Producto no encontrado (id: ${cartItem.product_id})`,
           );
 
-        if (product.quantity < orderedQuantity) {
-          throw new BadRequestException(
-            `Stock insuficiente para ${product.name}. Disponible: ${product.quantity}`,
-          );
-        }
-
-        // descontar stock
+        // Se descuenta aunque no alcance el stock para permitir backorder.
         product.quantity = +product.quantity - orderedQuantity;
         await queryRunner.manager.save(Product, product);
 
@@ -500,9 +494,35 @@ export class OrdersService {
           where: { id: r.order_item_id, order_id: order.id },
         });
         if (!item) throw new NotFoundException('Item inválido');
+
+        const returnedQuantity = Number(r.returned_quantity);
+        const previousReturnedQuantity = Number(item.returned_quantity ?? 0);
+        const orderedQuantity = Number(item.ordered_quantity ?? item.quantity ?? 0);
+
+        if (returnedQuantity < 0) {
+          throw new BadRequestException('La cantidad devuelta no puede ser negativa');
+        }
+
+        if (returnedQuantity > orderedQuantity) {
+          throw new BadRequestException(
+            `La devolución no puede superar la cantidad pedida del item ${item.id}`,
+          );
+        }
+
+        const quantityToRestore = returnedQuantity - previousReturnedQuantity;
+
+        if (quantityToRestore > 0) {
+          await qr.manager.increment(
+            Product,
+            { id: item.product_id },
+            'quantity',
+            quantityToRestore,
+          );
+        }
+
         total_becoin_returned += r.returned_quantity * Number(item.unit_price)
         total_Weight_returned += r.returned_quantity * Number(item.unit_weight)
-        item.returned_quantity = r.returned_quantity;
+        item.returned_quantity = returnedQuantity;
         await qr.manager.save(item); // recalcula por hooks
       }
 
@@ -949,7 +969,7 @@ export class OrdersService {
       * ======================================================= */
       const order = await qr.manager.findOne(Order, {
         where: { id: order_id },
-        relations: ['status'],
+        relations: {status:true, items:true},
       });
 
       if (!order) throw new NotFoundException('Orden no encontrada');
@@ -1074,6 +1094,16 @@ export class OrdersService {
           reference: `CANCELLED-ORDER-${order.id}`,
         });
       }
+
+      for (const item of order.items) {
+        await qr.manager.increment(
+          Product,
+          { id: item.product_id },
+          'quantity',
+          item.quantity, // o item.ordered_quantity
+        );
+      }
+
 
       await qr.commitTransaction();
 

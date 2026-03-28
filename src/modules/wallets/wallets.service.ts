@@ -21,10 +21,14 @@ import { AmountToPayment } from 'src/modules/amount-to-payment/entities/amount-t
 import { RespCobroDto } from './dto/resp-cobro.dto';
 import { NotificationsGateway } from 'src/modules/notification-socket/notification-socket.gateway';
 import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
+import { ProfileEnum } from 'src/modules/users/enums/profiles.enum';
+import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
 
 @Injectable()
 export class WalletsService {
   private readonly completeMessage = 'la billetera virtual';
+  private readonly clientTransactionDuplicateConstraint =
+    'IDX_transactions_client_transaction_id_unique';
 
   constructor(
     private readonly repository: WalletsRepository,
@@ -189,6 +193,18 @@ export class WalletsService {
     await queryRunner.startTransaction();
 
     try {
+      const payphoneTransactionId = String(dto.payphone_transactionId);
+      const clientTransactionId = dto.clientTransactionId;
+
+      const existingRecharge = await queryRunner.manager.findOne(Transaction, {
+        where: { clientTransactionId },
+      });
+      if (existingRecharge) {
+        throw new ConflictException(
+          'La transacción de Payphone ya fue procesada anteriormente.',
+        );
+      }
+
       // 1) Certificar que exista la wallet
       const wallet = await queryRunner.manager.findOne(Wallet, {
         where: { user_id },
@@ -269,8 +285,8 @@ export class WalletsService {
         amount_becoin: +userBeCoins,
         post_balance: wallet.becoin_balance,
         reference: dto.referenceCode,
-        payphone_transactionId: dto.payphone_transactionId?.toString(),
-        clientTransactionId: dto.clientTransactionId,
+        payphone_transactionId: payphoneTransactionId,
+        clientTransactionId,
       });
 
       // 6) Registrar la transacción de las becoin_orange
@@ -281,8 +297,8 @@ export class WalletsService {
         amount_becoin: +orangeFee,
         post_balance: wallet.becoin_orange,
         reference: dto.referenceCode,
-        payphone_transactionId: dto.payphone_transactionId?.toString(),
-        clientTransactionId: dto.clientTransactionId,
+        payphone_transactionId: payphoneTransactionId,
+        clientTransactionId: null,
       });
 
       // ✅ Confirmar la transacción
@@ -293,6 +309,11 @@ export class WalletsService {
     } catch (error) {
       // ❌ Deshacer todo si algo falla
       await queryRunner.rollbackTransaction();
+      if (this.isClientTransactionDuplicateError(error)) {
+        throw new ConflictException(
+          'La transacción de Payphone ya fue procesada anteriormente.',
+        );
+      }
       throw error;
     } finally {
       // Cerrar el queryRunner
@@ -341,28 +362,23 @@ export class WalletsService {
       if (!code_transaction_send) {
         const user: User = await queryRunner.manager.findOne(User, {
           where: { wallet: {id: to.id} },
+          relations: { profiles: { profile: true } },
         });
         if (!user) throw new NotFoundException('Usuario destino no existe');
-        switch (user.role_name) {
-          case 'COMMERCE':
-            code_transaction_send = TransactionCode.PURCHASE;
-            code_transaction_received = TransactionCode.SALE;
-            break;
+        const profiles = user.profiles?.map((p) => p.profile?.name) ?? [];
 
-          case 'FUNDATION':
-            code_transaction_send = TransactionCode.DONATION_SEND;
-            code_transaction_received = TransactionCode.DONATION_RECEIVED;
-            break;
-
-          case 'SUPERADMIN':
-            code_transaction_send = TransactionCode.PURCHASE_BELAND;
-            code_transaction_received = TransactionCode.SALE_BELAND;
-            break;
-
-          default:
-            code_transaction_send = TransactionCode.TRANSFER_SEND;
-            code_transaction_received = TransactionCode.TRANSFER_RECEIVED;
-          break;
+        if (profiles.includes(ProfileEnum.MERCHANT)) {
+          code_transaction_send = TransactionCode.PURCHASE;
+          code_transaction_received = TransactionCode.SALE;
+        } else if (profiles.includes(ProfileEnum.FOUNDATION)) {
+          code_transaction_send = TransactionCode.DONATION_SEND;
+          code_transaction_received = TransactionCode.DONATION_RECEIVED;
+        } else if (user.role_name === RoleEnum.SUPERADMIN) {
+          code_transaction_send = TransactionCode.PURCHASE_BELAND;
+          code_transaction_received = TransactionCode.SALE_BELAND;
+        } else {
+          code_transaction_send = TransactionCode.GIFTCARD_SEND;
+          code_transaction_received = TransactionCode.GIFTCARD_RECEIVED;
         }
       }
 
@@ -386,7 +402,7 @@ export class WalletsService {
       const walletUpdate = await queryRunner.manager.save(from);
 
       // 5) registro egreso del origen
-      await queryRunner.manager.save(Transaction, {
+      const transactionSend = await queryRunner.manager.save(Transaction, {
         wallet_id: from.id,
         type,
         status,
@@ -440,7 +456,10 @@ export class WalletsService {
       });   
 
       // se debe eliminar del front el amount to payment eliminado
-      return { wallet: walletUpdate };
+      return await this.dataSource.manager.findOne (Transaction, {
+        where : {id:transactionSend.id},
+        relations: {related_wallet:{user:true}, type:true, status:true}
+      });
     } catch (error) {
       // ❌ Deshago todo si algo falla
       if (!queryRun) await queryRunner.rollbackTransaction();
@@ -587,5 +606,22 @@ export class WalletsService {
       // Liberar el queryRunner
       await queryRunner.release();
     }
+  }
+
+  private isClientTransactionDuplicateError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+
+    const queryError = error as {
+      code?: string;
+      constraint?: string;
+      driverError?: { code?: string; constraint?: string };
+    };
+
+    return (
+      queryError.code === '23505' &&
+      (queryError.constraint === this.clientTransactionDuplicateConstraint ||
+        queryError.driverError?.constraint ===
+          this.clientTransactionDuplicateConstraint)
+    );
   }
 }

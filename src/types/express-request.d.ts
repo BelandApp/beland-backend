@@ -8,7 +8,7 @@ declare module 'express-serve-static-core' {
       sub?:string,
       id: string,
       email: string,
-      role_name: string,
+      role_name: ValidRoleNames,
       wallet_id?: string,
       cart_id?: string,
       profiles?: ValidProfileNames[],

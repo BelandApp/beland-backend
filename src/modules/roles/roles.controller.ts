@@ -31,18 +31,15 @@ import {
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
 import { Roles } from 'src/modules/auth/decorators/roles.decorator';
-import { PermissionsGuard } from 'src/modules/auth/guards/permissions.guard';
-import { RequiredPermissions } from 'src/modules/auth/decorators/permissions.decorator';
-import { User } from 'src/modules/users/entities/users.entity'; // Para el tipado del objeto de usuario en la request
 import { Request } from 'express'; // Importar la interfaz Request de express para su correcto tipado
 
 @ApiTags('roles')
 @Controller('roles')
 @ApiBearerAuth('JWT-auth') // Indica que todas las rutas requieren un token para la documentación de Swagger.
-// Aplicar FlexibleAuthGuard, RolesGuard y PermissionsGuard a nivel de controlador.
+// Aplicar FlexibleAuthGuard y RolesGuard a nivel de controlador.
 // Esto significa que TODAS las rutas en este controlador requieren autenticación
-// y los roles/permisos especificados, a menos que se use el bypass de SUPERADMIN.
-@UseGuards(FlexibleAuthGuard, RolesGuard, PermissionsGuard)
+// y los roles especificados, a menos que se use el bypass de SUPERADMIN.
+@UseGuards(FlexibleAuthGuard, RolesGuard)
 export class RolesController {
   private readonly logger = new Logger(RolesController.name);
 
@@ -64,12 +61,11 @@ export class RolesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  // Solo Superadmin puede crear roles, con permiso 'user_permission'.
+  // Solo Superadmin puede crear roles.
   // Las @UseGuards ya están en el controlador, no es necesario repetirlas aquí.
   @Roles('SUPERADMIN')
-  @RequiredPermissions('user_permission') // Usando el permiso 'user_permission' de tu entidad Admin
   @ApiOperation({
-    summary: 'Crear un nuevo rol (Solo Superadmin con permiso de usuario).',
+    summary: 'Crear un nuevo rol (Solo Superadmin).',
   })
   @ApiResponse({
     status: 201,
@@ -110,12 +106,11 @@ export class RolesController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  // Solo Admin y Superadmin pueden obtener todos los roles, con permiso 'user_permission'.
+  // Solo Admin y Superadmin pueden obtener todos los roles.
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Usando el permiso 'user_permission'
   @ApiOperation({
     summary:
-      'Obtener todos los roles (Solo Admin/Superadmin con permiso de usuario).',
+      'Obtener todos los roles (Solo Admin/Superadmin).',
   })
   @ApiResponse({
     status: 200,
@@ -146,12 +141,11 @@ export class RolesController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  // Solo Admin y Superadmin pueden obtener un rol por ID, con permiso 'user_permission'.
+  // Solo Admin y Superadmin pueden obtener un rol por ID.
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Usando el permiso 'user_permission'
   @ApiOperation({
     summary:
-      'Obtener un rol por ID (Solo Admin/Superadmin con permiso de usuario).',
+      'Obtener un rol por ID (Solo Admin/Superadmin).',
   })
   @ApiParam({ name: 'id', description: 'ID único del rol', type: String })
   @ApiResponse({
@@ -191,12 +185,11 @@ export class RolesController {
 
   @Get(':id/users')
   @HttpCode(HttpStatus.OK)
-  // Solo Admin y Superadmin pueden obtener usuarios por ID de rol, con permiso 'user_permission'.
+  // Solo Admin y Superadmin pueden obtener usuarios por ID de rol.
   @Roles('ADMIN', 'SUPERADMIN')
-  @RequiredPermissions('user_permission') // Usando el permiso 'user_permission'
   @ApiOperation({
     summary:
-      'Obtener usuarios por ID de rol (Solo Admin/Superadmin con permiso de usuario).',
+      'Obtener usuarios por ID de rol (Solo Admin/Superadmin).',
   })
   @ApiParam({ name: 'id', description: 'ID único del rol', type: String })
   @ApiResponse({
@@ -239,12 +232,11 @@ export class RolesController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  // Solo Superadmin puede actualizar roles, con permiso 'user_permission'.
+  // Solo Superadmin puede actualizar roles.
   @Roles('SUPERADMIN')
-  @RequiredPermissions('user_permission') // Usando el permiso 'user_permission'
   @ApiOperation({
     summary:
-      'Actualizar un rol por ID (Solo Superadmin con permiso de usuario).',
+      'Actualizar un rol por ID (Solo Superadmin).',
   })
   @ApiParam({
     name: 'id',
@@ -291,11 +283,10 @@ export class RolesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  // Solo Superadmin puede eliminar roles, con permiso 'user_permission'.
+  // Solo Superadmin puede eliminar roles.
   @Roles('SUPERADMIN')
-  @RequiredPermissions('user_permission') // Usando el permiso 'user_permission'
   @ApiOperation({
-    summary: 'Eliminar un rol por ID (Solo Superadmin con permiso de usuario).',
+    summary: 'Eliminar un rol por ID (Solo Superadmin).',
   })
   @ApiParam({
     name: 'id',

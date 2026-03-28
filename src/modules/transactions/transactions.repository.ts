@@ -39,7 +39,7 @@ export class TransactionsRepository {
         order: { created_at: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
-        relations: ['status', 'type'],
+        relations: {status:true, related_wallet: {user:true}, type:true, wallet: {user:true}}
     });
   }
 
@@ -55,7 +55,7 @@ export class TransactionsRepository {
     .innerJoinAndSelect('t.wallet', 'w') // wallet origen 
     .innerJoinAndSelect('t.related_wallet', 'rw') // wallet destino 
     .innerJoinAndSelect('rw.user', 'u') // user dueño del wallet destino 
-    .where('type.code = :code', { code: TransactionCode.TRANSFER_SEND }) 
+    .where('type.code = :code', { code: TransactionCode.GIFTCARD_SEND }) 
     .andWhere('w.user_id = :user_id', { user_id }) 
     .orderBy('t.related_wallet_id') 
     .addOrderBy('t.created_at', 'DESC') 
@@ -77,7 +77,7 @@ export class TransactionsRepository {
   async findOne(id: string): Promise<Transaction> {
     return this.repository.findOne({
       where: { id },
-      relations: ['status', 'type'],
+      relations: {status:true, related_wallet: {user:true}, type:true, wallet: {user:true}},
     });
   }
 

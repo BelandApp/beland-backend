@@ -246,8 +246,8 @@ export class WalletsController {
     return await this.service.transfer(
       req.user?.id,
       dto,
-      TransactionCode.TRANSFER_SEND,
-      TransactionCode.TRANSFER_RECEIVED,
+      TransactionCode.GIFTCARD_SEND,
+      TransactionCode.GIFTCARD_RECEIVED,
     );
   }
 

@@ -5,6 +5,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -44,6 +45,10 @@ export class Transaction {
   @Column({ type: 'text', nullable: true })
   payphone_transactionId: string | null; // para RECHARGE, id de la transaccion generada por Payphone
 
+  @Index('IDX_transactions_client_transaction_id_unique', {
+    unique: true,
+    where: `"clientTransactionId" IS NOT NULL`,
+  })
   @Column({ type: 'uuid', nullable: true })
   clientTransactionId: string | null; // para RECHARGE, id interno de seguimiento
   
