@@ -74,6 +74,7 @@ import { ServicesModule } from './modules/services/services.module';
 import { GroupMembersConsumptionModule } from './modules/group-members-consumption/group-members-consumption.module';
 import { GroupService } from './modules/group-services/entities/group-service.entity';
 import { GroupServicesModule } from './modules/group-services/group-services.module';
+import { StripeTopupsModule } from './modules/stripe-topups/stripe-topups.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -186,6 +187,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     ServicesModule,
     GroupMembersConsumptionModule,
     GroupServicesModule,
+    StripeTopupsModule,
   ],
   controllers: [],
   providers: [

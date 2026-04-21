@@ -118,8 +118,9 @@ async function bootstrap() {
   });
 
   // Middleware para parsear JSON y raw (para webhooks)
-  app.use(json());
   app.use('/webhook/payphone', raw({ type: 'application/json' }));
+  app.use('/api/webhooks/stripe', raw({ type: 'application/json' }));
+  app.use(json());
 
   // Inicio de la aplicación en el puerto configurado.. 
   const port = process.env.PORT || 3000;
