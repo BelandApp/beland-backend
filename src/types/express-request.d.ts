@@ -4,6 +4,7 @@ import { ProfileEnum, ValidProfileNames } from 'src/modules/users/enums/profiles
 
 declare module 'express-serve-static-core' {
   interface Request {
+    rawBody?: Buffer;
     user?: {
       sub?:string,
       id: string,
