@@ -33,6 +33,8 @@ import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmi
 import { TransactionCode } from 'src/modules/transaction-type/enum/transaction-code';
 import { RespCobroDto } from './dto/resp-cobro.dto';
 import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 @ApiTags('wallets')
 @Controller('wallets')
@@ -179,6 +181,15 @@ export class WalletsController {
   @ApiQuery({name: 'page',type: String,description: 'Nuevo Alias'})
   async updateAlias (@Param('id', ParseUUIDPipe) id: string, @Query('alias') alias: string) {
     return await this.service.updateAlias(id, alias);
+  }
+
+  @Put('admin/fix-missing-qr')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN')
+  @ApiOperation({ summary: 'Generar QR faltantes en todas las wallets (solo superadmin)' })
+  async fixMissingQr() {
+    return await this.service.fixMissingQr();
   }
 
   @Put(':id')

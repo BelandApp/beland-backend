@@ -241,11 +241,10 @@ async findOne(id: string, deleted: boolean = false): Promise<User | null> {
         // Ahora el ID de la wallet existe y es seguro usarlo.
         const qr = await QRCode.toDataURL(walletCreated.id);
   
-        // 4. Asignar el QR y el alias a la entidad
-        walletCreated.qr = qr;
-  
         // 5. Volver a guardar la Wallet para persistir el QR y el alias
-        await queryRunner.manager.save(walletCreated);
+        await queryRunner.manager.update(Wallet, walletCreated.id, {
+          qr: qr,
+        });
         this.logger.debug(
           `createWalletAndCart(): Wallet con ID: ${walletCreated.id} actualizada con QR y alias.`,
         );

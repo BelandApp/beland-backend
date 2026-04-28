@@ -624,4 +624,30 @@ export class WalletsService {
           this.clientTransactionDuplicateConstraint)
     );
   }
+
+  async fixMissingQr(): Promise<{ updated: number }> {
+    const wallets = await this.dataSource
+      .createQueryBuilder()
+      .select('wallet')
+      .from(Wallet, 'wallet')
+      .where('wallet.qr IS NULL OR wallet.qr = \'\'')
+      .getMany();
+
+    let updated = 0;
+
+    for (const wallet of wallets) {
+      const qr = await QRCode.toDataURL(String(wallet.id));
+
+      await this.dataSource
+        .createQueryBuilder()
+        .update(Wallet)
+        .set({ qr })
+        .where('id = :id', { id: wallet.id })
+        .execute();
+
+      updated++;
+    }
+
+    return { updated };
+  }
 }

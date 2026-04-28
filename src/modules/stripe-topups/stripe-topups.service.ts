@@ -6,8 +6,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import Stripe from 'stripe';
+import type { Stripe as StripeType } from 'stripe';
 import { InjectRepository } from '@nestjs/typeorm';
-import axios, { AxiosError } from 'axios';
 import * as crypto from 'crypto';
 import { EntityManager, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -36,8 +37,8 @@ type StripeEvent = {
 @Injectable()
 export class StripeTopupsService {
   private readonly logger = new Logger(StripeTopupsService.name);
-  private readonly stripeApiUrl = 'https://api.stripe.com/v1/payment_intents';
   private readonly webhookToleranceSeconds = 300;
+  private stripe: StripeType;
 
   constructor(
     @InjectRepository(StripeTopup)
@@ -47,7 +48,17 @@ export class StripeTopupsService {
     private readonly dataSource: DataSource,
     private readonly superadminConfig: SuperadminConfigService,
     private readonly notificationsGateway: NotificationsGateway,
-  ) {}
+  ) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+
+    if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY no configurada');
+    }
+
+    this.stripe = new Stripe(secretKey, {
+      apiVersion: '2026-04-22.dahlia',
+    });
+  }
 
   async createPaymentIntent(
     userId: string,
@@ -55,6 +66,7 @@ export class StripeTopupsService {
     dto: CreateStripeTopupDto,
   ): Promise<StripeTopupResponseDto> {
     const secretKey = process.env.STRIPE_SECRET_KEY;
+
     if (!secretKey) {
       this.logger.error('STRIPE_SECRET_KEY no configurada');
       throw new InternalServerErrorException(
@@ -83,30 +95,28 @@ export class StripeTopupsService {
     });
     await this.stripeTopupRepository.save(localTopup);
 
-    const body = new URLSearchParams();
-    body.append('amount', amountInCents.toString());
-    body.append('currency', 'usd');
-    body.append('automatic_payment_methods[enabled]', 'true');
-    body.append('metadata[topup_id]', localTopup.id);
-    body.append('metadata[wallet_id]', wallet.id);
-    body.append('metadata[user_id]', userId);
-    body.append('metadata[client_transaction_id]', clientTransactionId);
-    body.append('description', `Recarga de wallet Beland ${wallet.id}`);
-    if (userEmail) {
-      body.append('receipt_email', userEmail);
-    }
-
     try {
-      const response = await axios.post(this.stripeApiUrl, body, {
-        headers: {
-          Authorization: `Bearer ${secretKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Idempotency-Key': clientTransactionId,
+      // aca debo agregar el nuevo codigo del sdk
+      const paymentIntent = await this.stripe.paymentIntents.create(
+        {
+          amount: amountInCents,
+          currency: 'usd',
+          automatic_payment_methods: {
+            enabled: true,
+          },
+          metadata: {
+            topup_id: localTopup.id,
+            wallet_id: wallet.id,
+            user_id: userId,
+            client_transaction_id: clientTransactionId,
+          },
+          description: `Recarga de wallet Beland ${wallet.id}`,
+          receipt_email: userEmail,
         },
-        timeout: 15000,
-      });
-
-      const paymentIntent = response.data;
+        {
+          idempotencyKey: clientTransactionId,
+        },
+      );
       localTopup.payment_intent_id = paymentIntent.id;
       localTopup.status = 'PENDING';
       await this.stripeTopupRepository.save(localTopup);
@@ -127,7 +137,8 @@ export class StripeTopupsService {
     } catch (error) {
       localTopup.status = 'FAILED';
       localTopup.failure_code = 'payment_intent_creation_failed';
-      localTopup.failure_message = this.extractStripeErrorMessage(error);
+      localTopup.failure_message =
+        error instanceof Error ? error.message : 'Error con Stripe';
       localTopup.failed_at = new Date();
       await this.stripeTopupRepository.save(localTopup);
 
@@ -156,43 +167,20 @@ export class StripeTopupsService {
     return this.mapStatusDto(topup);
   }
 
-  async handleWebhook(signature: string | undefined, rawBody: Buffer): Promise<void> {
+  async handleWebhook(
+    signature: string | undefined,
+    rawBody: Buffer,
+  ): Promise<void> {
     if (!signature) {
       this.logger.warn('Webhook Stripe recibido sin cabecera stripe-signature');
       throw new BadRequestException('Firma de Stripe ausente');
     }
+
     if (!rawBody || rawBody.length === 0) {
       this.logger.warn('Webhook Stripe recibido sin raw body');
       throw new BadRequestException('Payload vacio');
     }
 
-    const rawPayload = rawBody.toString('utf8');
-    const event = this.verifyWebhookSignature(signature, rawPayload);
-    const paymentIntent = event.data?.object;
-
-    if (!paymentIntent?.id) {
-      this.logger.warn(`Evento Stripe sin payment_intent valido: eventId=${event.id}`);
-      return;
-    }
-
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-        await this.markTopupCompleted(paymentIntent, event.id, signature, rawPayload);
-        break;
-      case 'payment_intent.payment_failed':
-        await this.markTopupFailed(paymentIntent, event.id, signature, rawPayload);
-        break;
-      case 'payment_intent.canceled':
-        await this.markTopupCancelled(paymentIntent, event.id, signature, rawPayload);
-        break;
-      default:
-        this.logger.debug(
-          `Evento Stripe ignorado: type=${event.type} paymentIntentId=${paymentIntent.id}`,
-        );
-    }
-  }
-
-  private verifyWebhookSignature(signatureHeader: string, rawPayload: string): StripeEvent {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
       this.logger.error('STRIPE_WEBHOOK_SECRET no configurada');
@@ -201,71 +189,64 @@ export class StripeTopupsService {
       );
     }
 
-    const parsedSignature = this.parseStripeSignature(signatureHeader);
-    if (!parsedSignature.timestamp || parsedSignature.signatures.length === 0) {
-      throw new BadRequestException('Cabecera stripe-signature invalida');
-    }
 
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    if (
-      Math.abs(nowSeconds - parsedSignature.timestamp) >
-      this.webhookToleranceSeconds
-    ) {
-      throw new BadRequestException('Webhook Stripe expirado');
-    }
-
-    const signedPayload = `${parsedSignature.timestamp}.${rawPayload}`;
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(signedPayload, 'utf8')
-      .digest('hex');
-
-    const valid = parsedSignature.signatures.some((candidate) =>
-      this.safeCompareHex(candidate, expectedSignature),
-    );
-
-    if (!valid) {
-      this.logger.warn('Firma Stripe invalida');
-      throw new BadRequestException('Firma Stripe invalida');
-    }
+    let event: any;
 
     try {
-      return JSON.parse(rawPayload) as StripeEvent;
-    } catch (error) {
-      this.logger.error(
-        'No se pudo parsear el payload del webhook Stripe',
-        error instanceof Error ? error.stack : undefined,
+      event = this.stripe.webhooks.constructEvent(
+        rawBody,     // ⚠️ IMPORTANTE: buffer, no string
+        signature,
+        webhookSecret,
       );
-      throw new BadRequestException('Payload Stripe invalido');
-    }
-  }
-
-  private parseStripeSignature(signatureHeader: string): {
-    timestamp: number | null;
-    signatures: string[];
-  } {
-    const parts = signatureHeader.split(',');
-    let timestamp: number | null = null;
-    const signatures: string[] = [];
-
-    for (const part of parts) {
-      const [key, value] = part.split('=');
-      if (!key || !value) continue;
-      if (key === 't') timestamp = Number(value);
-      if (key === 'v1') signatures.push(value);
+    } catch (err) {
+      this.logger.error('Firma de webhook invalida', err);
+      throw new BadRequestException('Firma de Stripe invalida');
     }
 
-    return { timestamp, signatures };
-  }
+    const paymentIntent = event.data?.object as Record<string, any>;
 
-  private safeCompareHex(a: string, b: string): boolean {
-    try {
-      const left = Buffer.from(a, 'hex');
-      const right = Buffer.from(b, 'hex');
-      if (left.length !== right.length) return false;
-      return crypto.timingSafeEqual(left, right);
-    } catch {
-      return false;
+    if (!paymentIntent?.id) {
+      this.logger.warn(
+        `Evento Stripe sin payment_intent valido: eventId=${event.id}`,
+      );
+      return;
+    }
+
+    // ⚠️ Esto lo dejamos porque lo usás para guardar en DB
+    const rawPayload = rawBody.toString('utf8');
+
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        await this.markTopupCompleted(
+          paymentIntent,
+          event.id,
+          signature,
+          rawPayload,
+        );
+        break;
+
+      case 'payment_intent.payment_failed':
+        await this.markTopupFailed(
+          paymentIntent,
+          event.id,
+          signature,
+          rawPayload,
+        );
+        break;
+
+      case 'payment_intent.canceled':
+        await this.markTopupCancelled(
+          paymentIntent,
+          event.id,
+          signature,
+          rawPayload,
+        );
+        break;
+
+      default:
+        this.logger.debug(
+          `Evento Stripe ignorado: type=${event.type} paymentIntentId=${paymentIntent.id}`,
+        );
     }
   }
 
@@ -602,19 +583,4 @@ export class StripeTopupsService {
     return normalized;
   }
 
-  private extractStripeErrorMessage(error: unknown): string {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<any>;
-      const stripeMessage =
-        axiosError.response?.data?.error?.message ||
-        axiosError.response?.data?.message;
-      return stripeMessage || axiosError.message;
-    }
-
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    return 'Error desconocido al crear el pago con Stripe';
-  }
 }
