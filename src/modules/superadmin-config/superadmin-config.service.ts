@@ -7,6 +7,7 @@ import { RoleEnum } from '../roles/enum/role-validate.enum';
 export class SuperadminConfigService implements OnModuleInit {
   private superadminWalletId: string;
   private superadminId: string;
+  private superadminEmail: string;
   private readonly priceOneBecoin = 0.05;
   private readonly priceDelivery = 2.5;
   public readonly recicled_becoin = 2;
@@ -18,10 +19,12 @@ export class SuperadminConfigService implements OnModuleInit {
     // Podés cambiar el criterio de búsqueda si lo manejás con un flag en la DB
      const superadminWallet = await this.dataSource.manager.findOne(Wallet, {
            where: { user: {role: {name: RoleEnum.SUPERADMIN}} },
+           relations: {user:true}
          });
      if (superadminWallet) {
        this.superadminWalletId = superadminWallet.id;
-       this.superadminId = superadminWallet.user_id
+       this.superadminId = superadminWallet.user_id;
+       this.superadminEmail = superadminWallet.user.email;
      }
   }
 
@@ -39,6 +42,10 @@ export class SuperadminConfigService implements OnModuleInit {
 
   getPriceDelivery(): number {
     return this.priceDelivery;
+  }
+
+  getEmail(): string {
+    return this.superadminEmail;
   }
 }
 
