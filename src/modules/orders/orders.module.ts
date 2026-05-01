@@ -7,9 +7,10 @@ import { OrdersRepository } from './orders.repository';
 import { NotificationsGateway } from '../notification-socket/notification-socket.gateway';
 import { User } from '../users/entities/users.entity';
 import { UsersRepository } from '../users/users.repository';
+import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, User])],
+  imports: [TypeOrmModule.forFeature([Order, User]), EmailModule],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersRepository, NotificationsGateway, UsersRepository],
 })

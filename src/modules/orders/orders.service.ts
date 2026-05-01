@@ -4,6 +4,7 @@ import {
   HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
@@ -31,10 +32,16 @@ import { GroupMember } from '../group-members/entities/group-member.entity';
 import { User } from '../users/entities/users.entity';
 import { Product } from '../products/entities/product.entity';
 import { RecycledItem } from '../recycled-items/entities/recycled-item.entity';
+import { EmailService } from '../email/email.service';
+import {
+  superadminNotificationEmailSubject,
+  superadminNotificationEmailTemplate,
+} from '../email/plantilla/htmlNotificacionSuperadmin';
 
 @Injectable()
 export class OrdersService {
   private readonly completeMessage = 'la orden';
+  private readonly logger = new Logger(OrdersService.name);
 
   private generateRandomCode(length = 8): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -54,6 +61,7 @@ export class OrdersService {
     private readonly superadminService: SuperadminConfigService,
     private readonly dataSource: DataSource,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly emailService: EmailService,
 
   ) {}
 
@@ -69,6 +77,63 @@ export class OrdersService {
     }
 
     return code;
+  }
+
+  private async sendSuperadminOrderEmail(
+    order: Order,
+    paymentType: PaymentType,
+  ): Promise<void> {
+    try {
+      const superadminEmail = this.superadminService.getEmail();
+
+      if (!superadminEmail) {
+        this.logger.warn(
+          `No se envio email de orden ${order.id}: email de superadmin no configurado`,
+        );
+        return;
+      }
+
+      const user = order.user_id
+        ? await this.dataSource.manager.findOne(User, {
+            where: { id: order.user_id },
+          })
+        : null;
+
+      const subject = superadminNotificationEmailSubject('PURCHASE');
+      const html = superadminNotificationEmailTemplate({
+        type: 'PURCHASE',
+        amount: Number(order.total_amount),
+        currency: 'USD',
+        userName: user?.full_name,
+        userEmail: user?.email,
+        operationId: order.id,
+        reference: order.order_number
+          ? `ORDER-${order.order_number}`
+          : `ORDER-${order.id}`,
+        status: order.paied ? 'PAGADA' : 'PENDIENTE',
+        paymentMethod: paymentType?.description || paymentType?.code,
+        createdAt: order.created_at,
+        details: {
+          'Total BeCoin': order.total_becoin,
+          'Items': order.total_items,
+          'Costo de envio': order.delivery_cost,
+          'Tipo de pago': paymentType?.code,
+        },
+      });
+
+      await this.emailService.sendMail({
+        to: superadminEmail,
+        subject,
+        text: `Nueva compra registrada en Beland. Orden: ${order.id}. Total: ${order.total_amount}.`,
+        html,
+      });
+    } catch (error) {
+      this.logger.error(
+        `No se pudo enviar email de orden al superadmin: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   async findAll(filters: OrderFilterDto): Promise<[Order[], number]> {
@@ -443,6 +508,8 @@ export class OrdersService {
           items: +savedOrder.items,
         },
       );
+
+      await this.sendSuperadminOrderEmail(savedOrder, paymentType);
 
       return savedOrder;
     } catch (err) {

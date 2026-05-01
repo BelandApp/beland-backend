@@ -4,9 +4,10 @@ import { UserRechargeController } from './user-recharge.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RechargeTransfer } from './entities/user-recharge.entity';
 import { UserRechargeRepository } from './user-recharge.repository';
+import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([RechargeTransfer])],
+  imports: [TypeOrmModule.forFeature([RechargeTransfer]), EmailModule],
   controllers: [UserRechargeController],
   providers: [UserRechargeService, UserRechargeRepository],
 })
