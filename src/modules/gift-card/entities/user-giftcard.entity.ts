@@ -10,14 +10,13 @@ import {
 } from 'typeorm';
 
 import { GiftCard } from './gift-card.entity';
-import { User } from 'src/modules/users/entities/users.entity';
-import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
+import { User } from '../../users/entities/users.entity';
+import { Wallet } from '../../wallets/entities/wallet.entity';
 import { UserGiftCardStatus } from '../enums/giftcard-status.enum';
 
 @Entity({ name: 'user_gift_cards' })
 
 // 🔎 Índices simples
-@Index('IDX_USER_GIFT_CARD_CODE', ['code'], { unique: true })
 @Index('IDX_USER_GIFT_CARD_STATUS', ['status'])
 @Index('IDX_USER_GIFT_CARD_IS_ACTIVE', ['is_active'])
 @Index('IDX_USER_GIFT_CARD_EXPIRES_AT', ['expires_at'])

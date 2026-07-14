@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { Wallet } from '../../wallets/entities/wallet.entity';
 import { OwnerTopupEnum } from '../enums/owner-topups.enum';
-import { User } from 'src/modules/users/entities/users.entity';
+import { User } from '../../users/entities/users.entity';
 
 export type StripeTopupStatus =
   | 'PENDING'
@@ -94,7 +94,7 @@ export class StripeTopup {
   @Column({ type: 'enum', enum: OwnerTopupEnum, nullable:true })
   owner: OwnerTopupEnum;
 
-  @Column('uuid')
+  @Column('uuid', {nullable:true})
   owner_id: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })

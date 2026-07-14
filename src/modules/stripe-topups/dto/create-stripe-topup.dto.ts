@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsEnum,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -33,6 +34,7 @@ export class CreateStripeTopupDto {
     example: OwnerTopupEnum.RECHARGE,
   })
   @IsEnum(OwnerTopupEnum)
+  @IsNotEmpty()
   owner: OwnerTopupEnum;
 
   @ApiPropertyOptional({
