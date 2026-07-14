@@ -3,14 +3,14 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { TopupService } from './topup.service';
 import { CreateTopupDto } from './dto/create-topup.dto';
 import { TopupResponseDto } from './dto/topup-response.dto';
-import { FlexibleAuthGuard } from '../auth/guards/flexible-auth.guard';
+import { FlexibleAuthGuard } from '../../auth/guards/flexible-auth.guard';
 
 @ApiTags('topup')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(FlexibleAuthGuard)
 @Controller('topup-binance-pay')
 export class TopupController {
-  constructor(private readonly topupService: TopupService) {}
+  constructor(private readonly topupService: TopupService) { }
 
   @Post('create')
   @ApiOperation({ summary: 'Crear orden de recarga (USD entero) — retorna checkoutUrl de Binance Pay' })

@@ -64,7 +64,7 @@ export class GroupServicesService {
       // 3️⃣ Crear contratacion de servicio
       const groupServiceSaved = await qr.manager.save(GroupService, {
         ...dto,
-        total_becoin: service.price_becoin,
+        total_amount: Number(service.price),
       });
 
       // 4️⃣ Preparar estados y tipos
@@ -76,7 +76,7 @@ export class GroupServicesService {
         where: { code: TransactionCode.SERVICE_BELAND },
       });
 
-      const cost = Number(service.price_becoin);
+      const cost = Number(service.price);
 
       // const groupService = await qr.manager.findOne(GroupService, {
       //   where: {id:groupServiceSaved.id},
@@ -90,22 +90,21 @@ export class GroupServicesService {
       const full = "FULL"
       switch (full) {
         case PaymentTypeCode.FULL: {
-          if (Number(wallet.becoin_balance) < cost) {
+          if (Number(wallet.usd_balance) < cost) {
             throw new BadRequestException('Saldo insuficiente');
           }
-
-          wallet.becoin_balance = +wallet.becoin_balance - cost;
+          wallet.usd_balance = +wallet.usd_balance - cost;
           wallet.locked_balance = +wallet.locked_balance + cost;
 
-          await qr.manager.save(Wallet, wallet);
+          await qr.manager.save(Wallet, wallet); 
 
           await qr.manager.save(
             qr.manager.create(Transaction, {
               wallet_id: wallet.id,
               type: txType,
               status: txStatePending,
-              amount_becoin: cost,
-              post_balance: wallet.becoin_balance,
+              amount_usd: cost,
+              post_balance: wallet.usd_balance,
               reference: `GROUP_SERVICE-${groupServiceSaved.id}`,
             }),
           );
@@ -243,10 +242,10 @@ export class GroupServicesService {
           where: { id: tx.wallet_id },
         });
 
-        wallet.locked_balance = +wallet.locked_balance - Number(tx.amount_becoin);
+        wallet.locked_balance = +wallet.locked_balance - Number(tx.amount_usd);
         tx.status_id = txCompleted.id;
 
-        totalCollected += Number(tx.amount_becoin);
+        totalCollected += Number(tx.amount_usd);
 
         await qr.manager.save([wallet, tx]);
       }
@@ -256,12 +255,12 @@ export class GroupServicesService {
         where: { user_id: this.superadminService.getSuperadminId() },
       });
 
-      superWallet.becoin_balance = +superWallet.becoin_balance + totalCollected;
+      superWallet.usd_balance = +superWallet.usd_balance + totalCollected;
       await qr.manager.save(superWallet);
 
       const superadminTransaction = qr.manager.create(Transaction, {
         wallet_id: superWallet.id,
-        amount_becoin: totalCollected,
+        amount_usd: totalCollected,
         status_id: txCompleted.id,
         type_id: txType.id,
         reference: `GROUP_SERVICE-${groupService.id}`,
@@ -357,8 +356,7 @@ export class GroupServicesService {
           where: { id: tx.wallet_id },
         });
 
-        const originalAmount = Number(tx.amount_becoin);
-
+        const originalAmount = Number(tx.amount_usd)
         let penalty = 0;
         let refund = originalAmount;
 
@@ -367,8 +365,8 @@ export class GroupServicesService {
           refund = Number((originalAmount - penalty).toFixed(2));
         }
 
-        wallet.locked_balance -= originalAmount;
-        wallet.becoin_balance += refund;
+        wallet.locked_balance = Number(wallet.locked_balance) - originalAmount;
+        wallet.usd_balance = Number(wallet.usd_balance) + refund;
 
         tx.status = txCancelled;
 
@@ -386,13 +384,13 @@ export class GroupServicesService {
           where: { user_id: this.superadminService.getSuperadminId() },
         });
 
-        superWallet.becoin_balance += totalPenalty;
+        superWallet.usd_balance = Number(superWallet.usd_balance) + totalPenalty;
 
         await qr.manager.save(superWallet);
 
         const penaltyTx = qr.manager.create(Transaction, {
           wallet_id: superWallet.id,
-          amount_becoin: totalPenalty,
+          amount_usd: totalPenalty,
           status: txCompleted,
           type: txTypePenalty,
           reference: `GROUP_SERVICE-${groupService.id}`,

@@ -46,10 +46,6 @@ export class UserWithdraw {
   @Column('uuid')
   withdraw_account_id: string;
 
-  // 🔹 Montos
-  @Column({ type: 'decimal', precision: 18, scale: 2 })
-  amount_becoin: number;
-
   @Column({ type: 'decimal', precision: 18, scale: 2 })
   amount_usd: number;
 

@@ -2,14 +2,14 @@ import { Injectable, Logger, BadRequestException, NotFoundException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Topup } from './entities/topup.entity';
-import { Wallet } from '../wallets/entities/wallet.entity';
-import { BinancePayService } from '../binance-pay/binance-pay.service';
-import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
-import { Transaction } from '../transactions/entities/transaction.entity';
-import { TransactionType } from '../transaction-type/entities/transaction-type.entity';
-import { TransactionState } from '../transaction-state/entities/transaction-state.entity';
-import { TransactionCode } from '../transaction-type/enum/transaction-code'; 
-import { StatusCode } from '../transaction-state/enum/status.enum';
+import { Wallet } from '../../wallets/entities/wallet.entity';
+import { BinancePayService } from '../binance-pay.service';
+import { SuperadminConfigService } from '../../superadmin-config/superadmin-config.service';
+import { Transaction } from '../../transactions/entities/transaction.entity';
+import { TransactionType } from '../../transaction-type/entities/transaction-type.entity';
+import { TransactionState } from '../../transaction-state/entities/transaction-state.entity';
+import { TransactionCode } from '../../transaction-type/enum/transaction-code';
+import { StatusCode } from '../../transaction-state/enum/status.enum';
 @Injectable()
 export class TopupService {
   private readonly logger = new Logger(TopupService.name);
@@ -23,7 +23,7 @@ export class TopupService {
     private dataSource: DataSource,
     private binancePay: BinancePayService,
     private superadminConfig: SuperadminConfigService,
-  ) {}
+  ) { }
 
   // Crea la orden local y llama a Binance createOrder
   async createTopup(walletId: string, amountUsd: number) {
@@ -103,17 +103,14 @@ export class TopupService {
       const txRepo = manager.getRepository(Transaction);
 
       // Pessimistic lock wallet row to prevent race conditions
-      const wallet = await walletRepo.findOne({ where: { id: topup.wallet_id }, lock: { mode: 'pessimistic_write' }});
+      const wallet = await walletRepo.findOne({ where: { id: topup.wallet_id }, lock: { mode: 'pessimistic_write' } });
       if (!wallet) throw new Error('Wallet not found during webhook processing');
 
       // Determinar monto pagado: prefer campo del webhook (totalFee), sino el topup.amount_usd
       const paidAmountUsd = parseFloat((body.totalFee || body.total_fee || topup.amount_usd).toString()) || Number(topup.amount_usd);
 
-      const becoinPrice = this.superadminConfig.getPriceOneBecoin(); // 0.05
-      const becoins = Math.floor(paidAmountUsd / becoinPrice);
-
       // actualizar wallet
-      wallet.becoin_balance = Number((Number(wallet.becoin_balance) + becoins).toFixed(2));
+      wallet.usd_balance = Number((Number(wallet.usd_balance) + paidAmountUsd).toFixed(2));
       await walletRepo.save(wallet);
 
       // buscar type/state por code
@@ -129,7 +126,7 @@ export class TopupService {
         wallet_id: wallet.id,
         type_id: rechargeType.id,
         status_id: completedState.id,
-        amount_becoin: becoins,
+        amount_usd: paidAmountUsd,
         post_balance: wallet.becoin_balance,
         reference: topup.merchantTradeNo,
       });
@@ -137,11 +134,11 @@ export class TopupService {
 
       // actualizar topup
       topup.status = 'COMPLETED';
-      topup.becoins_granted = becoins;
+      topup.usd_granted = paidAmountUsd;
       topup.raw_webhook_payload = JSON.stringify(body);
       await topupRepo.save(topup);
     });
 
-    this.logger.log(`Topup ${merchantTradeNo} processed, credited ${topup.becoins_granted} becoins`);
+    this.logger.log(`Topup ${merchantTradeNo} processed, credited ${topup.usd_granted} becoins`);
   }
 }

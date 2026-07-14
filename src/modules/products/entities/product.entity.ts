@@ -43,12 +43,6 @@ export class Product {
   @Column({ type: 'int', default: 0, nullable:true })
   quantity: number;
 
-  @Column({ type: 'numeric', precision: 14, scale: 2, default: 0, nullable:true })
-  price_becoin: number;
-
-  @Column({ type: 'int', default: 0, nullable:true })
-  becoin_by_recycled: number;
-
   @Column({ type: 'text', nullable: true })
   image_url: string;
 

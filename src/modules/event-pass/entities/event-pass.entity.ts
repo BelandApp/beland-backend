@@ -81,13 +81,13 @@ export class EventPass {
 
   // 💰 DATOS ECONÓMICOS
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  price_dollar: number;
+  price_usd: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, default: 0 })
   discount: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  total_dollar: number;
+  total_usd: number;
 
   // 💸 CONFIGURACIÓN DE DEVOLUCIÓN
   @Column({ type: 'boolean', default: false })

@@ -43,7 +43,6 @@ export class CartsRepository {
     cart.payment_type_id = null;
     cart.total_amount = 0;
     cart.total_items = 0;
-    cart.total_becoin = 0;
     cart.total_weight = 0;
 
     const cartClean = await this.repository.save(cart)

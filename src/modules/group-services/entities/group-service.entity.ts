@@ -39,7 +39,7 @@ export class GroupService {
     precision: 10,
     scale: 2,
   })
-  total_becoin: number;
+  total_amount: number;
 
   @Column({
     type: 'boolean',

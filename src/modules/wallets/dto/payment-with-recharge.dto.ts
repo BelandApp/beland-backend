@@ -20,14 +20,7 @@ export class PaymentWithRechargeDto {
     description: 'Identificador entregado por Payphone para seguimientos',
   })
   @IsNumber()
-  payphone_transactionId: number;
-
-  @ApiProperty({
-    example: '8f03a1de-b71c-4a5a-a9ff-0d9a3a3c5b2a',
-    description: 'codigo interno para seguimientos',
-  })
-  @IsUUID()
-  clientTransactionId: string;
+  paymentReferenceId: string;
 
   @ApiProperty({
     example: '8f03a1de-b71c-4a5a-a9ff-0d9a3a3c5b2a',

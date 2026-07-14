@@ -12,7 +12,6 @@ import { EventPass } from './entities/event-pass.entity';
 import * as QRCode from 'qrcode';
 import { EventPassFiltersDto } from './dto/event-pass-filter.dto';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
-import { UploadApiResponse } from 'cloudinary';
 import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { CreateEventPassDto } from './dto/create-event-pass.dto';
 import { EventPassType } from './entities/event-pass-type.entity';
@@ -113,7 +112,7 @@ export class EventPassService {
 
       // --- 3️⃣ Calcular precio con descuento ---
       const discount = Number(dto.discount ?? 0);
-      const price = Number(dto.price_dollar);
+      const price = Number(dto.price_usd);
 
       const totalPrice = price - (price * discount) / 100;
 
@@ -126,7 +125,7 @@ export class EventPassService {
         ...dto,
         image_url: mainImage,
         images_urls: additionalImages,
-        total_dollar: totalPrice,
+        total_usd: totalPrice,
         created_by_id: user_id,
       });
 

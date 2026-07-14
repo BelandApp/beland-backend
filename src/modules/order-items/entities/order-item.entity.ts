@@ -32,12 +32,6 @@ export class OrderItem {
   @Column({ type: 'numeric', precision: 14, scale: 2 })
   total_price: number;
 
-  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
-  unit_becoin: number;
-
-  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
-  total_becoin: number;
-
   @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
   unit_weight: number;
 
@@ -82,10 +76,6 @@ export class OrderItem {
       // Calcular total_price
       const price = Number(this.unit_price ?? 0);
       this.total_price = this.quantity * price;
-
-      // Calcular total_becoin
-      const becoin = Number(this.unit_becoin ?? 0);
-      this.total_becoin = this.unit_becoin ? this.quantity * becoin : null;
 
       // Calcular total_weight
       const weight = Number(this.unit_weight ?? 0);
