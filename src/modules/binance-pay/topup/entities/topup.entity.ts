@@ -1,13 +1,13 @@
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  CreateDateColumn, 
-  ManyToOne, 
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
   JoinColumn,
   Index
 } from 'typeorm';
-import { Wallet } from '../../wallets/entities/wallet.entity';
+import { Wallet } from '../../../wallets/entities/wallet.entity';
 
 export type TopupStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'EXPIRED';
 
@@ -47,7 +47,7 @@ export class Topup {
   raw_webhook_payload: string | null;
 
   @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
-  becoins_granted: number | null;
+  usd_granted: number | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

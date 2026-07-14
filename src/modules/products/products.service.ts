@@ -17,7 +17,6 @@ export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
   constructor(private readonly repo: ProductRepository,
-    private readonly superadminConfig: SuperadminConfigService,
   ) {}
 
   async create(dto: CreateProductDto) {
@@ -26,7 +25,7 @@ export class ProductsService {
       throw new ConflictException(`Ya existe un producto con el nombre "${dto.name}".`);
     }
 
-    const newProduct = this.repo.create({...dto, price_becoin: +dto.price / +this.superadminConfig.getPriceOneBecoin()});
+    const newProduct = this.repo.create({...dto});
     return await this.repo.save(newProduct);
   }
 

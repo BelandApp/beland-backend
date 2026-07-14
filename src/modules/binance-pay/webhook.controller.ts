@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Headers, Res, Logger } from '@nestjs/common';
 import { BinancePayService } from './binance-pay.service';
-import { TopupService } from '../topup/topup.service';
+import { TopupService } from './topup/topup.service';
 import { Response } from 'express';
 
 @Controller('webhook/binance')
@@ -10,7 +10,7 @@ export class BinanceWebhookController {
   constructor(
     private readonly binancePay: BinancePayService,
     private readonly topupService: TopupService,
-  ) {}
+  ) { }
 
   @Post()
   async handle(@Body() body: any, @Headers() headers, @Res() res: Response) {

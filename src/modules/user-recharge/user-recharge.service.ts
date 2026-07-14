@@ -22,7 +22,7 @@ import {
   superadminNotificationEmailTemplate,
 } from '../email/plantilla/htmlNotificacionSuperadmin';
 import { User } from '../users/entities/users.entity';
-import { PaymentAccount } from '../payment-account/entities/payment-account.entity';
+import { PaymentAccount } from '../payout-account/entities/payment-account.entity';
 
 @Injectable()
 export class UserRechargeService {
@@ -158,19 +158,23 @@ export class UserRechargeService {
       });
       if (!wallet) throw new NotFoundException('No se encontro la Billetera del usuario');
 
+      if (Number(wallet.usd_balance)+Number(dto.amount_usd) > this.superadminConfig.recharge_limit) {
+        throw new ConflictException("Solo puede tener para consumos futuros hasta 100 USD.");
+      }
+
       const transaction = await queryRunner.manager.save (Transaction, {
         wallet_id: wallet.id,
         type: type,
         status: status,
-        amount_becoin: +dto.amount_usd / +this.superadminConfig.getPriceOneBecoin(),
-        post_balance: +wallet.becoin_balance,
+        amount_usd: +dto.amount_usd,
+        post_balance: +wallet.usd_balance,
         reference: dto.transfer_id,
       });
 
       const rechargeTransferCreated = queryRunner.manager.create(RechargeTransfer, {
         user_id,
         status:status,
-        amount_usd: dto.amount_usd,
+        amount_usd: Number(dto.amount_usd),
         payment_account_id: dto.payment_account_id,
         transfer_id: dto.transfer_id,
         transaction: transaction,
@@ -212,14 +216,15 @@ export class UserRechargeService {
       if (rechargeTransfer.status.name === StatusCode.FAILED) throw new BadRequestException('La recarga ya fue registrada como FALLIDA.');
 
       const wallet = await queryRunner.manager.findOne(Wallet, {
-        where: {user_id : rechargeTransfer.user_id}
+        where: {user_id : rechargeTransfer.user_id},
+        lock: { mode: 'pessimistic_write' },
       });
       if (!wallet) throw new NotFoundException('No se encontro la Billetera del usuario');
 
       rechargeTransfer.status = status;
       await queryRunner.manager.save(rechargeTransfer);
 
-      wallet.becoin_balance= +wallet.becoin_balance + rechargeTransfer.amount_usd/ +this.superadminConfig.getPriceOneBecoin()
+      wallet.usd_balance= +wallet.usd_balance + Number(rechargeTransfer.amount_usd)
       await queryRunner.manager.save(wallet);
 
       const transaction = await queryRunner.manager.findOne(Transaction, {
@@ -227,7 +232,7 @@ export class UserRechargeService {
       })
       if (!transaction) throw new NotFoundException('No se encontro la transaccion de la recarga');
       transaction.status_id= status.id;
-      transaction.post_balance= +wallet.becoin_balance;
+      transaction.post_balance= +wallet.usd_balance;
       await queryRunner.manager.save(transaction);
     
       await queryRunner.commitTransaction();

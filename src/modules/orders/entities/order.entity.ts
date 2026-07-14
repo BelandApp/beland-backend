@@ -42,20 +42,14 @@ export class Order {
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
   subtotal_amount: number;
 
-  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
-  subtotal_becoin: number;
-
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
   total_amount: number;
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
-  total_becoin: number;
+  total_amount_paied: number;
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
-  total_becoin_returned: number;
-
-  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, nullable:true })
-  total_becoin_paied: number;
+  total_amount_returned: number;
 
   @Column({ type: 'int', default: 0 })
   total_items: number;

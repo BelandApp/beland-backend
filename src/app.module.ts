@@ -56,12 +56,12 @@ import { NotificationsSocketModule } from './modules/notification-socket/notific
 import { TestimoniesModule } from './modules/testimonies/testimonies.module';
 import { UserFeedbackModule } from './modules/user-feedback/user-feedback.module';
 import { UserRechargeModule } from './modules/user-recharge/user-recharge.module';
-import { PaymentAccountModule } from './modules/payment-account/payment-account.module';
+import { PaymentAccountModule } from './modules/payout-account/payment-account.module';
 import { DeliveryStatusModule } from './modules/delivery-status/delivery-status.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { EventPassModule } from './modules/event-pass/event-pass.module';
 import { UserEventPassModule } from './modules/user-event-pass/user-event-pass.module';
-import { TopupModule } from './modules/topup/topup.module';
+import { TopupModule } from './modules/binance-pay/topup/topup.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { DriversModule } from './modules/profiles/drivers/drivers.module';
 import { MerchantsModule } from './modules/profiles/merchants/merchants.module';
@@ -120,12 +120,11 @@ const isTs = process.env.NODE_ENV !== 'production';
         ssl: isTs ? false : { rejectUnauthorized: false },
 
         extra: {
-          max: 5, 
+          max: 5,
         },
       }),
     }),
 
-    //  hola agragar algo
     ScheduleModule.forRoot(),
 
     DatabaseModule,
@@ -172,7 +171,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     PaymentAccountModule,
     DeliveryStatusModule,
     PaymentAccountModule,
-    CloudinaryModule, 
+    CloudinaryModule,
     EventPassModule,
     UserEventPassModule,
     TopupModule,
@@ -188,6 +187,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     GroupMembersConsumptionModule,
     GroupServicesModule,
     StripeTopupsModule,
+
   ],
   controllers: [],
   providers: [

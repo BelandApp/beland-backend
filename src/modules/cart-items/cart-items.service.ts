@@ -107,7 +107,6 @@ export class CartItemsService {
 
         // Si la cantidad es mayor a 0 → recalcular totales
         body.total_price = Number(item.unit_price) * newQuantity;
-        body.total_becoin = Number(item.unit_becoin) * newQuantity;
         body.total_weight = Number(item.unit_weight) * newQuantity;
       }
 

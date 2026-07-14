@@ -17,6 +17,7 @@ import { WalletsService } from '../wallets/wallets.service';
 import { GroupMember } from '../group-members/entities/group-member.entity';
 import { RoleGroupEnum } from '../group-members/enums/role-group.enum';
 import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
+import { PaymentProviderEnum } from '../transactions/enums/transaction.enums';
 
 @Injectable()
 export class UserEventPassRepository {
@@ -118,9 +119,8 @@ async findAll(
       if (!typeSale)
         throw new NotFoundException('Tipo de transaccion no encontrado. ', TransactionCode.SALE_EVENTPASS);
 
-      const total_becoin = +event.total_dollar / this.superadminConfig.getPriceOneBecoin();
       // 2️⃣ Validar saldo y disponibilidad
-      if (+walletUser.becoin_balance < total_becoin)
+      if (+walletUser.usd_balance < +event.total_usd)
         throw new BadRequestException('Saldo insuficiente.');
       if (!event.available) {
         throw new BadRequestException('Entradas agotadas.');
@@ -133,7 +133,7 @@ async findAll(
       await eventRepo.save(event);
 
       // 3️⃣ Descontar saldo del usuario
-      walletUser.becoin_balance = +walletUser.becoin_balance - total_becoin;
+      walletUser.usd_balance = +walletUser.usd_balance - +event.total_usd;
       await walletRepo.save(walletUser);
 
       // 4️⃣ Acreditar saldo al organizador (si existe)
@@ -142,7 +142,7 @@ async findAll(
       });
       if (!walletEvent) throw new NotFoundException('Billetera del Organizador del evento No encontrada.');
 
-      walletEvent.becoin_balance = +walletEvent.becoin_balance + total_becoin;
+      walletEvent.usd_balance = +walletEvent.usd_balance + +event.total_usd;
       await walletRepo.save(walletEvent);
 
       // 5️⃣ Crear transacción PURCHASE_EVENTPASS en la wallet del usuario
@@ -151,8 +151,8 @@ async findAll(
         type_id: typePurchase.id,
         status_id: status.id,
         related_wallet_id: walletEvent.id,
-        post_balance: +walletUser.becoin_balance,
-        amount_becoin: total_becoin,
+        post_balance: +walletUser.usd_balance,
+        amount_usd: +event.total_usd,
         reference: 'EVENTPASS -' + event_pass_id,
       });
       await transRepo.save(purchaseTx);
@@ -163,8 +163,8 @@ async findAll(
         type_id: typeSale.id,
         status_id: status.id,
         related_wallet_id: walletUser.id,
-        post_balance: +walletEvent.becoin_balance,
-        amount_becoin: total_becoin,
+        post_balance: +walletEvent.usd_balance,
+        amount_usd: +event.total_usd,
         reference: 'EVENTPASS -' + event_pass_id,
       });
       await transRepo.save(saleTx);
@@ -177,7 +177,7 @@ async findAll(
         holder_instagram_tiktok,
         holder_phone,
         holder_email,
-        purchase_price: total_becoin,
+        purchase_price: +event.total_usd,
         is_consumed: false,
         is_active: true,
       });
@@ -203,9 +203,9 @@ async findAll(
   ): Promise<UserEventPass> {
     const recharge = await this.walletService.recharge(user_id, {
       amountUsd: dto.amountUsd,
-      payphone_transactionId: dto.payphone_transactionId,
-      clientTransactionId: dto.clientTransactionId,
-      referenceCode: dto.referenceCode
+      paymentProvider: PaymentProviderEnum.PAYPHONE,
+      paymentReferenceId: String(dto.payphone_transactionId),
+      referenceCode: dto.referenceCode,
     })
 
     if (!recharge) throw new ConflictException("Fallo la recarga de Becoin")
@@ -281,12 +281,12 @@ async findAll(
         throw new NotFoundException('Datos de tipo o estado de transacción incompletos.');
 
         // 5️⃣ Validar que el organizador tenga fondos suficientes para devolver
-        if (+walletOrganizer.becoin_balance < +userPass.purchase_price)
+        if (+walletOrganizer.usd_balance < +userPass.purchase_price)
         throw new BadRequestException('El organizador no tiene saldo suficiente para realizar el reembolso.');
 
         // 6️⃣ Realizar movimientos de saldo
-        walletUser.becoin_balance = +walletUser.becoin_balance + +userPass.purchase_price;
-        walletOrganizer.becoin_balance = +walletOrganizer.becoin_balance - +userPass.purchase_price;
+        walletUser.usd_balance = +walletUser.usd_balance + +userPass.purchase_price;
+        walletOrganizer.usd_balance = +walletOrganizer.usd_balance - +userPass.purchase_price;
         await walletRepo.save([walletUser, walletOrganizer]);
 
         // 7️⃣ Crear transacciones
@@ -295,8 +295,8 @@ async findAll(
         type_id: typeRefund.id,
         status_id: status.id,
         related_wallet_id: walletOrganizer.id,
-        post_balance: +walletUser.becoin_balance,
-        amount_becoin: +userPass.purchase_price,
+        post_balance: +walletUser.usd_balance,
+        amount_usd: +userPass.purchase_price,
         reference: 'REFUND EVENTPASS - ' + userPass.event_pass_id,
         });
         await transRepo.save(refundTx);
@@ -306,8 +306,8 @@ async findAll(
         type_id: typeRefund.id,
         status_id: status.id,
         related_wallet_id: walletUser.id,
-        post_balance: +walletOrganizer.becoin_balance,
-        amount_becoin: +userPass.purchase_price,
+        post_balance: +walletOrganizer.usd_balance,
+        amount_usd: +userPass.purchase_price,
         reference: 'DEVOLUTION EVENTPASS - ' + userPass.event_pass_id,
         });
         await transRepo.save(devolutionTx);

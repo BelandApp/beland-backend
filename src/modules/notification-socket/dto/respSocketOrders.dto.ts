@@ -10,7 +10,7 @@ export class RespSocketOrdersDto {
     example: 200,
     description: 'Total de la orden en Becoin.',
   })
-  total_becoin: number;
+  total_usd: number;
 
   @ApiProperty({
     example: 4,

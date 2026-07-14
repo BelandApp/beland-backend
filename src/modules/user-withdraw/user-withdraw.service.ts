@@ -169,7 +169,7 @@ export class UserWithdrawsService {
         paymentMethod: withdrawAccount?.bankName,
         createdAt: userWithdraw.created_at,
         details: {
-          'Monto BeCoin': userWithdraw.amount_becoin,
+          'Monto BeCoin': userWithdraw.amount_usd/this.superadminConfig.getPriceOneBecoin(),
           'Cuenta destino': accountReference,
           'Banco': withdrawAccount?.bankName,
           'Tipo de cuenta': withdrawAccount?.withdraw_account_type?.name,
@@ -211,7 +211,7 @@ export class UserWithdrawsService {
       if (!wallet) throw new NotFoundException('No se encuentra la billetera');
 
       // 2) Verificar saldo suficiente
-      if (+wallet.becoin_balance < +dto.amountBecoin)
+      if (+wallet.usd_balance < +dto.amount_usd)
         throw new BadRequestException('Saldo insuficiente');
 
       // 3) Obtener tipo de transacción 'WITHDRAW'
@@ -232,8 +232,8 @@ export class UserWithdrawsService {
         throw new ConflictException("No se encuentra el estado ", StatusCode.PENDING);
 
       // 5) Reservar fondos: debitar del saldo disponible y aumentar el saldo bloqueado
-      wallet.becoin_balance = +wallet.becoin_balance - +dto.amountBecoin;
-      wallet.locked_balance = (wallet.locked_balance ?? 0) + +dto.amountBecoin;
+      wallet.usd_balance = +wallet.usd_balance - +dto.amount_usd;
+      wallet.locked_balance = (wallet.locked_balance ?? 0) + +dto.amount_usd;
       const walletUpdated = await queryRunner.manager.save(wallet);
 
       // 6) Registrar la transacción
@@ -241,8 +241,8 @@ export class UserWithdrawsService {
         wallet_id: wallet.id,
         type,
         status,
-        amount_becoin: -dto.amountBecoin,
-        post_balance: wallet.becoin_balance,
+        amount_usd: -dto.amount_usd,
+        post_balance: wallet.usd_balance,
       });
 
       // 7) Registrar la solicitud de retiro del usuario
@@ -250,8 +250,7 @@ export class UserWithdrawsService {
         user_id,
         wallet_id: wallet.id,
         withdraw_account_id: dto.withdraw_account_id,
-        amount_becoin: +dto.amountBecoin,
-        amount_usd: +dto.amountBecoin * +this.superadminConfig.getPriceOneBecoin(),
+        amount_usd: +dto.amount_usd,
         status_id: status.id,
         transaction_id: tx.id,
       });
@@ -309,10 +308,10 @@ export class UserWithdrawsService {
         throw new ConflictException("No se encuentra el estado ", StatusCode.FAILED);
 
       // 4) Regresar fondos: acreditar el saldo y descontar del saldo bloqueado
-      wallet.becoin_balance =
-        +wallet.becoin_balance + +userWithdraw.amount_becoin;
+      wallet.usd_balance =
+        +wallet.usd_balance + +userWithdraw.amount_usd;
       wallet.locked_balance =
-        +wallet.locked_balance - +userWithdraw.amount_becoin;
+        +wallet.locked_balance - +userWithdraw.amount_usd;
       const walletUpdated = await queryRunner.manager.save(wallet);
 
       // 5) actualizo la transacción a estado FAILED
@@ -379,7 +378,7 @@ export class UserWithdrawsService {
 
       // 4) Descuento Definitivo: Descontar del saldo bloqueado
       userWallet.locked_balance =
-        +userWallet.locked_balance - +userWithdraw.amount_becoin;
+        +userWallet.locked_balance - +userWithdraw.amount_usd;
       await queryRunner.manager.save(userWallet);
 
       // 5) actualizo la transacción a estado COMPLETED

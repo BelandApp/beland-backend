@@ -54,12 +54,6 @@ export class CreateServiceDto {
   @Min(0)
   price?: number;
 
-  @ApiPropertyOptional({ example: 7000 })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  price_becoin?: number;
-
   @ApiProperty({
     description: 'Imagen principal del Servicio',
     type: 'string',

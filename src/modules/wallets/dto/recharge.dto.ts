@@ -1,9 +1,28 @@
-import { IsNumber, IsString, IsUUID } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
+import { PaymentProviderEnum } from 'src/modules/transactions/enums/transaction.enums'; 
+
 export class RechargeDto {
-  @ApiProperty({ example: 50.0, description: 'Amount in USD to recharge' })
+
+  @ApiPropertyOptional({
+    description: 'Id de la wallet que hizo la recarga',
+  })
+  @IsOptional()
+  @IsUUID()
+  walletId?: string;
+
+  @ApiProperty({
+    example: 50,
+    description: 'Amount in USD to recharge',
+  })
   @IsNumber()
   @Type(() => Number)
   amountUsd: number;
@@ -16,16 +35,39 @@ export class RechargeDto {
   referenceCode: string;
 
   @ApiProperty({
-    example: 'PAYPHONE-TransactionID',
-    description: 'Identificador entregado por Payphone para seguimientos',
+    enum: PaymentProviderEnum,
+    example: PaymentProviderEnum.STRIPE,
+    description: 'Payment provider',
   })
-  @IsNumber()
-  payphone_transactionId: number;
+  @IsEnum(PaymentProviderEnum)
+  paymentProvider: PaymentProviderEnum;
 
   @ApiProperty({
-    example: '8f03a1de-b71c-4a5a-a9ff-0d9a3a3c5b2a',
-    description: 'codigo interno para seguimientos',
+    example: 'pi_3S8xKcD1D7cPxxxxxxx',
+    description: 'External payment identifier',
   })
-  @IsUUID()
-  clientTransactionId: string;
+  @IsString()
+  paymentReferenceId: string;
+}
+
+export class RechargeResponseDto {
+  @ApiProperty()
+  walletId: string;
+
+  @ApiProperty()
+  amountUsd: number;
+
+  @ApiProperty()
+  usdBalance: number;
+
+  @ApiProperty()
+  becoinOrangeBalance: number;
+
+  @ApiProperty()
+  rechargeTransactionId: string;
+
+  @ApiProperty({
+    nullable: true,
+  })
+  orangeTransactionId?: string;
 }

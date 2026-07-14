@@ -3,11 +3,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class WithdrawDto {
   @ApiProperty({
-    description: 'Cantidad de Becoin a retirar',
+    description: 'Cantidad de USD a retirar',
     example: 1000,
   })
   @IsNumber()
-  amountBecoin: number;
+  amount_usd: number;
 
   @ApiProperty({
     description: 'UUID de la cuenta para destino del retiro',

@@ -164,7 +164,7 @@ export class CreateEventPassDto {
     description: 'Precio en dolares del evento.',
   })
   @IsNumber()
-  price_dollar: number;
+  price_usd: number;
 
   @ApiProperty({
     example: 10,
