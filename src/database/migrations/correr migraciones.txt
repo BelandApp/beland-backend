@@ -4,7 +4,7 @@ comando para Crear migracionesa.
 npm run migration:generate -- src/database/migrations/NombreUnicoDeLaMigracion
 
 Comando para correr la migracion y actualizar la bd que esta conectada a local. (si lo ejecuto desde local)
-npm run typeorm migration:run
+npm run migration:run
 
 IMPORTANTE...
 Dentro de las entidades las rutas deben ser relativas. sino no va a encontrar las entidades relacionadas.
