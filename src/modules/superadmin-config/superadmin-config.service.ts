@@ -10,7 +10,7 @@ export class SuperadminConfigService implements OnModuleInit {
   private superadminId: string;
   private superadminEmail: string;
   private readonly priceOneBecoin = 0.05;
-  private readonly priceDelivery = 2.5;
+  private readonly priceDelivery = 1;
   public readonly recicled_becoin = 2;
   public readonly recharge_limit = 100;
   public readonly recharge_commission_payphone = 0.06;
