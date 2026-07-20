@@ -1,0 +1,6 @@
+export enum UserGiftCardStatus {
+  ACTIVE = 'ACTIVE',
+  PARTIALLY_USED = 'PARTIALLY_USED',
+  REDEEMED = 'REDEEMED',
+  CANCELLED = 'CANCELLED',
+}

@@ -5,7 +5,6 @@ import { CartItem } from './entities/cart-item.entity';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { NotFoundException } from '@zxing/library';
 import { Cart } from '../cart/entities/cart.entity';
-import { Group } from '../groups/entities/group.entity';
 import { PaymentTypeCode } from '../payment-types/enum/payment-type.enum';
 import { GroupMember } from '../group-members/entities/group-member.entity';
 
@@ -123,10 +122,8 @@ export class CartItemsRepository {
         const newItem = queryRunner.manager.create(CartItem, {
           ...body,
           unit_price: +product.price,
-          unit_becoin: +product.price_becoin,
           unit_weight: +product.weight, // Asumiendo que existe este campo
           total_price: +product.price * +body.quantity,
-          total_becoin: +product.price_becoin * +body.quantity,
           total_weight: +product.weight * +body.quantity,
         });
 
@@ -139,7 +136,6 @@ export class CartItemsRepository {
 
         item.quantity = newQuantity;
         item.total_price = +item.unit_price * newQuantity;
-        item.total_becoin = +item.unit_becoin * newQuantity;
         item.total_weight = +item.unit_weight * newQuantity;
 
         itemSave = await queryRunner.manager.save(item);
@@ -270,12 +266,12 @@ async recalculateSharedBalances(cartId: string, queryRunner: QueryRunner): Promi
     console.log(
       '➕ item:',
       i.id,
-      'total_becoin:',
-      i.total_becoin,
+      'total_price:',
+      i.total_price,
       'numeric:',
-      Number(i.total_becoin)
+      Number(i.total_price)
     );
-    return sum + Number(i.total_becoin);
+    return sum + Number(i.total_price);
   }, 0);
 
   console.log('💰 Shared items total:', sharedItemsTotal);
@@ -327,7 +323,7 @@ async recalculateSharedBalances(cartId: string, queryRunner: QueryRunner): Promi
 
     const personalTotal = cart.items
       .filter((i) => i.user_id === memberId)
-      .reduce((sum, i) => sum + Number(i.total_becoin), 0);
+      .reduce((sum, i) => sum + Number(i.total_price), 0);
 
     // 2. Actualizar solo la columna personal del miembro correspondiente
     await queryRunner.manager.update(

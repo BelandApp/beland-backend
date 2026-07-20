@@ -28,6 +28,9 @@ import { WithdrawAccountsService } from './withdraw-account.service';
 import { CreateWithdrawAccountDto } from './dto/create-withdraw-account.dto';
 import { UpdateWithdrawAccountDto } from './dto/update-withdraw-account.dto';
 import { CountryEnum, Currency, HolderDocumentType } from './enums/withdraw-account.enum';
+import { ProfilesGuard } from '../auth/guards/profile.guard';
+import { Profiles } from '../auth/decorators/profiles.decorator';
+import { ProfileEnum } from '../users/enums/profiles.enum';
 
 @ApiTags('withdraw-account')
 @Controller('withdraw-account')
@@ -80,6 +83,8 @@ export class WithdrawAccountsController {
   }
 
   @Post()
+  @UseGuards(ProfilesGuard)
+  @Profiles(ProfileEnum.MERCHANT, ProfileEnum.DRIVER, ProfileEnum.CREATOR)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear una nueva cuenta de retiro' })
   @ApiResponse({ status: 201, description: 'Cuenta de retiro creado exitosamente' })

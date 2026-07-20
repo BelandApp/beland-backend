@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
-import { PaymentAccount } from '../../payment-account/entities/payment-account.entity';
+import { PaymentAccount } from '../../payout-account/entities/payment-account.entity';
 import { TransactionState } from '../../transaction-state/entities/transaction-state.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
 

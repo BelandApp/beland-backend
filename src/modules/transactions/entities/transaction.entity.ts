@@ -10,6 +10,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm'; 
+import { PaymentProviderEnum } from '../enums/transaction.enums';
 
 @Entity('transactions')
 export class Transaction {
@@ -36,14 +37,26 @@ export class Transaction {
   @Column('uuid')
   status_id: string;
 
+  // @Column({ type: 'numeric', precision: 14, scale:2, nullable:true  })
+  // amount_becoin: number; // importe en Becoin (positivo o negativo según tipo)
+
   @Column({ type: 'numeric', precision: 14, scale:2, nullable:true  })
-  amount_becoin: number; // importe en Becoin (positivo o negativo según tipo)
+  amount_usd: number; // importe en Usd (positivo o negativo según tipo)
 
   @Column({ type: 'numeric', precision: 14, scale:2  })
   post_balance: number; // saldo resultante tras la operación
- 
-  @Column({ type: 'text', nullable: true })
-  payphone_transactionId: string | null; // para RECHARGE, id de la transaccion generada por Payphone
+
+  @Column({
+    type: 'enum',
+    enum: PaymentProviderEnum,
+    nullable: true,
+  })
+  external_provider: PaymentProviderEnum;
+
+  @Column({
+    nullable: true,
+  })
+  external_reference_id: string;
 
   @Index('IDX_transactions_client_transaction_id_unique', {
     unique: true,

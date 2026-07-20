@@ -10,11 +10,11 @@ export class TransferDto {
   toWalletId: string;
 
   @ApiProperty({
-    description: 'Cantidad de becoins a transferir',
+    description: 'Cantidad de USD a transferir',
     example: 150.75,
   })
   @IsNumber()
-  amountBecoin: number;
+  amountUsd: number;
 
   @ApiPropertyOptional({
     example: '8f03a1de-b71c-4a5a-a9ff-0d9a3a3c5b2a',

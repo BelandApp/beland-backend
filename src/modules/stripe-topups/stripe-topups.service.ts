@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -9,7 +10,6 @@ import {
 import Stripe from 'stripe';
 import type { Stripe as StripeType } from 'stripe';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as crypto from 'crypto';
 import { EntityManager, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { StripeTopup } from './entities/stripe-topup.entity';
@@ -25,14 +25,12 @@ import { TransactionState } from 'src/modules/transaction-state/entities/transac
 import { StatusCode } from 'src/modules/transaction-state/enum/status.enum';
 import { DataSource } from 'typeorm';
 import { NotificationsGateway } from 'src/modules/notification-socket/notification-socket.gateway';
-
-type StripeEvent = {
-  id: string;
-  type: string;
-  data?: {
-    object?: Record<string, any>;
-  };
-};
+import { OwnerTopupEnum } from './enums/owner-topups.enum';
+import { PaymentProviderEnum } from '../transactions/enums/transaction.enums';
+import { RechargeUseCase } from '../wallets/use-cases/recharge.use-case';
+import { PurchaseGiftCardUseCase } from '../wallets/use-cases/purchase-giftcard.use-case';
+import { PurchaseOrderPaymentUseCase } from '../wallets/use-cases/purchase-beland.use-case';
+import { PurchaseEventPassUseCase } from '../wallets/use-cases/purchase-eventpass.use-case';
 
 @Injectable()
 export class StripeTopupsService {
@@ -48,6 +46,11 @@ export class StripeTopupsService {
     private readonly dataSource: DataSource,
     private readonly superadminConfig: SuperadminConfigService,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly rechargeUseCase: RechargeUseCase,
+    private readonly purchaseGiftCardUseCase: PurchaseGiftCardUseCase,
+    private readonly purchaseOrderPaymentUseCase: PurchaseOrderPaymentUseCase,
+    private readonly purchaseEventPassUseCase: PurchaseEventPassUseCase,
+
   ) {
     const secretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -69,86 +72,251 @@ export class StripeTopupsService {
 
     if (!secretKey) {
       this.logger.error('STRIPE_SECRET_KEY no configurada');
+
       throw new InternalServerErrorException(
         'Stripe no se encuentra configurado correctamente',
       );
     }
 
     const wallet = await this.walletRepository.findOne({
-      where: { user_id: userId },
+      where: {
+        user_id: userId,
+      },
     });
+
     if (!wallet) {
-      throw new NotFoundException('No se encontro la billetera del usuario');
+      throw new NotFoundException(
+        'No se encontro la billetera del usuario',
+      );
     }
 
-    const amountUsd = this.normalizeAmount(dto.amountUsd);
-    const amountInCents = this.convertUsdToCents(amountUsd);
-    const clientTransactionId = randomUUID();
+    const amountUsd = this.normalizeAmount(
+      dto.amountUsd,
+    );
 
-    const localTopup = this.stripeTopupRepository.create({
-      wallet_id: wallet.id,
-      user_id: userId,
-      client_transaction_id: clientTransactionId,
-      amount_usd: amountUsd,
-      currency: 'usd',
-      status: 'PENDING',
-    });
-    await this.stripeTopupRepository.save(localTopup);
+    // ==========================================================
+    // VALIDACIONES POR TIPO DE COMPRA
+    // ==========================================================
+
+    switch (dto.owner) {
+      case OwnerTopupEnum.RECHARGE:
+        if (
+          Number(wallet.usd_balance) +
+            amountUsd >
+          this.superadminConfig.recharge_limit
+        ) {
+          throw new ConflictException(
+            'No puedes cargar más saldo para consumos futuros',
+          );
+        }
+        break;
+
+      case OwnerTopupEnum.GIFTCARD:
+        if (!dto.owner_id) {
+          throw new BadRequestException(
+            'giftCardId requerido',
+          );
+        }
+
+        if (!dto.recipient_wallet_id) {
+          throw new BadRequestException(
+            'recipient_wallet_id requerido',
+          );
+        }
+
+        break;
+
+      case OwnerTopupEnum.EVENTPASS:
+        if (!dto.owner_id) {
+          throw new BadRequestException(
+            'eventPassId requerido',
+          );
+        }
+
+        if (!dto.holder_name) {
+          throw new BadRequestException(
+            'holder_name requerido',
+          );
+        }
+
+        if (!dto.holder_instagram_tiktok) {
+          throw new BadRequestException(
+            'holder_instagram_tiktok requerido',
+          );
+        }
+
+        break;
+
+      case OwnerTopupEnum.ORDER_PAYMENT:
+        if (!dto.owner_id) {
+          throw new BadRequestException(
+            'paymentId requerido',
+          );
+        }
+
+        break;
+
+      case OwnerTopupEnum.EXPERIENCE:
+        if (!dto.owner_id) {
+          throw new BadRequestException(
+            'experienceId requerido',
+          );
+        }
+
+        break;
+
+      default:
+        throw new BadRequestException(
+          'Tipo de compra no soportado',
+        );
+    }
+
+    // ==========================================================
+    // PREPARACIÓN
+    // ==========================================================
+
+    const amountInCents =
+      this.convertUsdToCents(amountUsd);
+
+    const clientTransactionId =
+      randomUUID();
+
+    const localTopup =
+      this.stripeTopupRepository.create({
+        wallet_id: wallet.id,
+
+        recipient_wallet_id:
+          dto.recipient_wallet_id,
+
+        user_id: userId,
+
+        client_transaction_id:
+          clientTransactionId,
+
+        amount_usd: amountUsd,
+
+        currency: 'usd',
+
+        status: 'PENDING',
+
+        owner: dto.owner,
+
+        owner_id: dto.owner_id,
+
+        holder_name:
+          dto.holder_name,
+
+        holder_instagram_tiktok:
+          dto.holder_instagram_tiktok,
+
+        holder_phone:
+          dto.holder_phone,
+
+        holder_email:
+          dto.holder_email,
+      });
+
+    await this.stripeTopupRepository.save(
+      localTopup,
+    );
 
     try {
-      // aca debo agregar el nuevo codigo del sdk
-      const paymentIntent = await this.stripe.paymentIntents.create(
-        {
-          amount: amountInCents,
-          currency: 'usd',
-          automatic_payment_methods: {
-            enabled: true,
+      const paymentIntent =
+        await this.stripe.paymentIntents.create(
+          {
+            amount: amountInCents,
+
+            currency: 'usd',
+
+            automatic_payment_methods: {
+              enabled: true,
+            },
+
+            metadata: {
+              topup_id: localTopup.id,
+
+              owner: dto.owner,
+
+              owner_id:
+                dto.owner_id ?? '',
+
+              wallet_id: wallet.id,
+
+              user_id: userId,
+
+              client_transaction_id:
+                clientTransactionId,
+            },
+
+            description: `BELAND-${dto.owner}-${wallet.id}`,
+
+            receipt_email: userEmail,
           },
-          metadata: {
-            topup_id: localTopup.id,
-            wallet_id: wallet.id,
-            user_id: userId,
-            client_transaction_id: clientTransactionId,
+          {
+            idempotencyKey:
+              clientTransactionId,
           },
-          description: `Recarga de wallet Beland ${wallet.id}`,
-          receipt_email: userEmail,
-        },
-        {
-          idempotencyKey: clientTransactionId,
-        },
-      );
-      localTopup.payment_intent_id = paymentIntent.id;
+        );
+
+      localTopup.payment_intent_id =
+        paymentIntent.id;
+
       localTopup.status = 'PENDING';
-      await this.stripeTopupRepository.save(localTopup);
+
+      await this.stripeTopupRepository.save(
+        localTopup,
+      );
 
       this.logger.log(
-        `Stripe PaymentIntent creado: topupId=${localTopup.id} paymentIntentId=${paymentIntent.id} walletId=${wallet.id}`,
+        `Stripe PaymentIntent creado: topupId=${localTopup.id} paymentIntentId=${paymentIntent.id} owner=${dto.owner} walletId=${wallet.id}`,
       );
 
       return {
         topupId: localTopup.id,
+
         clientTransactionId,
-        paymentIntentId: paymentIntent.id,
-        clientSecret: paymentIntent.client_secret,
+
+        paymentIntentId:
+          paymentIntent.id,
+
+        clientSecret:
+          paymentIntent.client_secret,
+
         amountUsd,
-        currency: paymentIntent.currency,
-        status: localTopup.status,
+
+        currency:
+          paymentIntent.currency,
+
+        status:
+          localTopup.status,
       };
     } catch (error) {
       localTopup.status = 'FAILED';
-      localTopup.failure_code = 'payment_intent_creation_failed';
+
+      localTopup.failure_code =
+        'payment_intent_creation_failed';
+
       localTopup.failure_message =
-        error instanceof Error ? error.message : 'Error con Stripe';
+        error instanceof Error
+          ? error.message
+          : 'Error con Stripe';
+
       localTopup.failed_at = new Date();
-      await this.stripeTopupRepository.save(localTopup);
+
+      await this.stripeTopupRepository.save(
+        localTopup,
+      );
 
       this.logger.error(
         `Error creando PaymentIntent para stripeTopup=${localTopup.id}: ${localTopup.failure_message}`,
-        error instanceof Error ? error.stack : undefined,
+        error instanceof Error
+          ? error.stack
+          : undefined,
       );
 
       throw new BadRequestException(
-        localTopup.failure_message || 'No se pudo iniciar el pago con Stripe',
+        localTopup.failure_message ||
+          'No se pudo iniciar el pago con Stripe',
       );
     }
   }
@@ -257,6 +425,7 @@ export class StripeTopupsService {
     rawPayload: string,
   ): Promise<void> {
     const paymentIntentId = String(paymentIntent.id);
+
     let notificationPayload:
       | {
           userId: string;
@@ -267,12 +436,14 @@ export class StripeTopupsService {
 
     await this.dataSource.transaction(async (manager) => {
       const topupRepository = manager.getRepository(StripeTopup);
-      const walletRepository = manager.getRepository(Wallet);
-      const transactionRepository = manager.getRepository(Transaction);
 
       const topup = await topupRepository.findOne({
-        where: { payment_intent_id: paymentIntentId },
-        lock: { mode: 'pessimistic_write' },
+        where: {
+          payment_intent_id: paymentIntentId,
+        },
+        lock: {
+          mode: 'pessimistic_write',
+        },
       });
 
       if (!topup) {
@@ -282,93 +453,151 @@ export class StripeTopupsService {
         return;
       }
 
-      if (topup.stripe_event_id === eventId || topup.status === 'COMPLETED') {
+      if (
+        topup.stripe_event_id === eventId ||
+        topup.status === 'COMPLETED'
+      ) {
         this.logger.warn(
           `Webhook Stripe duplicado ignorado: topupId=${topup.id} eventId=${eventId}`,
         );
         return;
       }
 
-      const paymentIntentAmountUsd = this.convertCentsToUsd(paymentIntent.amount);
-      if (paymentIntentAmountUsd !== Number(topup.amount_usd)) {
+      const paymentIntentAmountUsd =
+        this.convertCentsToUsd(paymentIntent.amount);
+
+      if (
+        paymentIntentAmountUsd !==
+        Number(topup.amount_usd)
+      ) {
         throw new BadRequestException(
-          'El monto informado por Stripe no coincide con la recarga local',
+          'El monto informado por Stripe no coincide con el registro local',
         );
       }
 
-      if (String(paymentIntent.currency || '').toLowerCase() !== topup.currency) {
+      if (
+        String(paymentIntent.currency || '').toLowerCase() !==
+        topup.currency
+      ) {
         throw new BadRequestException(
-          'La moneda informada por Stripe no coincide con la recarga local',
+          'La moneda informada por Stripe no coincide con el registro local',
         );
       }
 
-      const metadataTopupId = paymentIntent.metadata?.topup_id;
-      if (metadataTopupId && metadataTopupId !== topup.id) {
+      const metadataTopupId =
+        paymentIntent.metadata?.topup_id;
+
+      if (
+        metadataTopupId &&
+        metadataTopupId !== topup.id
+      ) {
         throw new BadRequestException(
-          'El metadata del PaymentIntent no coincide con la recarga local',
+          'El metadata del PaymentIntent no coincide con el registro local',
         );
       }
 
-      const wallet = await walletRepository.findOne({
-        where: { id: topup.wallet_id },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (!wallet) {
-        throw new NotFoundException('No se encontro la billetera para acreditar la recarga');
+      switch (topup.owner) {
+        case OwnerTopupEnum.RECHARGE:
+          await this.rechargeUseCase.execute(manager,{
+
+            walletId: topup.wallet_id,
+
+            amountUsd: Number(topup.amount_usd),
+
+            paymentProvider:
+              PaymentProviderEnum.STRIPE,
+
+            paymentReferenceId:
+              paymentIntentId,
+
+            referenceCode: paymentIntentId,
+          });
+
+          break;
+
+        case OwnerTopupEnum.GIFTCARD:
+          await this.purchaseGiftCardUseCase.execute({
+            manager,
+            giftCardId: topup.owner_id,
+            buyerWalletId: topup.wallet_id,
+            recipientWalletId: topup.recipient_wallet_id,
+            paymentProvider: PaymentProviderEnum.STRIPE,
+            paymentReferenceId: paymentIntentId,
+            reference: paymentIntentId,
+          });
+
+          break;
+
+        case OwnerTopupEnum.ORDER_PAYMENT:
+            await this.purchaseOrderPaymentUseCase.execute(
+              manager,
+              {
+                paymentId: topup.owner_id,
+
+                paymentProvider:
+                  PaymentProviderEnum.STRIPE,
+
+                paymentReferenceId:
+                  paymentIntentId,
+
+                reference: paymentIntentId,
+              },
+            );
+
+            break;
+
+        case OwnerTopupEnum.EVENTPASS:
+          await this.purchaseEventPassUseCase.execute(
+            manager,
+            {
+              eventPassId: topup.owner_id,
+
+              userId: topup.user_id,
+
+              paymentProvider:
+                PaymentProviderEnum.STRIPE,
+
+              paymentReferenceId:
+                paymentIntentId,
+
+              holderName:
+                topup.holder_name,
+
+              holderInstagramTiktok:
+                topup.holder_instagram_tiktok,
+
+              holderPhone:
+                topup.holder_phone,
+
+              holderEmail:
+                topup.holder_email,
+
+              reference:
+                paymentIntentId,
+            },
+          );
+
+          break;
+
+        case OwnerTopupEnum.EXPERIENCE:
+          // TODO:
+          // await this.purchaseExperienceUseCase.execute({
+          //   manager,
+          //   experienceId: topup.owner_id,
+          //   walletId: topup.wallet_id,
+          //   paymentProvider: PaymentProviderEnum.STRIPE,
+          //   paymentReferenceId: paymentIntentId,
+          // });
+
+          break;
+
+        default:
+          throw new BadRequestException(
+            `Owner ${topup.owner} no soportado`,
+          );
       }
-
-      const rechargeType = await this.findTransactionTypeOrFail(
-        manager,
-        TransactionCode.RECHARGE,
-      );
-      const orangeType = await this.findTransactionTypeOrFail(
-        manager,
-        TransactionCode.ORANGE_CREDIT,
-      );
-      const completedState = await this.findTransactionStateOrFail(
-        manager,
-        StatusCode.COMPLETED,
-      );
-
-      const becoinPrice = Number(this.superadminConfig.getPriceOneBecoin());
-      if (!Number.isFinite(becoinPrice) || becoinPrice <= 0) {
-        throw new InternalServerErrorException('El precio de BeCoin configurado no es valido');
-      }
-
-      const amountUsd = Number(topup.amount_usd);
-      const totalBecoins = Math.floor(amountUsd / becoinPrice);
-      if (totalBecoins <= 0) {
-        throw new BadRequestException('El monto pagado no genera saldo acreditable');
-      }
-
-      const orangeFee = Math.floor(totalBecoins * 0.06);
-      const userBecoins = totalBecoins - orangeFee;
-
-      wallet.becoin_balance = Number(wallet.becoin_balance) + userBecoins;
-      wallet.becoin_orange = Number(wallet.becoin_orange || 0) + orangeFee;
-      await walletRepository.save(wallet);
-
-      await transactionRepository.save({
-        wallet_id: wallet.id,
-        type_id: rechargeType.id,
-        status_id: completedState.id,
-        amount_becoin: userBecoins,
-        post_balance: wallet.becoin_balance,
-        reference: paymentIntentId,
-        clientTransactionId: topup.client_transaction_id,
-      });
-
-      await transactionRepository.save({
-        wallet_id: wallet.id,
-        type_id: orangeType.id,
-        status_id: completedState.id,
-        amount_becoin: orangeFee,
-        post_balance: wallet.becoin_orange,
-        reference: paymentIntentId,
-      });
 
       topup.status = 'COMPLETED';
-      topup.becoins_granted = userBecoins;
       topup.failure_code = null;
       topup.failure_message = null;
       topup.stripe_event_id = eventId;
@@ -376,27 +605,32 @@ export class StripeTopupsService {
       topup.raw_webhook_payload = rawPayload;
       topup.completed_at = new Date();
       topup.failed_at = null;
+
       await topupRepository.save(topup);
+
       notificationPayload = {
         userId: topup.user_id,
-        walletId: wallet.id,
-        amountUsd,
+        walletId: topup.wallet_id,
+        amountUsd: Number(topup.amount_usd),
       };
 
       this.logger.log(
-        `Recarga Stripe completada: topupId=${topup.id} paymentIntentId=${paymentIntentId} walletId=${wallet.id} becoins=${userBecoins}`,
+        `Pago Stripe completado: topupId=${topup.id} paymentIntentId=${paymentIntentId} owner=${topup.owner}`,
       );
     });
 
     if (notificationPayload) {
-      this.notificationsGateway.notifyUser(notificationPayload.userId, {
-        wallet_id: notificationPayload.walletId,
-        message: 'Recarga acreditada con exito',
-        amount: notificationPayload.amountUsd,
-        success: true,
-        amount_payment_id_deleted: null,
-        noHidden: true,
-      });
+      this.notificationsGateway.notifyUser(
+        notificationPayload.userId,
+        {
+          wallet_id: notificationPayload.walletId,
+          message: 'Pago acreditado con éxito',
+          amount: notificationPayload.amountUsd,
+          success: true,
+          amount_payment_id_deleted: null,
+          noHidden: true,
+        },
+      );
     }
   }
 
@@ -550,8 +784,6 @@ export class StripeTopupsService {
       amountUsd: Number(topup.amount_usd),
       currency: topup.currency,
       status: topup.status,
-      becoinsGranted:
-        topup.becoins_granted !== null ? Number(topup.becoins_granted) : null,
       createdAt: topup.created_at,
       completedAt: topup.completed_at,
       failureCode: topup.failure_code,

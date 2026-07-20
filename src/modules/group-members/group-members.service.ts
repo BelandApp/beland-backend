@@ -263,7 +263,6 @@ async deleteGroupMember(id: string, requester_id: string): Promise<{ message: st
     // 3. Guardar datos necesarios antes de la eliminación
     const cartId = membership.group.cart?.id;
     const paymentTypeCode = membership.group.payment_type?.code;
-    const groupId = membership.group_id;
 
     // 4. Eliminar la membresía
     await queryRunner.manager.delete(GroupMember, id);

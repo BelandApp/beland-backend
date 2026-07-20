@@ -7,7 +7,10 @@ import {
   OneToOne,
   JoinColumn,
   Index,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
+
 import { User } from '../../users/entities/users.entity';
 import { WithdrawAccount } from '../../withdraw-account/entities/withdraw-account.entity';
 
@@ -20,29 +23,39 @@ export class Wallet {
   @Column({ type: 'text', nullable: true })
   address: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   alias: string;
 
   @Column({ type: 'text', nullable: true })
   qr: string;
 
   @Column('numeric', { precision: 14, scale: 2, default: 0 })
-  becoin_balance: number;             // saldo disponible en Becoin
+  usd_balance: number;
 
   @Column({ type: 'numeric', precision: 14, scale: 2, default: 0 })
-  locked_balance: number;             // opcional: fondos en proceso de retiro
+  locked_balance: number;
 
-  @Column('numeric', { precision: 14, scale: 2, default: 0, nullable: true })
-  becoin_green: number; 
+  @Column('numeric', { precision: 14, scale: 2, default: 0 })
+  becoin_balance: number;
 
-  @Column('numeric', { precision: 14, scale: 2, default: 0, nullable: true })
-  becoin_orange: number; 
+  @Column('numeric', {
+    precision: 14,
+    scale: 2,
+    default: 0,
+    nullable: true,
+  })
+  becoin_green: number;
+
+  @Column('numeric', {
+    precision: 14,
+    scale: 2,
+    default: 0,
+    nullable: true,
+  })
+  becoin_orange: number;
 
   @Column({ type: 'text', nullable: true })
   private_key_encrypted: string;
-
-  //@Column({ type: 'numeric', default: 0 })
-  //on_chain_balance: number;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
@@ -50,17 +63,37 @@ export class Wallet {
   @OneToOne(() => User, (user) => user.wallet)
   @JoinColumn({ name: 'user_id' })
   user: User;
+
   @Column('uuid')
   user_id: string;
 
   // 🔹 Relación con cuenta de retiro
-  @OneToOne(() => WithdrawAccount, (withdrawAccount) => withdrawAccount.wallet, {
-    cascade: true,
-    nullable: true,
-  })
+  @OneToOne(
+    () => WithdrawAccount,
+    (withdrawAccount) => withdrawAccount.wallet,
+    {
+      cascade: true,
+      nullable: true,
+    },
+  )
   @JoinColumn({ name: 'withdraw_account_id' })
   withdraw_account: WithdrawAccount;
-  @Column('uuid', {nullable:true})
-  withdraw_account_id:string
 
-} 
+  @Column('uuid', { nullable: true })
+  withdraw_account_id: string;
+
+  /**
+   * 1 Becoin = 0.05 USD
+   * Entonces:
+   * becoin_balance = usd_balance / 0.05
+   * Ej:
+   * 100 USD => 2000 Becoin
+   */
+  @BeforeInsert()
+  @BeforeUpdate()
+  syncBecoinBalance() {
+    const usd = Number(this.usd_balance || 0);
+
+    this.becoin_balance = Number((usd / 0.05).toFixed(2));
+  }
+}

@@ -134,7 +134,7 @@ export class DatabaseInitService {
       let count = 0;
 
       for (const product of products) {
-          product.price_becoin = +product.price / +this.superadminConfig.getPriceOneBecoin();
+          product.price = +product.price;
           await productRepo.save(product);
           count++;
         }

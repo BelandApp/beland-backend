@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { UserRechargeRepository } from './user-recharge.repository';
@@ -15,15 +16,24 @@ import { TransactionType } from '../transaction-type/entities/transaction-type.e
 import { TransactionCode } from '../transaction-type/enum/transaction-code';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
+import { EmailService } from '../email/email.service';
+import {
+  superadminNotificationEmailSubject,
+  superadminNotificationEmailTemplate,
+} from '../email/plantilla/htmlNotificacionSuperadmin';
+import { User } from '../users/entities/users.entity';
+import { PaymentAccount } from '../payout-account/entities/payment-account.entity';
 
 @Injectable()
 export class UserRechargeService {
   private readonly completeMessage = 'la recarga por transferencia';
+  private readonly logger = new Logger(UserRechargeService.name);
 
   constructor(
     private readonly repository: UserRechargeRepository,
     private readonly dataSource: DataSource,
     private readonly superadminConfig: SuperadminConfigService,
+    private readonly emailService: EmailService,
   ) {}
 
   async findAll(
@@ -55,6 +65,79 @@ export class UserRechargeService {
     }
   }
 
+  private async sendSuperadminRechargeTransferEmail(
+    rechargeTransfer: RechargeTransfer,
+  ): Promise<void> {
+    try {
+      const superadminEmail = this.superadminConfig.getEmail();
+
+      if (!superadminEmail) {
+        this.logger.warn(
+          `No se envio email de recarga ${rechargeTransfer.id}: email de superadmin no configurado`,
+        );
+        return;
+      }
+
+      const [user, paymentAccount] = await Promise.all([
+        this.dataSource.manager.findOne(User, {
+          where: { id: rechargeTransfer.user_id },
+        }),
+        this.dataSource.manager.findOne(PaymentAccount, {
+          where: { id: rechargeTransfer.payment_account_id },
+        }),
+      ]);
+
+      const accountReference =
+        paymentAccount?.alias ||
+        paymentAccount?.cbu ||
+        paymentAccount?.nro_account ||
+        paymentAccount?.email ||
+        paymentAccount?.id;
+
+      const becoinAmount =
+        Number(rechargeTransfer.amount_usd) /
+        Number(this.superadminConfig.getPriceOneBecoin());
+
+      const subject = superadminNotificationEmailSubject('TRANSFER_RECHARGE');
+      const html = superadminNotificationEmailTemplate({
+        type: 'TRANSFER_RECHARGE',
+        amount: Number(rechargeTransfer.amount_usd),
+        currency: 'USD',
+        userName: user?.full_name,
+        userEmail: user?.email,
+        operationId: rechargeTransfer.id,
+        reference: rechargeTransfer.transfer_id,
+        status: 'PENDIENTE',
+        paymentMethod: paymentAccount?.bank || paymentAccount?.name,
+        createdAt: rechargeTransfer.created_at,
+        description:
+          'Un usuario reporto una transferencia bancaria. Revisar comprobante y acreditar saldo si corresponde.',
+        details: {
+          'BeCoin a acreditar': becoinAmount,
+          'Cuenta receptora': paymentAccount?.name,
+          'Banco': paymentAccount?.bank,
+          'Titular': paymentAccount?.accountHolder,
+          'Cuenta/Alias/CBU': accountReference,
+          'Comprobante': rechargeTransfer.ticket_image_url,
+          'Transaccion': rechargeTransfer.transaction_id,
+        },
+      });
+
+      await this.emailService.sendMail({
+        to: superadminEmail,
+        subject,
+        text: `Nueva recarga por transferencia en Beland. Recarga: ${rechargeTransfer.id}. Monto: ${rechargeTransfer.amount_usd}. Debe acreditarse saldo si la transferencia es valida.`,
+        html,
+      });
+    } catch (error) {
+      this.logger.error(
+        `No se pudo enviar email de recarga al superadmin: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
   async rechargeTransfer (user_id: string, dto: Partial<RechargeTransfer>): Promise<RechargeTransfer> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -75,19 +158,23 @@ export class UserRechargeService {
       });
       if (!wallet) throw new NotFoundException('No se encontro la Billetera del usuario');
 
+      if (Number(wallet.usd_balance)+Number(dto.amount_usd) > this.superadminConfig.recharge_limit) {
+        throw new ConflictException("Solo puede tener para consumos futuros hasta 100 USD.");
+      }
+
       const transaction = await queryRunner.manager.save (Transaction, {
         wallet_id: wallet.id,
         type: type,
         status: status,
-        amount_becoin: +dto.amount_usd / +this.superadminConfig.getPriceOneBecoin(),
-        post_balance: +wallet.becoin_balance,
+        amount_usd: +dto.amount_usd,
+        post_balance: +wallet.usd_balance,
         reference: dto.transfer_id,
       });
 
       const rechargeTransferCreated = queryRunner.manager.create(RechargeTransfer, {
         user_id,
         status:status,
-        amount_usd: dto.amount_usd,
+        amount_usd: Number(dto.amount_usd),
         payment_account_id: dto.payment_account_id,
         transfer_id: dto.transfer_id,
         transaction: transaction,
@@ -96,6 +183,8 @@ export class UserRechargeService {
       const rechargeTransfer = await queryRunner.manager.save(rechargeTransferCreated);
     
       await queryRunner.commitTransaction();
+
+      await this.sendSuperadminRechargeTransferEmail(rechargeTransfer);
 
       return rechargeTransfer;
     } catch (error) {
@@ -127,14 +216,15 @@ export class UserRechargeService {
       if (rechargeTransfer.status.name === StatusCode.FAILED) throw new BadRequestException('La recarga ya fue registrada como FALLIDA.');
 
       const wallet = await queryRunner.manager.findOne(Wallet, {
-        where: {user_id : rechargeTransfer.user_id}
+        where: {user_id : rechargeTransfer.user_id},
+        lock: { mode: 'pessimistic_write' },
       });
       if (!wallet) throw new NotFoundException('No se encontro la Billetera del usuario');
 
       rechargeTransfer.status = status;
       await queryRunner.manager.save(rechargeTransfer);
 
-      wallet.becoin_balance= +wallet.becoin_balance + rechargeTransfer.amount_usd/ +this.superadminConfig.getPriceOneBecoin()
+      wallet.usd_balance= +wallet.usd_balance + Number(rechargeTransfer.amount_usd)
       await queryRunner.manager.save(wallet);
 
       const transaction = await queryRunner.manager.findOne(Transaction, {
@@ -142,7 +232,7 @@ export class UserRechargeService {
       })
       if (!transaction) throw new NotFoundException('No se encontro la transaccion de la recarga');
       transaction.status_id= status.id;
-      transaction.post_balance= +wallet.becoin_balance;
+      transaction.post_balance= +wallet.usd_balance;
       await queryRunner.manager.save(transaction);
     
       await queryRunner.commitTransaction();

@@ -23,6 +23,7 @@ import { NotificationsGateway } from 'src/modules/notification-socket/notificati
 import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
 import { ProfileEnum } from 'src/modules/users/enums/profiles.enum';
 import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
+import { PaymentProviderEnum } from '../transactions/enums/transaction.enums';
 
 @Injectable()
 export class WalletsService {
@@ -183,33 +184,34 @@ export class WalletsService {
     }
   }
 
-  // FUNCIONES PARA RECARGAS DE SALDO
+  // FUNCIONES PARA RECARGAS DE SALDO POR PAYPHONE
   async recharge(
     user_id: string,
     dto: RechargeDto,
+    queryRun?: QueryRunner,
   ): Promise<{ wallet: Wallet }> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    let queryRunner: QueryRunner;
+    if (queryRun) {
+      queryRunner = queryRun;
+    } else {
+      const qr = this.dataSource.createQueryRunner();
+      await qr.connect();
+      await qr.startTransaction();
+      queryRunner = qr;
+    }
 
     try {
-      const payphoneTransactionId = String(dto.payphone_transactionId);
-      const clientTransactionId = dto.clientTransactionId;
-
-      const existingRecharge = await queryRunner.manager.findOne(Transaction, {
-        where: { clientTransactionId },
-      });
-      if (existingRecharge) {
-        throw new ConflictException(
-          'La transacción de Payphone ya fue procesada anteriormente.',
-        );
-      }
-
+      const paymentReferenceId = String(dto.paymentReferenceId);
       // 1) Certificar que exista la wallet
       const wallet = await queryRunner.manager.findOne(Wallet, {
         where: { user_id },
+        lock: { mode: 'pessimistic_write' },
       });
       if (!wallet) throw new NotFoundException('No se encuentra la billetera');
+
+      if (Number(wallet.usd_balance)+Number(dto.amountUsd) > this.superadminConfig.recharge_limit) {
+        throw new ConflictException("Solo puede tener para consumos futuros hasta 100 USD.");
+      }
 
       // 2) Certificar que exista el tipo de transacción 'RECHARGE'
       const type = await queryRunner.manager.findOne(TransactionType, {
@@ -259,19 +261,18 @@ export class WalletsService {
       // 3) Calcular 5% para orange
       const orangeFee = Math.floor(totalBeCoins * 0.06);
 
-      // 4) BeCoins finales para el usuario
-      const userBeCoins = totalBeCoins - orangeFee;
 
       // 5) Actualizar wallet
-      wallet.becoin_balance =
-        Number(wallet.becoin_balance) + userBeCoins;
+      wallet.usd_balance =
+        Number(wallet.usd_balance) + amountUsd;
 
       wallet.becoin_orange =
         Number(wallet.becoin_orange) + orangeFee;
 
       // 6) Fallback de seguridad
-      if (isNaN(wallet.becoin_balance)) wallet.becoin_balance = 0;
-      if (isNaN(wallet.becoin_orange)) wallet.becoin_orange = 0;
+      if (isNaN(wallet.usd_balance)) 
+        throw new InternalServerErrorException('Error al incrementar el saldo');
+
 
       // 7) Guardar
       const walletUpdated = await queryRunner.manager.save(wallet);
@@ -282,11 +283,10 @@ export class WalletsService {
         wallet_id: wallet.id,
         type_id: type.id,
         status_id: status.id,
-        amount_becoin: +userBeCoins,
-        post_balance: wallet.becoin_balance,
+        amount_usd: amountUsd,
+        post_balance: wallet.usd_balance,
         reference: dto.referenceCode,
-        payphone_transactionId: payphoneTransactionId,
-        clientTransactionId,
+        external_reference_id: paymentReferenceId,
       });
 
       // 6) Registrar la transacción de las becoin_orange
@@ -294,21 +294,22 @@ export class WalletsService {
         wallet_id: wallet.id,
         type_id: typeOrange.id,
         status,
-        amount_becoin: +orangeFee,
+        amount_usd: +orangeFee*priceOneBecoin,
         post_balance: wallet.becoin_orange,
         reference: dto.referenceCode,
-        payphone_transactionId: payphoneTransactionId,
+        external_provider: PaymentProviderEnum.PAYPHONE,
+        external_reference_id: paymentReferenceId,
         clientTransactionId: null,
       });
 
       // ✅ Confirmar la transacción
-      await queryRunner.commitTransaction();
+      if (!queryRun) await queryRunner.commitTransaction();
 
       // 7) Retornar la wallet actualizada
       return { wallet: walletUpdated };
     } catch (error) {
       // ❌ Deshacer todo si algo falla
-      await queryRunner.rollbackTransaction();
+      if (!queryRun) await queryRunner.rollbackTransaction();
       if (this.isClientTransactionDuplicateError(error)) {
         throw new ConflictException(
           'La transacción de Payphone ya fue procesada anteriormente.',
@@ -317,7 +318,7 @@ export class WalletsService {
       throw error;
     } finally {
       // Cerrar el queryRunner
-      await queryRunner.release();
+      if (!queryRun) await queryRunner.release();
     }
   }
 
@@ -346,14 +347,16 @@ export class WalletsService {
       // 1) certifico que exista la wallet origen y que tenga los fondos
       const from = await queryRunner.manager.findOne(Wallet, {
         where: { user_id },
+        lock: { mode: 'pessimistic_write' },
       });
       if (!from) throw new NotFoundException('No se encuentra la Billetera');
-      if (Number(from.becoin_balance) < +dto.amountBecoin)
+      if (Number(from.usd_balance) < +dto.amountUsd)
         throw new BadRequestException('Saldo insuficiente');
 
       // 2) certifico que exista la wallet de destino
       const to = await queryRunner.manager.findOne(Wallet, {
         where: { id: dto.toWalletId },
+        lock: { mode: 'pessimistic_write' },
       });
       if (!to) throw new NotFoundException('Billetera destino no existe');
 
@@ -397,8 +400,8 @@ export class WalletsService {
       if (!status)
         throw new ConflictException("No se encuentra el estado 'COMPLETED'");
 
-      // 4) Debitar origen
-      from.becoin_balance = +from.becoin_balance - +dto.amountBecoin;
+      // 4) Debitar usd_balance
+      from.usd_balance = +from.usd_balance - +dto.amountUsd;
       const walletUpdate = await queryRunner.manager.save(from);
 
       // 5) registro egreso del origen
@@ -406,8 +409,8 @@ export class WalletsService {
         wallet_id: from.id,
         type,
         status,
-        amount_becoin: -dto.amountBecoin,
-        post_balance: from.becoin_balance,
+        amount_usd: -dto.amountUsd,
+        post_balance: from.usd_balance,
         related_wallet_id: to.id,
         reference: `${code_transaction_send}-${dto.toWalletId}`,
       });
@@ -422,7 +425,7 @@ export class WalletsService {
         );
 
       // 7) Acreditar destino
-      to.becoin_balance = +to.becoin_balance + +dto.amountBecoin;
+      to.usd_balance = +to.usd_balance + +dto.amountUsd;
       await queryRunner.manager.save(to);
 
       // 8) registro ingreso del destino
@@ -430,8 +433,8 @@ export class WalletsService {
         wallet_id: to.id,
         type,
         status,
-        amount_becoin: dto.amountBecoin,
-        post_balance: to.becoin_balance,
+        amount_usd: dto.amountUsd,
+        post_balance: to.usd_balance,
         related_wallet_id: from.id,
         reference: `${code_transaction_received}-${from.id}`,
       });
@@ -449,7 +452,7 @@ export class WalletsService {
       this.notificationsGateway.notifyUser(to.user_id, {
         wallet_id: to.id,
         message: "Cobro Realizado con Éxito",
-        amount: +dto.amountBecoin* +this.superadminConfig.getPriceOneBecoin(),
+        amount: +dto.amountUsd,
         success: true,
         amount_payment_id_deleted: dto.amount_payment_id || null,
         noHidden: true,
@@ -471,38 +474,52 @@ export class WalletsService {
   }
 
   async purchaseRecarge (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
-    
-    const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const walletRecharge = await this.recharge(
-      user_id,
-      {
-        amountUsd: +dto.amountUsd,
-        referenceCode: dto.referenceCode,
-        payphone_transactionId: dto.payphone_transactionId,
-        clientTransactionId: dto.clientTransactionId,
-      }
-    ) 
+    try {
 
-    if (!walletRecharge) throw new ConflictException("Fallo la recarga");
-
-    const amount_payment_id = dto.amount_payment_id;
-
-    const amountBecoin = +dto.amountUsd / +priceOneBecoin;
-
-    return await this.transfer(
+      const walletRecharge = await this.recharge(
         user_id,
         {
-          toWalletId: to_wallet_id,
-          amountBecoin,
-          amount_payment_id,
+          amountUsd: +dto.amountUsd,
+          referenceCode: dto.referenceCode,
+          paymentReferenceId: dto.paymentReferenceId,
+          paymentProvider: PaymentProviderEnum.PAYPHONE,
         },
-      );
+        queryRunner
+      ) 
+
+      if (!walletRecharge) throw new ConflictException("Fallo la recarga");
+
+      const amount_payment_id = dto.amount_payment_id;
+
+      const transferResult = await this.transfer(
+          user_id,
+          {
+            toWalletId: to_wallet_id,
+            amountUsd: +dto.amountUsd,
+            amount_payment_id,
+          },
+          undefined,
+          undefined,
+          queryRunner
+        );
+
+      await queryRunner.commitTransaction();
+      return transferResult as any;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async purchaseBeland(
     wallet_id: string,
-    becoinAmount: number,
+    amountUsd: number,
     referenceCode: string,
   ): Promise<Transaction> {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -538,10 +555,10 @@ export class WalletsService {
         throw new ConflictException("No se encuentra el estado 'COMPLETED'");
 
       // 3) Validar saldo
-      if (+wallet.becoin_balance < becoinAmount)
+      if (+wallet.usd_balance < amountUsd)
         throw new ConflictException('Saldo insuficiente');
 
-      wallet.becoin_balance = +wallet.becoin_balance - +becoinAmount;
+      wallet.usd_balance = +wallet.usd_balance - +amountUsd;
 
       // 4) Actualizar billetera
       await queryRunner.manager.save(wallet);
@@ -551,8 +568,8 @@ export class WalletsService {
         wallet_id: wallet.id,
         type_id: type.id,
         status_id: status.id,
-        amount_becoin: becoinAmount,
-        post_balance: wallet.becoin_balance,
+        amount_usd: amountUsd,
+        post_balance: wallet.usd_balance,
         reference: referenceCode,
       });
       const txSaved = await queryRunner.manager.save(tx);

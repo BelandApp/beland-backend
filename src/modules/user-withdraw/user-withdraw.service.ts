@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { UserWithdraw } from './entities/user-withdraw.entity';
@@ -16,15 +17,24 @@ import { TransactionState } from '../transaction-state/entities/transaction-stat
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 import { StatusCode } from '../transaction-state/enum/status.enum';
+import { EmailService } from '../email/email.service';
+import {
+  superadminNotificationEmailSubject,
+  superadminNotificationEmailTemplate,
+} from '../email/plantilla/htmlNotificacionSuperadmin';
+import { User } from '../users/entities/users.entity';
+import { WithdrawAccount } from '../withdraw-account/entities/withdraw-account.entity';
 
 @Injectable()
 export class UserWithdrawsService {
   private readonly completeMessage = 'el retiro del usuario';
+  private readonly logger = new Logger(UserWithdrawsService.name);
 
   constructor(
     private readonly repository: UserWithdrawsRepository,
     private readonly dataSource: DataSource,
     private readonly superadminConfig: SuperadminConfigService,
+    private readonly emailService: EmailService,
   ) {}
 
   async findAll(
@@ -117,6 +127,73 @@ export class UserWithdrawsService {
     }
   }
 
+  private async sendSuperadminWithdrawEmail(
+    userWithdraw: UserWithdraw,
+  ): Promise<void> {
+    try {
+      const superadminEmail = this.superadminConfig.getEmail();
+
+      if (!superadminEmail) {
+        this.logger.warn(
+          `No se envio email de retiro ${userWithdraw.id}: email de superadmin no configurado`,
+        );
+        return;
+      }
+
+      const [user, withdrawAccount] = await Promise.all([
+        this.dataSource.manager.findOne(User, {
+          where: { id: userWithdraw.user_id },
+        }),
+        this.dataSource.manager.findOne(WithdrawAccount, {
+          where: { id: userWithdraw.withdraw_account_id },
+          relations: { withdraw_account_type: true },
+        }),
+      ]);
+
+      const accountReference =
+        withdrawAccount?.alias ||
+        withdrawAccount?.cbu ||
+        withdrawAccount?.accountNumber ||
+        withdrawAccount?.id;
+
+      const subject = superadminNotificationEmailSubject('WITHDRAWAL_REQUEST');
+      const html = superadminNotificationEmailTemplate({
+        type: 'WITHDRAWAL_REQUEST',
+        amount: Number(userWithdraw.amount_usd),
+        currency: withdrawAccount?.currency || 'USD',
+        userName: user?.full_name,
+        userEmail: user?.email,
+        operationId: userWithdraw.id,
+        reference: `WITHDRAW-${userWithdraw.id}`,
+        status: 'PENDIENTE',
+        paymentMethod: withdrawAccount?.bankName,
+        createdAt: userWithdraw.created_at,
+        details: {
+          'Monto BeCoin': userWithdraw.amount_usd/this.superadminConfig.getPriceOneBecoin(),
+          'Cuenta destino': accountReference,
+          'Banco': withdrawAccount?.bankName,
+          'Tipo de cuenta': withdrawAccount?.withdraw_account_type?.name,
+          'Titular': withdrawAccount?.holderName,
+          'Documento': withdrawAccount?.holderDocument,
+          'Transaccion': userWithdraw.transaction_id,
+        },
+      });
+
+      await this.emailService.sendMail({
+        to: superadminEmail,
+        subject,
+        text: `Nueva solicitud de retiro en Beland. Retiro: ${userWithdraw.id}. Monto: ${userWithdraw.amount_usd}.`,
+        html,
+      });
+    } catch (error) {
+      this.logger.error(
+        `No se pudo enviar email de retiro al superadmin: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
   // LOGICA PARA RECARGAS
   async withdraw(
     user_id: string,
@@ -134,7 +211,7 @@ export class UserWithdrawsService {
       if (!wallet) throw new NotFoundException('No se encuentra la billetera');
 
       // 2) Verificar saldo suficiente
-      if (+wallet.becoin_balance < +dto.amountBecoin)
+      if (+wallet.usd_balance < +dto.amount_usd)
         throw new BadRequestException('Saldo insuficiente');
 
       // 3) Obtener tipo de transacción 'WITHDRAW'
@@ -155,8 +232,8 @@ export class UserWithdrawsService {
         throw new ConflictException("No se encuentra el estado ", StatusCode.PENDING);
 
       // 5) Reservar fondos: debitar del saldo disponible y aumentar el saldo bloqueado
-      wallet.becoin_balance = +wallet.becoin_balance - +dto.amountBecoin;
-      wallet.locked_balance = (wallet.locked_balance ?? 0) + +dto.amountBecoin;
+      wallet.usd_balance = +wallet.usd_balance - +dto.amount_usd;
+      wallet.locked_balance = (wallet.locked_balance ?? 0) + +dto.amount_usd;
       const walletUpdated = await queryRunner.manager.save(wallet);
 
       // 6) Registrar la transacción
@@ -164,23 +241,24 @@ export class UserWithdrawsService {
         wallet_id: wallet.id,
         type,
         status,
-        amount_becoin: -dto.amountBecoin,
-        post_balance: wallet.becoin_balance,
+        amount_usd: -dto.amount_usd,
+        post_balance: wallet.usd_balance,
       });
 
       // 7) Registrar la solicitud de retiro del usuario
-      await queryRunner.manager.save(UserWithdraw, {
+      const userWithdraw = await queryRunner.manager.save(UserWithdraw, {
         user_id,
         wallet_id: wallet.id,
         withdraw_account_id: dto.withdraw_account_id,
-        amount_becoin: +dto.amountBecoin,
-        amount_usd: +dto.amountBecoin * +this.superadminConfig.getPriceOneBecoin(),
+        amount_usd: +dto.amount_usd,
         status_id: status.id,
         transaction_id: tx.id,
       });
 
       // ✅ Confirmo la transacción
       await queryRunner.commitTransaction();
+
+      await this.sendSuperadminWithdrawEmail(userWithdraw);
 
       // 8) Retornar la wallet actualizada
       return walletUpdated;
@@ -230,10 +308,10 @@ export class UserWithdrawsService {
         throw new ConflictException("No se encuentra el estado ", StatusCode.FAILED);
 
       // 4) Regresar fondos: acreditar el saldo y descontar del saldo bloqueado
-      wallet.becoin_balance =
-        +wallet.becoin_balance + +userWithdraw.amount_becoin;
+      wallet.usd_balance =
+        +wallet.usd_balance + +userWithdraw.amount_usd;
       wallet.locked_balance =
-        +wallet.locked_balance - +userWithdraw.amount_becoin;
+        +wallet.locked_balance - +userWithdraw.amount_usd;
       const walletUpdated = await queryRunner.manager.save(wallet);
 
       // 5) actualizo la transacción a estado FAILED
@@ -300,7 +378,7 @@ export class UserWithdrawsService {
 
       // 4) Descuento Definitivo: Descontar del saldo bloqueado
       userWallet.locked_balance =
-        +userWallet.locked_balance - +userWithdraw.amount_becoin;
+        +userWallet.locked_balance - +userWithdraw.amount_usd;
       await queryRunner.manager.save(userWallet);
 
       // 5) actualizo la transacción a estado COMPLETED

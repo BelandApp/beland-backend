@@ -20,9 +20,6 @@ export class StripeTopupStatusDto {
   status: string;
 
   @ApiProperty()
-  becoinsGranted: number | null;
-
-  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()

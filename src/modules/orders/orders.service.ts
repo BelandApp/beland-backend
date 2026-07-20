@@ -4,6 +4,7 @@ import {
   HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
@@ -27,14 +28,19 @@ import { DeliveryStatus } from '../delivery-status/entities/delivery-status.enti
 import { DeliveryStatusCode } from '../delivery-status/enums/delivery-status.enum';
 import { NotificationsGateway } from '../notification-socket/notification-socket.gateway';
 import { OrderFilterDto } from './dto/order-filter.dto';
-import { GroupMember } from '../group-members/entities/group-member.entity';
 import { User } from '../users/entities/users.entity';
 import { Product } from '../products/entities/product.entity';
 import { RecycledItem } from '../recycled-items/entities/recycled-item.entity';
+import { EmailService } from '../email/email.service';
+import {
+  superadminNotificationEmailSubject,
+  superadminNotificationEmailTemplate,
+} from '../email/plantilla/htmlNotificacionSuperadmin';
 
 @Injectable()
 export class OrdersService {
   private readonly completeMessage = 'la orden';
+  private readonly logger = new Logger(OrdersService.name);
 
   private generateRandomCode(length = 8): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -54,6 +60,7 @@ export class OrdersService {
     private readonly superadminService: SuperadminConfigService,
     private readonly dataSource: DataSource,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly emailService: EmailService,
 
   ) {}
 
@@ -69,6 +76,63 @@ export class OrdersService {
     }
 
     return code;
+  }
+
+  private async sendSuperadminOrderEmail(
+    order: Order,
+    paymentType: PaymentType,
+  ): Promise<void> {
+    try {
+      const superadminEmail = this.superadminService.getEmail();
+
+      if (!superadminEmail) {
+        this.logger.warn(
+          `No se envio email de orden ${order.id}: email de superadmin no configurado`,
+        );
+        return;
+      }
+
+      const user = order.user_id
+        ? await this.dataSource.manager.findOne(User, {
+            where: { id: order.user_id },
+          })
+        : null;
+
+      const subject = superadminNotificationEmailSubject('PURCHASE');
+      const html = superadminNotificationEmailTemplate({
+        type: 'PURCHASE',
+        amount: Number(order.total_amount),
+        currency: 'USD',
+        userName: user?.full_name,
+        userEmail: user?.email,
+        operationId: order.id,
+        reference: order.order_number
+          ? `ORDER-${order.order_number}`
+          : `ORDER-${order.id}`,
+        status: order.paied ? 'PAGADA' : 'PENDIENTE',
+        paymentMethod: paymentType?.description || paymentType?.code,
+        createdAt: order.created_at,
+        details: {
+          'Total': order.total_amount,
+          'Items': order.total_items,
+          'Costo de envio': order.delivery_cost,
+          'Tipo de pago': paymentType?.code,
+        },
+      });
+
+      await this.emailService.sendMail({
+        to: superadminEmail,
+        subject,
+        text: `Nueva compra registrada en Beland. Orden: ${order.id}. Total: ${order.total_amount}.`,
+        html,
+      });
+    } catch (error) {
+      this.logger.error(
+        `No se pudo enviar email de orden al superadmin: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   async findAll(filters: OrderFilterDto): Promise<[Order[], number]> {
@@ -198,7 +262,6 @@ export class OrdersService {
         payment_type,
         address,
         total_amount,
-        total_becoin,
         ...createOrder
       } = cart as Cart;
 
@@ -206,12 +269,7 @@ export class OrdersService {
         ...createOrder,
         user_id,
         subtotal_amount: +total_amount,
-        subtotal_becoin: +total_becoin,
         total_amount: +total_amount + +createOrder.delivery_cost,
-        total_becoin:
-          +total_becoin +
-          +createOrder.delivery_cost /
-            +this.superadminService.getPriceOneBecoin(),
         payment_type_id: paymentType.id,
         status_id: statusOrder.id,
       });
@@ -266,7 +324,6 @@ export class OrdersService {
       cart.payment_type_id = null;
       cart.total_amount = 0;
       cart.total_items = 0;
-      cart.total_becoin = 0;
 
       await queryRunner.manager.save(Cart, cart);
       await queryRunner.manager.delete(CartItem, { cart_id: cart.id });
@@ -294,9 +351,9 @@ export class OrdersService {
           sumTotal += amount;
         }
 
-        if (sumTotal !== Number(order.total_becoin))
+        if (sumTotal !== Number(order.total_amount))
           throw new ConflictException(
-            `Diferencia entre compromisos y total. Orden: ${order.total_becoin}, Cobros: ${sumTotal}`,
+            `Diferencia entre compromisos y total. Orden: ${order.total_amount}, Cobros: ${sumTotal}`,
           );
       }
 
@@ -339,7 +396,7 @@ export class OrdersService {
 
               if (becoinOrangeUsed > 0) {
                 userWallet.becoin_orange = +userWallet.becoin_orange- becoinOrangeUsed;
-                userWallet.becoin_balance = +userWallet.becoin_balance + becoinOrangeUsed;
+                userWallet.usd_balance = +userWallet.usd_balance + (becoinOrangeUsed*priceOneBecoin);
 
                 const orangeTxType = await queryRunner.manager.findOne(TransactionType,{
                   where:{code: TransactionCode.ORANGE_CREDIT_USED}
@@ -351,8 +408,8 @@ export class OrdersService {
 
                 await queryRunner.manager.save(Transaction,{
                   wallet_id:userWallet.id,
-                  amount_becoin:becoinOrangeUsed,
-                  post_balance:userWallet.becoin_balance,
+                  amount_usd:(becoinOrangeUsed/this.superadminService.getPriceOneBecoin()),
+                  post_balance:userWallet.usd_balance,
                   type_id:orangeTxType.id,
                   status_id:txStatus.id,
                   reference:`ORDER-${savedOrder.id}`
@@ -363,11 +420,11 @@ export class OrdersService {
         }
 
         // ---------- VALIDAR SALDO ----------
-        if (Number(userWallet.becoin_balance) < Number(savedOrder.total_becoin))
+        if (Number(userWallet.usd_balance) < Number(savedOrder.total_amount))
           throw new BadRequestException('Saldo insuficiente para completar la compra');
 
         // ---------- DEBITAR USUARIO ----------
-        userWallet.becoin_balance = +userWallet.becoin_balance - Number(savedOrder.total_becoin);
+        userWallet.usd_balance = +userWallet.usd_balance - Number(savedOrder.total_amount);
         await queryRunner.manager.save(userWallet);
 
         // tipos y estados
@@ -382,8 +439,8 @@ export class OrdersService {
         // transaction cliente
         const userTx = await queryRunner.manager.save(Transaction,{
           wallet_id:userWallet.id,
-          amount_becoin:Number(savedOrder.total_becoin),
-          post_balance:userWallet.becoin_balance,
+          amount_usd:Number(savedOrder.total_amount),
+          post_balance:userWallet.usd_balance,
           type_id:txTypePurchase.id,
           status_id:txStatus.id,
           reference:`ORDER-${savedOrder.id}`
@@ -391,7 +448,7 @@ export class OrdersService {
 
         // ---------- CREAR PAYMENT COMPLETED ----------
         const paymentCompleted = await queryRunner.manager.save(Payment,{
-          amount_paid:Number(savedOrder.total_becoin),
+          amount_paid:Number(savedOrder.total_amount),
           order_id:savedOrder.id,
           payment_type_id:savedOrder.payment_type_id,
           user_id:cart.user_id,
@@ -408,7 +465,7 @@ export class OrdersService {
         if(!superAdminWallet)
           throw new InternalServerErrorException('Billetera del superadmin no encontrada');
 
-        superAdminWallet.becoin_balance = +superAdminWallet.becoin_balance + Number(savedOrder.total_becoin);
+        superAdminWallet.usd_balance = +superAdminWallet.usd_balance + Number(savedOrder.total_amount);
         await queryRunner.manager.save(superAdminWallet);
 
         const txTypeSale = await queryRunner.manager.findOne(TransactionType,{
@@ -417,8 +474,8 @@ export class OrdersService {
 
         await queryRunner.manager.save(Transaction,{
           wallet_id:superAdminWallet.id,
-          amount_becoin:Number(savedOrder.total_becoin),
-          post_balance:superAdminWallet.becoin_balance,
+          amount_usd:Number(savedOrder.total_amount),
+          post_balance:superAdminWallet.usd_balance,
           type_id:txTypeSale.id,
           status_id:txStatus.id,
           reference:`PAYMENT-${paymentCompleted.id}`
@@ -426,7 +483,7 @@ export class OrdersService {
 
         // ---------- MARCAR ORDEN PAGA ----------
         savedOrder.paied = true;
-        savedOrder.total_becoin_paied = Number(savedOrder.total_becoin);
+        savedOrder.total_amount_paied = Number(savedOrder.total_amount);
         await queryRunner.manager.save(savedOrder);
 
       }
@@ -439,10 +496,12 @@ export class OrdersService {
         this.superadminService.getSuperadminId(),
         {
           order_id: savedOrder.id,
-          total_becoin: savedOrder.total_becoin,
+          total_usd: savedOrder.total_amount,
           items: +savedOrder.items,
         },
       );
+
+      await this.sendSuperadminOrderEmail(savedOrder, paymentType);
 
       return savedOrder;
     } catch (err) {
@@ -487,7 +546,7 @@ export class OrdersService {
       /* =======================================================
       * 2️⃣ CALCULAR DEVOLUCIONES
       * ======================================================= */
-      let total_becoin_returned = 0;
+      let total_amount_returned = 0;
       let total_Weight_returned = 0;
       for (const r of returns) {
         const item = await qr.manager.findOne(OrderItem, {
@@ -520,7 +579,7 @@ export class OrdersService {
           );
         }
 
-        total_becoin_returned += r.returned_quantity * Number(item.unit_price)
+        total_amount_returned += r.returned_quantity * Number(item.unit_price)
         total_Weight_returned += r.returned_quantity * Number(item.unit_weight)
         item.returned_quantity = returnedQuantity;
         await qr.manager.save(item); // recalcula por hooks
@@ -529,7 +588,7 @@ export class OrdersService {
       /* =======================================================
       * 3️⃣ RECALCULAR TOTALES DE ORDEN Y ASIGNA MONTO A DEVOLVER
       * ======================================================= */
-      order.total_becoin_returned = total_becoin_returned;
+      order.total_amount_returned = total_amount_returned;
       order.total_weight = Number(order.total_weight) - total_Weight_returned;
 
       await qr.manager.save(order);
@@ -563,7 +622,7 @@ export class OrdersService {
 
       if (!order) throw new NotFoundException('Orden no encontrada');
 
-      const refundTotal = Number(order.total_becoin_returned);
+      const refundTotal = Number(order.total_amount_returned);
       if (!refundTotal || refundTotal <= 0) {
         throw new BadRequestException('La orden no tiene monto para devolver');
       }
@@ -799,9 +858,9 @@ export class OrdersService {
 
         const percentage = Number(this.superadminService.recicled_becoin);
 
-        const becoinGreenToAdd = Math.ceil(
-          Number(order.subtotal_becoin) * (percentage / 100)
-        );
+        const becoinGreenToAdd = (Math.ceil(
+          Number(order.subtotal_amount) * (percentage / 100)))/this.superadminService.getPriceOneBecoin();
+        
 
         userWallet.becoin_green =
           Number(userWallet.becoin_green) + becoinGreenToAdd;
@@ -867,10 +926,9 @@ export class OrdersService {
 
       const percentage = Number(this.superadminService.recicled_becoin);
 
-      const becoinGreenToAdd = Math.ceil(
-        Number(order.subtotal_becoin) * (percentage / 100)
-      );
-
+      const becoinGreenToAdd = (Math.ceil(
+          Number(order.subtotal_amount) * (percentage / 100)))/this.superadminService.getPriceOneBecoin();
+      
       userWallet.becoin_green =
         Number(userWallet.becoin_green) + becoinGreenToAdd;
 
@@ -1058,13 +1116,13 @@ export class OrdersService {
           throw new NotFoundException(`Wallet no encontrada usuario ${payment.user_id}`);
         }
 
-        userWallet.becoin_balance = +userWallet.becoin_balance + amount;
+        userWallet.usd_balance = +userWallet.usd_balance + amount;
         await qr.manager.save(userWallet);
 
         const userTx = await qr.manager.save(Transaction, {
           wallet_id: userWallet.id,
-          amount_becoin: amount,
-          post_balance: userWallet.becoin_balance,
+          amount_usd: amount,
+          post_balance: userWallet.usd_balance,
           type: txCancel,
           status: statusCompleted,
           reference: `CANCELLED-ORDER-${order.id}`,
@@ -1076,19 +1134,19 @@ export class OrdersService {
         await qr.manager.save(payment);
 
         // 🏦 Superadmin
-        if (Number(superAdminWallet.becoin_balance) < amount) {
+        if (Number(superAdminWallet.usd_balance) < amount) {
           throw new ConflictException(
             'Saldo insuficiente del superadmin para cancelar la orden',
           );
         }
 
-        superAdminWallet.becoin_balance = +superAdminWallet.becoin_balance - amount;
+        superAdminWallet.usd_balance = +superAdminWallet.usd_balance - amount;
         await qr.manager.save(superAdminWallet);
 
         await qr.manager.save(Transaction, {
           wallet_id: superAdminWallet.id,
-          amount_becoin: amount,
-          post_balance: superAdminWallet.becoin_balance,
+          amount_usd: amount,
+          post_balance: superAdminWallet.usd_balance,
           type: txCancel,
           status: statusCompleted,
           reference: `CANCELLED-ORDER-${order.id}`,
@@ -1145,7 +1203,7 @@ export class OrdersService {
         relations: {user: {wallet:true}}
       })
 
-      payments.forEach ( async (payment) => {
+      for (const payment of payments) {
         // 8 BIS) Libero los fondos de la billetera del usuario
          const wallet = payment.user.wallet;
         // wallet.locked_balance = +wallet.locked_balance - +payment.amount_paid
@@ -1156,8 +1214,8 @@ export class OrdersService {
           wallet_id: wallet.id,
           type_id: txType.id,
           status_id: status.id,
-          amount_becoin: +payment.amount_paid,
-          post_balance: wallet.becoin_balance,
+          amount_usd: +payment.amount_paid,
+          post_balance: wallet.usd_balance,
           reference: `PURCHASEBELAND-${order.id}`,
         });
         const txPurchaseSaved = await queryRunner.manager.save(Transaction, txPurchase);
@@ -1165,8 +1223,7 @@ export class OrdersService {
         payment.status = status;
         payment.transaction_id = txPurchase.id
         await queryRunner.manager.save(Payment, payment)
-
-      })
+      }
 
       // 9 Bis) aca deberia incrementar el saldo del wallet SuperAdmin, registrar tambien la transaccion, y generar una nueva tabla para enviar los pedidos para generar el envio.
       const walletSuperadmin = await queryRunner.manager.findOne(Wallet, {
@@ -1174,15 +1231,15 @@ export class OrdersService {
       });
       if (!walletSuperadmin) throw new NotFoundException('Wallet del Super Admin no encontrada');
       
-      walletSuperadmin.becoin_balance = +walletSuperadmin.becoin_balance + +order.total_becoin;
+      walletSuperadmin.usd_balance = +walletSuperadmin.usd_balance + +order.total_amount;
       await queryRunner.manager.save(Wallet, walletSuperadmin);
 
       const txSale = queryRunner.manager.create(Transaction, {
         wallet_id: walletSuperadmin.id,
         type_id: txTypeSale.id,
         status_id: status.id,
-        amount_becoin: +order.total_becoin,
-        post_balance: +walletSuperadmin.becoin_balance,
+        amount_usd: +order.total_amount,
+        post_balance: +walletSuperadmin.usd_balance,
         reference: `SALEBELAND-${order.id}`,
       });
       await queryRunner.manager.save(Transaction, txSale);

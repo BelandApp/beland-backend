@@ -1,7 +1,6 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { DataSource, In, Repository } from "typeorm";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { DataSource, In } from "typeorm";
 import { OrderItem } from "./entities/order-item.entity";
-import { InjectRepository } from "@nestjs/typeorm";
 import { OrderItemConsumption } from "./entities/order-item-consumptions.entity";
 import { GroupMember } from "../group-members/entities/group-member.entity";
 
@@ -9,15 +8,6 @@ import { GroupMember } from "../group-members/entities/group-member.entity";
 export class OrderItemConsumptionService {
   constructor(
     private readonly dataSource: DataSource,
-
-    @InjectRepository(OrderItem)
-    private readonly orderItemRepo: Repository<OrderItem>,
-
-    @InjectRepository(OrderItemConsumption)
-    private readonly consumptionRepo: Repository<OrderItemConsumption>,
-
-    @InjectRepository(GroupMember)
-    private readonly groupMemberRepo: Repository<GroupMember>,
   ) {}
 
     async markConsumed(

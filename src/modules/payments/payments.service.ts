@@ -105,8 +105,8 @@ export class PaymentsService {
       if (!order) {throw new NotFoundException('Orden no encontrado');}
       if (order.paied) {throw new ConflictException('La orden ya fue pagada');}
 
-      order.total_becoin_paied = Number(order.total_becoin_paied) + Number(payment.amount_paid);
-      if (Number(order.total_becoin_paied) >= Number(order.total_becoin)) 
+      order.total_amount_paied = Number(order.total_amount_paied) + Number(payment.amount_paid);
+      if (Number(order.total_amount_paied) >= Number(order.total_amount)) 
           order.paied = true;
       await queryRunner.manager.save(order);
 
@@ -155,8 +155,8 @@ export class PaymentsService {
               userWallet.becoin_orange =
                 Number(userWallet.becoin_orange) - becoinOrangeUsed;
 
-              userWallet.becoin_balance =
-                Number(userWallet.becoin_balance) + becoinOrangeUsed;
+              userWallet.usd_balance =
+                  Number(userWallet.usd_balance) + Number(becoinOrangeUsed)*Number(priceOneBecoin);
 
               // Mensajes
               if (becoinOrangeUsed === maxRecoverable) {
@@ -178,8 +178,8 @@ export class PaymentsService {
 
               await queryRunner.manager.save(Transaction, {
                 wallet_id: userWallet.id,
-                amount_becoin: becoinOrangeUsed,
-                post_balance: Number(userWallet.becoin_balance),
+                amount_usd: Number(becoinOrangeUsed)*Number(priceOneBecoin),
+                post_balance: Number(userWallet.usd_balance),
                 type_id: orangeTxType.id,
                 status_id: txStatus.id,
                 reference: `ORDER-${payment.order_id}`,
@@ -190,13 +190,13 @@ export class PaymentsService {
       }
 
 
-      if (Number(userWallet.becoin_balance) < Number(payment.amount_paid)) {
+      if (Number(userWallet.usd_balance) < Number(payment.amount_paid)) {
         throw new BadRequestException('Saldo Insuficiente');
       }
 
       // 3️⃣ Debitar wallet usuario
-      userWallet.becoin_balance =
-        Number(userWallet.becoin_balance) - Number(payment.amount_paid);
+      userWallet.usd_balance =
+        Number(userWallet.usd_balance) - Number(payment.amount_paid);
 
       await queryRunner.manager.save(userWallet);
 
@@ -210,8 +210,8 @@ export class PaymentsService {
       // 4️⃣ Transaction usuario (PURCHASE)
       const userTransaction = await queryRunner.manager.save(Transaction, {
         wallet_id: userWallet.id,
-        amount_becoin: Number(payment.amount_paid),
-        post_balance: Number(userWallet.becoin_balance),
+        amount_usd: Number(payment.amount_paid),
+        post_balance: Number(userWallet.usd_balance),
         type_id: txType.id,
         status_id: txStatus.id,
         reference: `ORDER-${payment.order_id}`
@@ -232,8 +232,8 @@ export class PaymentsService {
       }
 
       // 8️⃣ Acreditar wallet super admin
-      superAdminWallet.becoin_balance =
-        Number(superAdminWallet.becoin_balance) + Number(payment.amount_paid);
+      superAdminWallet.usd_balance =
+        Number(superAdminWallet.usd_balance) + Number(payment.amount_paid);
 
       await queryRunner.manager.save(superAdminWallet);
 
@@ -244,8 +244,8 @@ export class PaymentsService {
       // 9️⃣ Transaction super admin (SALE)
       await queryRunner.manager.save(Transaction, {
         wallet_id: superAdminWallet.id,
-        amount_becoin: Number(payment.amount_paid),
-        post_balance: Number(superAdminWallet.becoin_balance),
+        amount_usd: Number(payment.amount_paid),
+        post_balance: Number(superAdminWallet.usd_balance),
         type_id: txTypeSale.id,
         status_id: txStatus.id,
         reference: `PAYMENT-${payment.id}`

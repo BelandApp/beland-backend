@@ -40,23 +40,22 @@ export class OrderItemsRepository {
   }
 
   async createMany(items: Partial<OrderItem>[]) {
-    const itemsToSave = await Promise.all(
-      items.map(async (item) => {
-        const product = await this.dataSource.manager.findOne(Product, {
-          where: { id: item.product_id },
-        });
+    const itemsToSave = [];
+    for (const item of items) {
+      const product = await this.dataSource.manager.findOne(Product, {
+        where: { id: item.product_id },
+      });
 
-        if (!product) {
-          throw new Error(`Producto ${item.product_id} no encontrado`);
-        }
+      if (!product) {
+        throw new Error(`Producto ${item.product_id} no encontrado`);
+      }
 
-        item.unit_weight = Number(product.weight);
-        item.total_weight =
-          Number(product.weight) * Number(item.ordered_quantity ?? 0);
+      item.unit_weight = Number(product.weight);
+      item.total_weight =
+        Number(product.weight) * Number(item.ordered_quantity ?? 0);
 
-        return item;
-      }),
-    );
+      itemsToSave.push(item);
+    }
 
     return await this.repository.save(itemsToSave);
   }

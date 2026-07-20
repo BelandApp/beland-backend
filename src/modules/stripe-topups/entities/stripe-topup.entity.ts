@@ -9,6 +9,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Wallet } from '../../wallets/entities/wallet.entity';
+import { OwnerTopupEnum } from '../enums/owner-topups.enum';
+import { User } from '../../users/entities/users.entity';
 
 export type StripeTopupStatus =
   | 'PENDING'
@@ -41,10 +43,15 @@ export class StripeTopup {
   @ManyToOne(() => Wallet)
   @JoinColumn({ name: 'wallet_id' })
   wallet: Wallet;
-
   @Column('uuid')
   wallet_id: string;
 
+  @Column('uuid',{nullable: true})
+  recipient_wallet_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
   @Column({ type: 'uuid' })
   user_id: string;
 
@@ -66,9 +73,6 @@ export class StripeTopup {
   @Column({ type: 'text', default: 'PENDING' })
   status: StripeTopupStatus;
 
-  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
-  becoins_granted: number | null;
-
   @Column({ type: 'text', nullable: true })
   failure_code: string | null;
 
@@ -86,6 +90,24 @@ export class StripeTopup {
 
   @Column({ type: 'timestamptz', nullable: true })
   failed_at: Date | null;
+
+  @Column({ type: 'enum', enum: OwnerTopupEnum, nullable:true })
+  owner: OwnerTopupEnum;
+
+  @Column('uuid', {nullable:true})
+  owner_id: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  holder_name?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  holder_instagram_tiktok?: string;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  holder_phone?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  holder_email?: string;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

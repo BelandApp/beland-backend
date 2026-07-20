@@ -34,13 +34,7 @@ export class CartItem {
   unit_price: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  total_price: number; 
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true })
-  unit_becoin: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true  })
-  total_becoin: number; 
+  total_price: number;
 
   @Column({ type: 'numeric', precision: 7, scale: 3, default: 0, nullable:true })
   unit_weight: number;
@@ -55,8 +49,5 @@ export class CartItem {
   @BeforeInsert()
   calculateBecoin() {
     this.total_price = Number(this.unit_price) * Number(this.quantity)
-    const rate = 0.05; // 1 Becoin = 0.05 USD
-    this.unit_becoin = Number(this.unit_price) / rate;
-    this.total_becoin = Number(this.total_price) / rate;
   }
 }

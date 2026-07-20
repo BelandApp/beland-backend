@@ -35,11 +35,6 @@ export class CreateProductDto {
   @IsNumber()
   price: number;
 
-  @ApiPropertyOptional({ description: 'Precio del producto en USD' })
-  @IsNumber()
-  @IsOptional()
-  price_becoin: number;
-
   @ApiProperty({
     description: 'URL de la imagen del producto',
     required: false,
