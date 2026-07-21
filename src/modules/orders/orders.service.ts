@@ -397,15 +397,33 @@ export class OrdersService {
       await this.sendSuperadminOrderEmail(savedOrder, paymentType);
 
       return savedOrder;
-    } catch (err) {
+    } catch (err: any) {
       await queryRunner.rollbackTransaction();
 
-      // ✅ si ya es un HttpException, mantenerlo
+      console.error('\n====== ERROR ORIGINAL CAPTURADO ======');
+      console.error('Constructor:', err?.constructor?.name);
+      console.error('Message:', err?.message);
+      console.error('Stack:', err?.stack);
+
+      if (err?.driverError) {
+        console.error('DriverError:', err.driverError);
+      }
+
+      if (err?.query) {
+        console.error('Query:', err.query);
+      }
+
+      if (err?.parameters) {
+        console.error('Parameters:', err.parameters);
+      }
+
+      console.error('Objeto completo:', err);
+      console.error('======================================\n');
+
       if (err instanceof HttpException) {
         throw err;
       }
 
-      // ❌ si es error inesperado
       throw new InternalServerErrorException(
         'Error interno al crear la orden',
       );
