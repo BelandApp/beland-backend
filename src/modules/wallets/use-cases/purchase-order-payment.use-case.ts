@@ -88,10 +88,6 @@ export class PurchaseOrderPaymentUseCase {
       where: {
         id: paymentId,
       },
-      relations: {
-        order: true,
-        status: true,
-      },
       lock: {
         mode: 'pessimistic_write',
       },
