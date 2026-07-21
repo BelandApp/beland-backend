@@ -13,7 +13,7 @@ import { Order } from './entities/order.entity';
 import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
 import { Cart } from 'src/modules/cart/entities/cart.entity';
 import { PaymentType } from 'src/modules/payment-types/entities/payment-type.entity';
-import { DataSource, Not, QueryRunner } from 'typeorm';
+import { DataSource, Not, QueryRunner, EntityManager } from 'typeorm';
 import { CartItem } from 'src/modules/cart-items/entities/cart-item.entity';
 import { OrderItem } from 'src/modules/order-items/entities/order-item.entity';
 import { TransactionState } from 'src/modules/transaction-state/entities/transaction-state.entity';
@@ -36,7 +36,10 @@ import {
   superadminNotificationEmailSubject,
   superadminNotificationEmailTemplate,
 } from '../email/plantilla/htmlNotificacionSuperadmin';
-
+import { SpendOrangeUseCase } from '../rewards/becoin-orange/use-cases/spend-orange.use-case';
+import { FinancialReversalService, ReversalPayload } from '../wallets/financial-reversal.service';
+import { PurchaseOrderPaymentUseCase } from '../wallets/use-cases/purchase-order-payment.use-case';
+import { PaymentProviderEnum } from '../transactions/enums/transaction.enums';
 @Injectable()
 export class OrdersService {
   private readonly completeMessage = 'la orden';
@@ -61,18 +64,20 @@ export class OrdersService {
     private readonly dataSource: DataSource,
     private readonly notificationsGateway: NotificationsGateway,
     private readonly emailService: EmailService,
-
+    private readonly spendOrangeUseCase: SpendOrangeUseCase,
+    private readonly financialReversalService: FinancialReversalService,
+    private readonly purchaseOrderPaymentUseCase: PurchaseOrderPaymentUseCase,
   ) {}
 
-  async generateUniqueCode(): Promise<string> {
+  async generateUniqueCode(manager?: EntityManager): Promise<string> {
     let code = this.generateRandomCode();
 
-    const exists = await this.dataSource.manager.findOne(Order, {
+    const exists = await (manager || this.dataSource.manager).findOne(Order, {
       where: { recycled_code: code },
     });
 
     if (exists) {
-      return this.generateUniqueCode(); // recursion hasta que salga único
+      return this.generateUniqueCode(manager); // recursion hasta que salga único
     }
 
     return code;
@@ -360,132 +365,20 @@ export class OrdersService {
       if (!cart.group_id && cart.user_id) {
         // ===== PAGO INMEDIATO (COMPRA INDIVIDUAL) =====
         console.log('entoro a hacer el pago de la orden por ser compra individual')
-        // wallet usuario
-        const userWallet = await queryRunner.manager.findOne(Wallet, {
-          where: { user_id: cart.user_id },
-          lock: { mode: 'pessimistic_write' },
+        
+        const singlePaymentCreated = await queryRunner.manager.save(Payment, {
+          amount_paid: Number(savedOrder.total_amount),
+          order_id: savedOrder.id,
+          payment_type_id: savedOrder.payment_type_id,
+          user_id: cart.user_id,
+          status_id: statusPayment.id,
         });
 
-        if (!userWallet)
-          throw new BadRequestException('Billetera del usuario no encontrada');
-
-        let becoinOrangeUsed = 0;
-
-        // ---------- APLICAR ORANGE ----------
-        if (Number(userWallet.becoin_orange) > 0) {
-          const items = await queryRunner.manager.find(OrderItem, {
-            where: { order_id: savedOrder.id, user_id: cart.user_id },
-            relations: { product: true },
-          });
-
-          let profit = 0;
-          for (const item of items) {
-            profit += Number(item.product.price) - Number(item.product.cost);
-          }
-
-          if (profit > 0) {
-            const priceOneBecoin = this.superadminService.getPriceOneBecoin();
-            const profitBecoin = profit / priceOneBecoin;
-            const maxRecoverable = Math.floor(profitBecoin * 0.8);
-
-            if (maxRecoverable > 0) {
-              becoinOrangeUsed = Math.min(
-                Math.floor(Number(userWallet.becoin_orange)),
-                maxRecoverable,
-              );
-
-              if (becoinOrangeUsed > 0) {
-                userWallet.becoin_orange = +userWallet.becoin_orange- becoinOrangeUsed;
-                userWallet.usd_balance = +userWallet.usd_balance + (becoinOrangeUsed*priceOneBecoin);
-
-                const orangeTxType = await queryRunner.manager.findOne(TransactionType,{
-                  where:{code: TransactionCode.ORANGE_CREDIT_USED}
-                });
-
-                const txStatus = await queryRunner.manager.findOne(TransactionState,{
-                  where:{code: StatusCode.COMPLETED}
-                });
-
-                await queryRunner.manager.save(Transaction,{
-                  wallet_id:userWallet.id,
-                  amount_usd:(becoinOrangeUsed/this.superadminService.getPriceOneBecoin()),
-                  post_balance:userWallet.usd_balance,
-                  type_id:orangeTxType.id,
-                  status_id:txStatus.id,
-                  reference:`ORDER-${savedOrder.id}`
-                });
-              }
-            }
-          }
-        }
-
-        // ---------- VALIDAR SALDO ----------
-        if (Number(userWallet.usd_balance) < Number(savedOrder.total_amount))
-          throw new BadRequestException('Saldo insuficiente para completar la compra');
-
-        // ---------- DEBITAR USUARIO ----------
-        userWallet.usd_balance = +userWallet.usd_balance - Number(savedOrder.total_amount);
-        await queryRunner.manager.save(userWallet);
-
-        // tipos y estados
-        const txStatus = await queryRunner.manager.findOne(TransactionState,{
-          where:{code: StatusCode.COMPLETED}
+        await this.purchaseOrderPaymentUseCase.execute(queryRunner.manager, {
+            paymentId: singlePaymentCreated.id,
+            paymentProvider: PaymentProviderEnum.WALLET,
+            paymentReferenceId: singlePaymentCreated.id
         });
-
-        const txTypePurchase = await queryRunner.manager.findOne(TransactionType,{
-          where:{code: TransactionCode.PURCHASE_BELAND}
-        });
-
-        // transaction cliente
-        const userTx = await queryRunner.manager.save(Transaction,{
-          wallet_id:userWallet.id,
-          amount_usd:Number(savedOrder.total_amount),
-          post_balance:userWallet.usd_balance,
-          type_id:txTypePurchase.id,
-          status_id:txStatus.id,
-          reference:`ORDER-${savedOrder.id}`
-        });
-
-        // ---------- CREAR PAYMENT COMPLETED ----------
-        const paymentCompleted = await queryRunner.manager.save(Payment,{
-          amount_paid:Number(savedOrder.total_amount),
-          order_id:savedOrder.id,
-          payment_type_id:savedOrder.payment_type_id,
-          user_id:cart.user_id,
-          status_id:txStatus.id,
-          transaction_id:userTx.id
-        });
-
-        // ---------- SUPER ADMIN ----------
-        const superAdminWallet = await queryRunner.manager.findOne(Wallet,{
-          where:{id:this.superadminService.getWalletId()},
-          lock:{mode:'pessimistic_write'}
-        });
-
-        if(!superAdminWallet)
-          throw new InternalServerErrorException('Billetera del superadmin no encontrada');
-
-        superAdminWallet.usd_balance = +superAdminWallet.usd_balance + Number(savedOrder.total_amount);
-        await queryRunner.manager.save(superAdminWallet);
-
-        const txTypeSale = await queryRunner.manager.findOne(TransactionType,{
-          where:{code:TransactionCode.SALE_BELAND}
-        });
-
-        await queryRunner.manager.save(Transaction,{
-          wallet_id:superAdminWallet.id,
-          amount_usd:Number(savedOrder.total_amount),
-          post_balance:superAdminWallet.usd_balance,
-          type_id:txTypeSale.id,
-          status_id:txStatus.id,
-          reference:`PAYMENT-${paymentCompleted.id}`
-        });
-
-        // ---------- MARCAR ORDEN PAGA ----------
-        savedOrder.paied = true;
-        savedOrder.total_amount_paied = Number(savedOrder.total_amount);
-        await queryRunner.manager.save(savedOrder);
-
       }
 
       // 12) Commit
@@ -647,43 +540,35 @@ export class OrdersService {
       }
 
       /* =======================================================
-      * 3️⃣ WALLET SUPERADMIN
+      * 3️⃣ SUPERADMIN WALLET ID
       * ======================================================= */
-      const superAdminWallet = await queryRunner.manager.findOne(Wallet, {
-        where: { id: this.superadminService.getWalletId() },
-      });
-
-      if (!superAdminWallet) {
-        throw new InternalServerErrorException('Wallet del superadmin no encontrada');
-      }
-
-      if (Number(superAdminWallet.becoin_balance) < refundTotal) {
-        throw new ConflictException('Saldo insuficiente del superadmin para la devolución');
-      }
+      const superAdminWalletId = this.superadminService.getWalletId();
 
       /* =======================================================
-      * 4️⃣ DEVOLUCIÓN
+      * 4️⃣ DEVOLUCIÓN A TRAVÉS DE FINANCIAL REVERSAL SERVICE
       * ======================================================= */
       if (!is_split) {
         /* ===== TODO AL CREADOR ===== */
+        // Obtenemos solo el ID de la wallet del creador para el servicio unificado
         const leaderWallet = await queryRunner.manager.findOne(Wallet, {
           where: { user_id: order.user_id },
-          lock: { mode: 'pessimistic_write' },
+          select: ['id'],
         });
 
         if (!leaderWallet) throw new NotFoundException('Wallet del líder no encontrada');
 
-        leaderWallet.becoin_balance = +leaderWallet.becoin_balance + refundTotal;
-        await queryRunner.manager.save(leaderWallet);
+        const payload: ReversalPayload = {
+          sourceWalletId: superAdminWalletId,
+          destinationWalletId: leaderWallet.id,
+          amountUsd: refundTotal,
+          transactionData: {
+            type_id: txRefund.id,
+            status_id: txStatus.id,
+            reference: `REFUND-ORDER-${order.id}`,
+          },
+        };
 
-        await queryRunner.manager.save(Transaction, {
-          wallet_id: leaderWallet.id,
-          amount_becoin: refundTotal,
-          post_balance: leaderWallet.becoin_balance,
-          type_id: txRefund.id,
-          status_id: txStatus.id,
-          reference: `REFUND-ORDER-${order.id}`,
-        });
+        await this.financialReversalService.executeReversal(queryRunner.manager, payload);
 
       } else {
         /* ===== DEVOLUCIÓN SPLIT CON REDONDEO ===== */
@@ -694,6 +579,7 @@ export class OrdersService {
         const members = order.group.members;
         const totalMembers = members.length;
 
+        // Se mantiene la matemática exacta del código original
         const amountPerMember = Math.floor(refundTotal / totalMembers);
         const distributedTotal = amountPerMember * totalMembers;
         const remainder = refundTotal - distributedTotal; // exceso
@@ -701,9 +587,10 @@ export class OrdersService {
         let leaderId: string | null = null;
 
         for (const member of members) {
+          // Obtenemos solo el ID para pasarlo al servicio
           const wallet = await queryRunner.manager.findOne(Wallet, {
             where: { user_id: member.user_id },
-            lock: { mode: 'pessimistic_write' },
+            select: ['id'],
           });
 
           if (!wallet) {
@@ -717,38 +604,24 @@ export class OrdersService {
             amountToCredit += remainder; // 👑 exceso al líder
           }
 
-          wallet.becoin_balance = +wallet.becoin_balance + amountToCredit;
-          await queryRunner.manager.save(wallet);
+          const payload: ReversalPayload = {
+            sourceWalletId: superAdminWalletId,
+            destinationWalletId: wallet.id,
+            amountUsd: amountToCredit,
+            transactionData: {
+              type_id: txRefund.id,
+              status_id: txStatus.id,
+              reference: `REFUND-ORDER-${order.id}`,
+            },
+          };
 
-          await queryRunner.manager.save(Transaction, {
-            wallet_id: wallet.id,
-            amount_becoin: amountToCredit,
-            post_balance: wallet.becoin_balance,
-            type_id: txRefund.id,
-            status_id: txStatus.id,
-            reference: `REFUND-ORDER-${order.id}`,
-          });
+          await this.financialReversalService.executeReversal(queryRunner.manager, payload);
         }
 
         if (!leaderId) {
           throw new ConflictException('No se encontró un miembro LEADER para asignar el excedente');
         }
       }
-
-      /* =======================================================
-      * 5️⃣ DEBITAR SUPERADMIN
-      * ======================================================= */
-      superAdminWallet.becoin_balance = +superAdminWallet.becoin_balance - refundTotal;
-      await queryRunner.manager.save(superAdminWallet);
-
-      await queryRunner.manager.save(Transaction, {
-        wallet_id: superAdminWallet.id,
-        amount_becoin: refundTotal,
-        post_balance: superAdminWallet.becoin_balance,
-        type_id: txRefund.id,
-        status_id: txStatus.id,
-        reference: `REFUND-ORDER-${order.id}`,
-      });
 
       /* =======================================================
       * 6️⃣ MARCAR ORDEN
@@ -888,6 +761,8 @@ export class OrdersService {
 
   async collected (order_id: string): Promise<{ success: boolean; code: string }> {
     const qr = this.dataSource.createQueryRunner(); 
+    await qr.connect();
+    await qr.startTransaction();
 
     try {      
       /* =======================================================
@@ -913,7 +788,7 @@ export class OrdersService {
 
       order.status_id = statusCollected.id;
       order.collected_at = new Date();
-      order.recycled_code = await this.generateUniqueCode();
+      order.recycled_code = await this.generateUniqueCode(qr.manager);
       await qr.manager.save(order);
 
 
@@ -933,6 +808,29 @@ export class OrdersService {
         Number(userWallet.becoin_green) + becoinGreenToAdd;
 
       await qr.manager.save(userWallet);
+
+      // Register Green Reward Transaction
+      const transactionType = await qr.manager.findOne(TransactionType, {
+        where: { code: TransactionCode.GREEN_REWARD },
+      });
+      if (!transactionType) throw new NotFoundException('Tipo de transacción GREEN_REWARD no encontrado');
+
+      const transactionState = await qr.manager.findOne(TransactionState, {
+        where: { code: StatusCode.COMPLETED },
+      });
+      if (!transactionState) throw new NotFoundException('Estado COMPLETED no encontrado');
+
+      await qr.manager.save(Transaction, {
+        wallet_id: userWallet.id,
+        type: transactionType,
+        status: transactionState,
+        amount_green: becoinGreenToAdd,
+        post_green_balance: userWallet.becoin_green,
+        post_balance: userWallet.becoin_balance, // Mantener el saldo regular que es requerido
+        reference: order.id,
+        clientTransactionId: null,
+      });
+
       /* =======================================================
       * 7️⃣ COMMIT + NOTIFICACIÓN
       * ======================================================= */
@@ -946,7 +844,9 @@ export class OrdersService {
       return { success: true, code: order.recycled_code ?? "NO RECYCLE-NO CODE " };
 
     } catch (error) {
-      await qr.rollbackTransaction();
+      if (qr.isTransactionActive) {
+        await qr.rollbackTransaction();
+      }
       throw error;
     } finally {
       await qr.release();
@@ -1080,14 +980,7 @@ export class OrdersService {
       /* =======================================================
       * 4️⃣ WALLET SUPERADMIN
       * ======================================================= */
-      const superAdminWallet = await qr.manager.findOne(Wallet, {
-        where: { id: this.superadminService.getWalletId() },
-        lock: { mode: 'pessimistic_write' },
-      });
-
-      if (!superAdminWallet) {
-        throw new InternalServerErrorException('Wallet del superadmin no encontrada');
-      }
+      const superAdminWalletId = this.superadminService.getWalletId();
 
       /* =======================================================
       * 5️⃣ PROCESAR PAYMENTS
@@ -1106,60 +999,48 @@ export class OrdersService {
 
         const amount = Number(payment.amount_paid);
 
-        // 👤 Wallet usuario
+        // 👤 Wallet usuario (Obtenemos ID sin lock pesimista)
         const userWallet = await qr.manager.findOne(Wallet, {
           where: { user_id: payment.user_id },
-          lock: { mode: 'pessimistic_write' },
+          select: ['id'],
         });
 
         if (!userWallet) {
           throw new NotFoundException(`Wallet no encontrada usuario ${payment.user_id}`);
         }
 
-        userWallet.usd_balance = +userWallet.usd_balance + amount;
-        await qr.manager.save(userWallet);
+        const payload: ReversalPayload = {
+          sourceWalletId: superAdminWalletId,
+          destinationWalletId: userWallet.id,
+          amountUsd: amount,
+          transactionData: {
+            type_id: txCancel.id,
+            status_id: statusCompleted.id,
+            reference: `CANCELLED-ORDER-${order.id}`,
+          },
+        };
 
-        const userTx = await qr.manager.save(Transaction, {
-          wallet_id: userWallet.id,
-          amount_usd: amount,
-          post_balance: userWallet.usd_balance,
-          type: txCancel,
-          status: statusCompleted,
-          reference: `CANCELLED-ORDER-${order.id}`,
-        });
+        const { destinationTransaction } = await this.financialReversalService.executeReversal(
+          qr.manager,
+          payload,
+        );
 
         // 🧾 Cancelar payment
         payment.status = statusCancelled;
-        payment.transaction = userTx;
+        payment.transaction = destinationTransaction;
         await qr.manager.save(payment);
-
-        // 🏦 Superadmin
-        if (Number(superAdminWallet.usd_balance) < amount) {
-          throw new ConflictException(
-            'Saldo insuficiente del superadmin para cancelar la orden',
-          );
-        }
-
-        superAdminWallet.usd_balance = +superAdminWallet.usd_balance - amount;
-        await qr.manager.save(superAdminWallet);
-
-        await qr.manager.save(Transaction, {
-          wallet_id: superAdminWallet.id,
-          amount_usd: amount,
-          post_balance: superAdminWallet.usd_balance,
-          type: txCancel,
-          status: statusCompleted,
-          reference: `CANCELLED-ORDER-${order.id}`,
-        });
       }
 
       for (const item of order.items) {
-        await qr.manager.increment(
-          Product,
-          { id: item.product_id },
-          'quantity',
-          item.quantity, // o item.ordered_quantity
-        );
+        const quantityToRestore = Number(item.ordered_quantity ?? item.quantity ?? 0);
+        if (quantityToRestore > 0) {
+          await qr.manager.increment(
+            Product,
+            { id: item.product_id },
+            'quantity',
+            quantityToRestore,
+          );
+        }
       }
 
 

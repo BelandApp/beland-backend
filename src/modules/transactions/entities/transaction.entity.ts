@@ -46,6 +46,18 @@ export class Transaction {
   @Column({ type: 'numeric', precision: 14, scale:2  })
   post_balance: number; // saldo resultante tras la operación
 
+  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
+  amount_orange: number; // importe en Orange (positivo o negativo)
+
+  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
+  post_orange_balance: number; // saldo resultante de Orange tras la operación
+
+  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
+  amount_green: number; // importe en Green (positivo o negativo)
+
+  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
+  post_green_balance: number; // saldo resultante de Green tras la operación
+
   @Column({
     type: 'enum',
     enum: PaymentProviderEnum,

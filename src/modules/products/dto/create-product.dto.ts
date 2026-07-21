@@ -1,6 +1,6 @@
 // src/products/dto/create-product.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsNumber, IsUUID, IsArray, ArrayNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsNumber, IsUUID, IsArray, ArrayNotEmpty, IsBoolean, isNotEmpty } from 'class-validator';
 
 export class CreateProductDto {
   @ApiProperty({ description: 'Nombre del producto' })
@@ -30,6 +30,11 @@ export class CreateProductDto {
   @ApiProperty({ description: 'Cantidad del producto en stock' })
   @IsNumber()
   quantity: number;
+
+  @ApiProperty({ description: 'Es circular?' })
+  @IsBoolean()
+  @IsNotEmpty()
+  is_circular: boolean;
 
   @ApiProperty({ description: 'Precio del producto en USD' })
   @IsNumber()

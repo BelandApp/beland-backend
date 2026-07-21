@@ -9,6 +9,8 @@ import {
 import { UserRechargeRepository } from './user-recharge.repository';
 import { RechargeTransfer } from './entities/user-recharge.entity';
 import { TransactionState } from '../transaction-state/entities/transaction-state.entity';
+import { RechargeUseCase } from '../wallets/use-cases/recharge.use-case';
+import { PaymentProviderEnum } from '../transactions/enums/transaction.enums';
 import { StatusCode } from '../transaction-state/enum/status.enum';
 import { DataSource } from 'typeorm';
 import { Transaction } from '../transactions/entities/transaction.entity';
@@ -24,6 +26,10 @@ import {
 import { User } from '../users/entities/users.entity';
 import { PaymentAccount } from '../payout-account/entities/payment-account.entity';
 
+import { RequestTransferRechargeUseCase } from './use-cases/request-transfer-recharge.use-case';
+import { RejectTransferRechargeUseCase } from './use-cases/reject-transfer-recharge.use-case';
+import { CompleteTransferRechargeUseCase } from './use-cases/complete-transfer-recharge.use-case';
+
 @Injectable()
 export class UserRechargeService {
   private readonly completeMessage = 'la recarga por transferencia';
@@ -34,6 +40,9 @@ export class UserRechargeService {
     private readonly dataSource: DataSource,
     private readonly superadminConfig: SuperadminConfigService,
     private readonly emailService: EmailService,
+    private readonly requestTransferRechargeUseCase: RequestTransferRechargeUseCase,
+    private readonly rejectTransferRechargeUseCase: RejectTransferRechargeUseCase,
+    private readonly completeTransferRechargeUseCase: CompleteTransferRechargeUseCase,
   ) {}
 
   async findAll(
@@ -139,160 +148,31 @@ export class UserRechargeService {
   }
 
   async rechargeTransfer (user_id: string, dto: Partial<RechargeTransfer>): Promise<RechargeTransfer> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    try {
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: {code: StatusCode.PENDING}
-      });
-      if (!status) throw new NotFoundException('No se encontro el estado de transaccion ', StatusCode.PENDING)
-
-      const type = await queryRunner.manager.findOne(TransactionType, {
-        where: {code: TransactionCode.RECHARGE}
-      });
-      if (!type) throw new NotFoundException('No se encontro el Tipo de transaccion ', TransactionCode.RECHARGE)
-      
-      const wallet = await queryRunner.manager.findOne(Wallet, {
-        where: {user_id}
-      });
-      if (!wallet) throw new NotFoundException('No se encontro la Billetera del usuario');
-
-      if (Number(wallet.usd_balance)+Number(dto.amount_usd) > this.superadminConfig.recharge_limit) {
-        throw new ConflictException("Solo puede tener para consumos futuros hasta 100 USD.");
-      }
-
-      const transaction = await queryRunner.manager.save (Transaction, {
-        wallet_id: wallet.id,
-        type: type,
-        status: status,
-        amount_usd: +dto.amount_usd,
-        post_balance: +wallet.usd_balance,
-        reference: dto.transfer_id,
-      });
-
-      const rechargeTransferCreated = queryRunner.manager.create(RechargeTransfer, {
+    const rechargeTransfer = await this.dataSource.transaction(async (manager) => {
+      return await this.requestTransferRechargeUseCase.execute(manager, {
         user_id,
-        status:status,
         amount_usd: Number(dto.amount_usd),
         payment_account_id: dto.payment_account_id,
         transfer_id: dto.transfer_id,
-        transaction: transaction,
         ticket_image_url: dto.ticket_image_url,
-      })
-      const rechargeTransfer = await queryRunner.manager.save(rechargeTransferCreated);
-    
-      await queryRunner.commitTransaction();
+      });
+    });
 
-      await this.sendSuperadminRechargeTransferEmail(rechargeTransfer);
+    await this.sendSuperadminRechargeTransferEmail(rechargeTransfer);
 
-      return rechargeTransfer;
-    } catch (error) {
-      // ❌ Deshacer todo si algo falla
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      // Cerrar el queryRunner
-      await queryRunner.release();
-    }
+    return rechargeTransfer;
   }
 
   async rechargeCompleted (rechargeTransferId: string): Promise<RechargeTransfer> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    try {
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: {code: StatusCode.COMPLETED}
-      });
-      if (!status) throw new NotFoundException('No se encontro el estado de transaccion ', StatusCode.COMPLETED)
-
-      const rechargeTransfer = await queryRunner.manager.findOne(RechargeTransfer, {
-        where: {id: rechargeTransferId},
-        relations: {status: true},
-      })
-      if (!rechargeTransfer) throw new NotFoundException('No se encontro la recarga por transferencia');
-      if (rechargeTransfer.status.name === StatusCode.COMPLETED) throw new BadRequestException('La recarga ya esta en estado COMPLETADA.');
-      if (rechargeTransfer.status.name === StatusCode.FAILED) throw new BadRequestException('La recarga ya fue registrada como FALLIDA.');
-
-      const wallet = await queryRunner.manager.findOne(Wallet, {
-        where: {user_id : rechargeTransfer.user_id},
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (!wallet) throw new NotFoundException('No se encontro la Billetera del usuario');
-
-      rechargeTransfer.status = status;
-      await queryRunner.manager.save(rechargeTransfer);
-
-      wallet.usd_balance= +wallet.usd_balance + Number(rechargeTransfer.amount_usd)
-      await queryRunner.manager.save(wallet);
-
-      const transaction = await queryRunner.manager.findOne(Transaction, {
-        where: {id: rechargeTransfer.transaction_id}
-      })
-      if (!transaction) throw new NotFoundException('No se encontro la transaccion de la recarga');
-      transaction.status_id= status.id;
-      transaction.post_balance= +wallet.usd_balance;
-      await queryRunner.manager.save(transaction);
-    
-      await queryRunner.commitTransaction();
-
-      const check = await this.dataSource.getRepository(RechargeTransfer).findOne({
-  where: { id: rechargeTransferId }
-});
-
-console.log('estado real DB:', check.status_id);
-
-      return rechargeTransfer;
-    } catch (error) {
-      // ❌ Deshacer todo si algo falla
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      // Cerrar el queryRunner
-      await queryRunner.release();
-    }
+    return await this.dataSource.transaction(async (manager) => {
+      return await this.completeTransferRechargeUseCase.execute(manager, rechargeTransferId);
+    });
   }
 
   async rechargeFailed (rechargeTransferId: string): Promise<RechargeTransfer> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    try {
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: {code: StatusCode.FAILED}
-      });
-      if (!status) throw new NotFoundException('No se encontro el estado de transaccion ', StatusCode.FAILED)
-    
-      const rechargeTransfer = await queryRunner.manager.findOne(RechargeTransfer, {
-        where: {id: rechargeTransferId},
-        relations: {status: true}
-      })
-      if (!rechargeTransfer) throw new NotFoundException('No se encontro la recarga por transferencia');
-      if (rechargeTransfer.status.name === StatusCode.COMPLETED) throw new BadRequestException('La recarga ya esta en estado COMPLETADA.');
-      if (rechargeTransfer.status.name === StatusCode.FAILED) throw new BadRequestException('La recarga ya fue registrada como FALLIDA.');
-
-      rechargeTransfer.status = status;
-      await queryRunner.manager.save(rechargeTransfer);
-
-      const transaction = await queryRunner.manager.findOne(Transaction, {
-        where: {id: rechargeTransfer.transaction_id}
-      })
-      if (!transaction) throw new NotFoundException('No se encontro la transaccion de la recarga');
-      transaction.status_id= status.id;
-      await queryRunner.manager.save(transaction);
-    
-      await queryRunner.commitTransaction();
-
-      return rechargeTransfer;
-    } catch (error) {
-      // ❌ Deshacer todo si algo falla
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      // Cerrar el queryRunner
-      await queryRunner.release();
-    }
+    return await this.dataSource.transaction(async (manager) => {
+      return await this.rejectTransferRechargeUseCase.execute(manager, rechargeTransferId);
+    });
   }
 
   async update(id: string, body: Partial<RechargeTransfer>) {
