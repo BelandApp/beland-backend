@@ -120,9 +120,11 @@ export class CartsController {
   @ApiResponse({ status: 500, description: 'Error al actualizar el carrito' })
   async updateDelivery(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: DeliveryCartDto,
+    // Nota: El DTO se mantiene por compatibilidad con el frontend actual, pero el backend
+    // ignora sus valores y recalcula el delivery internamente usando Mapbox.
+    @Body() dto: DeliveryCartDto, 
   ) {
-    return this.service.update(id, dto);
+    return this.service.calculateAndSaveDelivery(id);
   }
 
   @Put('clean/:id')

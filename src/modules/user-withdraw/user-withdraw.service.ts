@@ -24,6 +24,9 @@ import {
 } from '../email/plantilla/htmlNotificacionSuperadmin';
 import { User } from '../users/entities/users.entity';
 import { WithdrawAccount } from '../withdraw-account/entities/withdraw-account.entity';
+import { CreateWithdrawRequestUseCase } from './use-cases/create-withdraw-request.use-case';
+import { CompleteWithdrawUseCase } from './use-cases/complete-withdraw.use-case';
+import { FailWithdrawUseCase } from './use-cases/fail-withdraw.use-case';
 
 @Injectable()
 export class UserWithdrawsService {
@@ -35,6 +38,9 @@ export class UserWithdrawsService {
     private readonly dataSource: DataSource,
     private readonly superadminConfig: SuperadminConfigService,
     private readonly emailService: EmailService,
+    private readonly createWithdrawRequestUseCase: CreateWithdrawRequestUseCase,
+    private readonly completeWithdrawUseCase: CompleteWithdrawUseCase,
+    private readonly failWithdrawUseCase: FailWithdrawUseCase,
   ) {}
 
   async findAll(
@@ -86,47 +92,6 @@ export class UserWithdrawsService {
     }
   }
 
-  async create(
-    body: Partial<UserWithdraw>,
-  ): Promise<UserWithdraw> {
-    try {
-      const res = await this.repository.create(body);
-      if (!res)
-        throw new InternalServerErrorException(
-          `No se pudo crear ${this.completeMessage}`,
-        );
-      return res;
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
-  }
-
-  async update(id: string, body: Partial<UserWithdraw>) {
-    try {
-      const res = await this.repository.update(id, body);
-      if (res.affected === 0)
-        throw new NotFoundException(
-          `No se encontró ${this.completeMessage}`,
-        );
-      return res;
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
-  }
-
-  async remove(id: string) {
-    try {
-      const res = await this.repository.remove(id);
-      if (res.affected === 0)
-        throw new NotFoundException(
-          `No se encontró ${this.completeMessage}`,
-        );
-      return res;
-    } catch (error) {
-      throw new ConflictException(`No se puede eliminar ${this.completeMessage}`);
-    }
-  }
-
   private async sendSuperadminWithdrawEmail(
     userWithdraw: UserWithdraw,
   ): Promise<void> {
@@ -169,7 +134,7 @@ export class UserWithdrawsService {
         paymentMethod: withdrawAccount?.bankName,
         createdAt: userWithdraw.created_at,
         details: {
-          'Monto BeCoin': userWithdraw.amount_usd/this.superadminConfig.getPriceOneBecoin(),
+          'Monto BeCoin': Number(userWithdraw.amount_usd)/this.superadminConfig.getPriceOneBecoin(),
           'Cuenta destino': accountReference,
           'Banco': withdrawAccount?.bankName,
           'Tipo de cuenta': withdrawAccount?.withdraw_account_type?.name,
@@ -204,56 +169,12 @@ export class UserWithdrawsService {
     await queryRunner.startTransaction();
 
     try {
-      // 1) Buscar la wallet del usuario
-      const wallet = await queryRunner.manager.findOne(Wallet, {
-        where: { user_id },
-      });
-      if (!wallet) throw new NotFoundException('No se encuentra la billetera');
-
-      // 2) Verificar saldo suficiente
-      if (+wallet.usd_balance < +dto.amount_usd)
-        throw new BadRequestException('Saldo insuficiente');
-
-      // 3) Obtener tipo de transacción 'WITHDRAW'
-      const type = await queryRunner.manager.findOne(TransactionType, {
-        where: { code: TransactionCode.WITHDRAW },
-      });
-      if (!type)
-        throw new ConflictException(
-          'No se encuentra el tipo ',
-          TransactionCode.WITHDRAW,
+      const { walletUpdated, userWithdraw } =
+        await this.createWithdrawRequestUseCase.execute(
+          user_id,
+          dto,
+          queryRunner.manager,
         );
-
-      // 4) Obtener estado 'PENDING'
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: StatusCode.PENDING },
-      });
-      if (!status)
-        throw new ConflictException("No se encuentra el estado ", StatusCode.PENDING);
-
-      // 5) Reservar fondos: debitar del saldo disponible y aumentar el saldo bloqueado
-      wallet.usd_balance = +wallet.usd_balance - +dto.amount_usd;
-      wallet.locked_balance = (wallet.locked_balance ?? 0) + +dto.amount_usd;
-      const walletUpdated = await queryRunner.manager.save(wallet);
-
-      // 6) Registrar la transacción
-      const tx = await queryRunner.manager.save(Transaction, {
-        wallet_id: wallet.id,
-        type,
-        status,
-        amount_usd: -dto.amount_usd,
-        post_balance: wallet.usd_balance,
-      });
-
-      // 7) Registrar la solicitud de retiro del usuario
-      const userWithdraw = await queryRunner.manager.save(UserWithdraw, {
-        user_id,
-        wallet_id: wallet.id,
-        withdraw_account_id: dto.withdraw_account_id,
-        amount_usd: +dto.amount_usd,
-        status_id: status.id,
-        transaction_id: tx.id,
-      });
 
       // ✅ Confirmo la transacción
       await queryRunner.commitTransaction();
@@ -278,52 +199,10 @@ export class UserWithdrawsService {
     await queryRunner.startTransaction();
     const { user_withdraw_id, observation, reference } = dto;
     try {
-      // 0) Buscar el retiro del usuario
-      const userWithdraw = await queryRunner.manager.findOne(UserWithdraw, {
-        where: { id: user_withdraw_id },
-      });
-      if (!userWithdraw)
-        throw new NotFoundException('No se encuentra el retiro del usuario');
-
-      // 1) Buscar la wallet del usuario
-      const wallet = await queryRunner.manager.findOne(Wallet, {
-        where: { user_id: userWithdraw.user_id },
-      });
-      if (!wallet) throw new NotFoundException('No se encuentra la billetera');
-
-      // 2) Busco el registro de la transacción
-      const transaction = await queryRunner.manager.findOne(Transaction, {
-        where: { id: userWithdraw.transaction_id },
-      });
-      if (!transaction)
-        throw new ConflictException(
-          'No se encuentra la transaccion del retiro',
-        );
-
-      // 3) Obtener estado 'FAILED'
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: StatusCode.FAILED },
-      });
-      if (!status)
-        throw new ConflictException("No se encuentra el estado ", StatusCode.FAILED);
-
-      // 4) Regresar fondos: acreditar el saldo y descontar del saldo bloqueado
-      wallet.usd_balance =
-        +wallet.usd_balance + +userWithdraw.amount_usd;
-      wallet.locked_balance =
-        +wallet.locked_balance - +userWithdraw.amount_usd;
-      const walletUpdated = await queryRunner.manager.save(wallet);
-
-      // 5) actualizo la transacción a estado FAILED
-      transaction.status_id = status.id;
-      transaction.reference = reference;
-      await queryRunner.manager.save(transaction);
-
-      // 6) actualizo el retiro de usuario a estado FAILED
-      userWithdraw.status_id = status.id;
-      userWithdraw.observation = observation ?? '';
-      userWithdraw.transaction_banck_id = reference ?? '';;
-      await queryRunner.manager.save(userWithdraw);
+      const userWithdraw = await this.failWithdrawUseCase.execute(
+        dto,
+        queryRunner.manager,
+      );
 
       // ✅ Confirmo la transacción
       await queryRunner.commitTransaction();
@@ -346,51 +225,10 @@ export class UserWithdrawsService {
     await queryRunner.startTransaction();
     const { user_withdraw_id, observation, reference } = dto;
     try {
-      // 0) Buscar el retiro del usuario
-      const userWithdraw = await queryRunner.manager.findOne(UserWithdraw, {
-        where: { id: user_withdraw_id },
-      });
-      if (!userWithdraw)
-        throw new NotFoundException('No se encuentra el retiro del usuario');
-
-      // 1) Buscar la wallet del usuario
-      const userWallet = await queryRunner.manager.findOne(Wallet, {
-        where: { user_id: userWithdraw.user_id },
-      });
-      if (!userWallet)
-        throw new NotFoundException('No se encuentra la billetera del usuario');
-
-      // 2) Busco el registro de la transacción
-      const transaction = await queryRunner.manager.findOne(Transaction, {
-        where: { id: userWithdraw.transaction_id },
-      });
-      if (!transaction)
-        throw new ConflictException(
-          'No se encuentra la transaccion del retiro',
-        );
-
-      // 3) Obtener estado 'COMPLETED'
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: StatusCode.COMPLETED },
-      });
-      if (!status)
-        throw new ConflictException("No se encuentra el estado ", StatusCode.COMPLETED );
-
-      // 4) Descuento Definitivo: Descontar del saldo bloqueado
-      userWallet.locked_balance =
-        +userWallet.locked_balance - +userWithdraw.amount_usd;
-      await queryRunner.manager.save(userWallet);
-
-      // 5) actualizo la transacción a estado COMPLETED
-      transaction.status_id = status.id;
-      transaction.reference= reference ?? '';
-      await queryRunner.manager.save(transaction);
-
-      // 6) actualizo el retiro de usuario a estado COMPLETED
-      userWithdraw.status_id = status.id;
-      userWithdraw.observation = observation ?? '';
-      userWithdraw.transaction_banck_id = reference ?? '';
-      await queryRunner.manager.save(userWithdraw);
+      const userWithdraw = await this.completeWithdrawUseCase.execute(
+        dto,
+        queryRunner.manager,
+      );
 
       // ✅ Confirmo la transacción
       await queryRunner.commitTransaction();

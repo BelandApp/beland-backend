@@ -12,6 +12,7 @@ import { User } from '../../users/entities/users.entity';
 import { PaymentType } from '../../payment-types/entities/payment-type.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
 import { TransactionState } from '../../transaction-state/entities/transaction-state.entity';
+import { UserGiftCard } from '../../gift-card/entities/user-giftcard.entity';
 
 @Entity('payments')
 export class Payment {
@@ -57,4 +58,14 @@ export class Payment {
   status: TransactionState;
   @Column('uuid')
   status_id: string;
+
+  // 💳 Monto cubierto mediante GiftCard
+  @Column({ type: 'numeric', precision: 14, scale: 2, default: 0 })
+  gift_card_amount_used: number;
+
+  @ManyToOne(() => UserGiftCard, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'user_gift_card_id' })
+  user_gift_card: UserGiftCard;
+  @Column('uuid', { nullable: true })
+  user_gift_card_id: string;
 }

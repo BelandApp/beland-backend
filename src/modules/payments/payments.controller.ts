@@ -25,6 +25,8 @@ import { PaymentsService } from './payments.service';
 import { Payment } from './entities/payment.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { PayphoneOrderDto } from './dto/payphone-order.dto';
+import { TransferOrderDto } from './dto/transfer-order.dto';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
 import { Request } from 'express';
 
@@ -94,8 +96,43 @@ export class PaymentsController {
   @ApiResponse({ status: 201, description: 'Pago creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para crear el pago' })
   @ApiResponse({ status: 500, description: 'Error al crear el miembro' })
-  async payNow(@Param('payment_id', ParseUUIDPipe) payment_id: string): Promise<{payment: Payment, message:string, becoinOrangeUsed:number}> {
-    return await this.service.payNow(payment_id);
+  async payNow(
+    @Param('payment_id', ParseUUIDPipe) payment_id: string,
+    @Body('userGiftCardId', new ParseUUIDPipe({ optional: true })) userGiftCardId?: string,
+  ): Promise<{payment: Payment, message:string, becoinOrangeUsed:number}> {
+    return await this.service.payNow(payment_id, userGiftCardId);
+  }
+
+  @Post('payphone/:payment_id')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiParam({ name: 'payment_id', description: 'UUID del pago a realizar' })
+  @ApiOperation({ summary: 'Realizar pago de orden mediante Payphone' })
+  @ApiResponse({ status: 201, description: 'Pago de orden procesado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Pago u Orden no encontrado' })
+  @ApiResponse({ status: 409, description: 'Conflicto con la transacción' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async payWithPayphone(
+    @Param('payment_id', ParseUUIDPipe) payment_id: string,
+    @Body() dto: PayphoneOrderDto,
+  ) {
+    return await this.service.payWithPayphone(payment_id, dto);
+  }
+
+  @Post('transfer/:payment_id')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiParam({ name: 'payment_id', description: 'UUID del pago a realizar' })
+  @ApiOperation({ summary: 'Realizar pago de orden mediante Transferencia Bancaria' })
+  @ApiResponse({ status: 201, description: 'Pago de orden procesado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Pago u Orden no encontrado' })
+  @ApiResponse({ status: 409, description: 'Conflicto con la transacción' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async payWithTransfer(
+    @Param('payment_id', ParseUUIDPipe) payment_id: string,
+    @Body() dto: TransferOrderDto,
+  ) {
+    return await this.service.payWithTransfer(payment_id, dto);
   }
 
   @Post()

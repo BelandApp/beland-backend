@@ -53,6 +53,13 @@ export class CreateStripeTopupDto {
   @IsUUID()
   recipient_wallet_id?: string;
 
+  @ApiPropertyOptional({
+    description: 'Id de la GiftCard a utilizar opcionalmente',
+  })
+  @IsOptional()
+  @IsUUID()
+  user_gift_card_id?: string;
+
   // =====================================================
   // EVENT PASS
   // =====================================================

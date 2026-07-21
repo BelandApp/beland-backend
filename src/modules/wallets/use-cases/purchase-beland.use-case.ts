@@ -1,273 +1,104 @@
 import {
   ConflictException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-
 import { EntityManager } from 'typeorm';
-
-import { Payment } from 'src/modules/payments/entities/payment.entity'; 
-import { Order } from 'src/modules/orders/entities/order.entity'; 
-
 import { Wallet } from 'src/modules/wallets/entities/wallet.entity';
-
 import { Transaction } from 'src/modules/transactions/entities/transaction.entity';
 import { TransactionType } from 'src/modules/transaction-type/entities/transaction-type.entity';
 import { TransactionState } from 'src/modules/transaction-state/entities/transaction-state.entity';
-
-import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
-
+import { AmountToPayment } from 'src/modules/amount-to-payment/entities/amount-to-payment.entity';
+import { WalletPaymentService } from 'src/modules/wallets/wallet-payment.service';
 import { TransactionCode } from 'src/modules/transaction-type/enum/transaction-code';
 import { StatusCode } from 'src/modules/transaction-state/enum/status.enum';
 
-import { PaymentProviderEnum } from 'src/modules/transactions/enums/transaction.enums';
-
-export interface PurchaseOrderPaymentUseCaseInput {
-  paymentId: string;
-
-  paymentProvider: PaymentProviderEnum;
-
-  paymentReferenceId: string;
-
-  reference?: string;
+export interface PurchaseBelandUseCaseInput {
+  buyerWalletId: string;
+  destinationWalletId: string;
+  amountUsd: number;
+  referenceCode: string;
+  amountPaymentId: string | null;
 }
 
-export interface PurchaseOrderPaymentUseCaseResponse {
-  paymentId: string;
-
-  orderId: string;
-
-  transactionId: string;
-
-  totalOrderPaid: number;
-
-  orderPaid: boolean;
+export interface PurchaseBelandUseCaseResponse {
+  transaction: Transaction;
 }
 
 @Injectable()
-export class PurchaseOrderPaymentUseCase {
+export class PurchaseBelandUseCase {
   constructor(
-    private readonly superadminConfig: SuperadminConfigService,
+    private readonly walletPaymentService: WalletPaymentService,
   ) {}
 
   async execute(
     manager: EntityManager,
-    input: PurchaseOrderPaymentUseCaseInput,
-  ): Promise<PurchaseOrderPaymentUseCaseResponse> {
+    input: PurchaseBelandUseCaseInput,
+  ): Promise<PurchaseBelandUseCaseResponse> {
     const {
-      paymentId,
-      paymentProvider,
-      paymentReferenceId,
-      reference,
+      buyerWalletId,
+      destinationWalletId,
+      amountUsd,
+      referenceCode,
+      amountPaymentId,
     } = input;
 
-    // ==========================================================
-    // PAYMENT
-    // ==========================================================
-
-    const payment = await manager.findOne(Payment, {
-      where: {
-        id: paymentId,
-      },
-      relations: {
-        order: true,
-        status: true,
-      },
-      lock: {
-        mode: 'pessimistic_write',
-      },
+    // 1) Tipos y Estados
+    const typeSend = await manager.findOne(TransactionType, {
+      where: { code: 'PURCHASE_BELAND' },
     });
+    if (!typeSend) throw new ConflictException("No se encuentra el tipo 'PURCHASE_BELAND'");
 
-    if (!payment) {
-      throw new NotFoundException(
-        'Payment not found',
-      );
-    }
+    const typeReceive = await manager.findOne(TransactionType, {
+      where: { code: 'SALE_BELAND' },
+    });
+    if (!typeReceive) throw new ConflictException("No se encuentra el tipo 'SALE_BELAND'");
 
-    if (payment.transaction_id) {
-      throw new ConflictException(
-        'Payment already processed',
-      );
-    }
+    const status = await manager.findOne(TransactionState, {
+      where: { code: StatusCode.COMPLETED },
+    });
+    if (!status) throw new ConflictException("No se encuentra el estado 'COMPLETED'");
 
-    // ==========================================================
-    // STATUS COMPLETED
-    // ==========================================================
-
-    const completedStatus =
-      await manager.findOne(TransactionState, {
-        where: {
-          code: StatusCode.COMPLETED,
-        },
-      });
-
-    if (!completedStatus) {
-      throw new ConflictException(
-        'Completed status not found',
-      );
-    }
-
-    // ==========================================================
-    // SUPERADMIN WALLET
-    // ==========================================================
-
-    const superAdminWallet =
-      await manager.findOne(Wallet, {
-        where: {
-          id: this.superadminConfig.getWalletId(),
-        },
-        lock: {
-          mode: 'pessimistic_write',
-        },
-      });
-
-    if (!superAdminWallet) {
-      throw new InternalServerErrorException(
-        'Superadmin wallet not found',
-      );
-    }
-
-    // ==========================================================
-    // TRANSACTION TYPE
-    // ==========================================================
-
-    const saleType = await manager.findOne(
-      TransactionType,
+    // 2) Debitar Wallet Origen
+    const txSend = await this.walletPaymentService.processPayment(
+      manager,
+      buyerWalletId,
+      amountUsd,
       {
-        where: {
-          code: TransactionCode.SALE_BELAND,
-        },
+        type_id: typeSend.id,
+        status_id: status.id,
+        reference: referenceCode,
+        related_wallet_id: destinationWalletId,
       },
     );
 
-    if (!saleType) {
-      throw new ConflictException(
-        'SALE_BELAND type not found',
-      );
-    }
+    // 3) Acreditar billetera destino administrativa
+    const toWallet = await manager.findOne(Wallet, {
+      where: { id: destinationWalletId },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (toWallet) {
+      toWallet.usd_balance = Number(toWallet.usd_balance) + Number(amountUsd);
+      await manager.save(Wallet, toWallet);
 
-    // ==========================================================
-    // CREDIT SUPERADMIN
-    // ==========================================================
-
-    superAdminWallet.usd_balance =
-      Number(superAdminWallet.usd_balance) +
-      Number(payment.amount_paid);
-
-    await manager.save(
-      Wallet,
-      superAdminWallet,
-    );
-
-    // ==========================================================
-    // TRANSACTION
-    // ==========================================================
-
-    const transaction = await manager.save(
-      Transaction,
-      {
-        wallet_id: superAdminWallet.id,
-
-        type_id: saleType.id,
-
-        status_id: completedStatus.id,
-
-        amount_usd: Number(payment.amount_paid),
-
-        post_balance:
-          superAdminWallet.usd_balance,
-
-        reference:
-          reference ??
-          `PAYMENT-${payment.id}`,
-
-        external_provider:
-          paymentProvider,
-
-        external_reference_id:
-          paymentReferenceId,
-      },
-    );
-
-    // ==========================================================
-    // PAYMENT COMPLETED
-    // ==========================================================
-
-    payment.transaction_id =
-      transaction.id;
-
-    payment.status_id =
-      completedStatus.id;
-
-    await manager.save(
-      Payment,
-      payment,
-    );
-
-    // ==========================================================
-    // ORDER
-    // ==========================================================
-
-    const order = await manager.findOne(
-      Order,
-      {
-        where: {
-          id: payment.order_id,
-        },
-        lock: {
-          mode: 'pessimistic_write',
-        },
-      },
-    );
-
-    if (!order) {
-      throw new NotFoundException(
-        'Order not found',
-      );
-    }
-
-    const completedPayments =
-      await manager.find(Payment, {
-        where: {
-          order_id: order.id,
-          status_id:
-            completedStatus.id,
-        },
+      // Registrar transacción de ingreso
+      const txReceive = manager.create(Transaction, {
+        wallet_id: toWallet.id,
+        type_id: typeReceive.id,
+        status_id: status.id,
+        amount_usd: amountUsd,
+        post_balance: toWallet.usd_balance,
+        reference: `SALE_BELAND-${buyerWalletId}`,
+        related_wallet_id: buyerWalletId,
       });
-
-    const totalOrderPaid =
-      completedPayments.reduce(
-        (sum, current) =>
-          sum +
-          Number(current.amount_paid),
-        0,
-      );
-
-    order.total_amount_paied =
-      totalOrderPaid;
-
-    if (
-      totalOrderPaid >=
-      Number(order.total_amount)
-    ) {
-      order.paied = true;
+      await manager.save(Transaction, txReceive);
     }
 
-    await manager.save(Order, order);
+    // 4) Eliminar AmountToPayment si corresponde
+    if (amountPaymentId) {
+      await manager.delete(AmountToPayment, { id: amountPaymentId });
+    }
 
-    return {
-      paymentId: payment.id,
-
-      orderId: order.id,
-
-      transactionId:
-        transaction.id,
-
-      totalOrderPaid,
-
-      orderPaid:
-        order.paied ?? false,
-    };
+    return { transaction: txSend };
   }
 }

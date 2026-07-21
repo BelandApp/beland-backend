@@ -4,10 +4,8 @@ import {
   Post,
   Body,
   Param,
-  Delete,
   Query,
   ParseUUIDPipe,
-  Put,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -22,17 +20,18 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { FlexibleAuthGuard } from 'src/modules/auth/guards/flexible-auth.guard';
+import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
+import { Roles } from 'src/modules/auth/decorators/roles.decorator';
 import { UserWithdraw } from './entities/user-withdraw.entity';
 import { UserWithdrawsService } from './user-withdraw.service';
 import { Request } from 'express';
-import { UpdateUserWithdrawDto } from './dto/update-user-withdraw.dto';
 import { WithdrawDto, WithdrawResponseDto } from './dto/withdraw.dto';
 import { Wallet } from '../wallets/entities/wallet.entity';
 
 @ApiTags('user-withdraw')
 @Controller('user-withdraw')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(FlexibleAuthGuard)
+@UseGuards(FlexibleAuthGuard, RolesGuard)
 export class UserWithdrawsController {
   constructor(private readonly service: UserWithdrawsService) {}
 
@@ -98,6 +97,7 @@ export class UserWithdrawsController {
   }
   // SI LA TRANSFERENCIA FALLA LLAMA ESTE ENDPOINT
   @Post('withdraw-failed')
+  @Roles('SUPERADMIN')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary:
@@ -114,6 +114,7 @@ export class UserWithdrawsController {
   }
   // SI LA TRANSFERENCIA SALE BIEN LLAMA ESTE ENDPOINT
   @Post('withdraw-completed')
+  @Roles('SUPERADMIN')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary:
@@ -126,29 +127,4 @@ export class UserWithdrawsController {
     return await this.service.withdrawCompleted(dto);
   }
   // FIN DE ENPOINT PARA EXTRACCIONES
-
-  @Put(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar una extracción existente' })
-  @ApiParam({ name: 'id', description: 'UUID de la extracción' })
-  @ApiResponse({ status: 200, description: 'Extracción actualizada correctamente' })
-  @ApiResponse({ status: 404, description: 'No se encontró la extracción a actualizar' })
-  @ApiResponse({ status: 500, description: 'Error al actualizar la extracción' })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: UpdateUserWithdrawDto,
-  ) {
-    return this.service.update(id, body);
-  }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar una extracción por su ID' })
-  @ApiParam({ name: 'id', description: 'UUID de la extracción' })
-  @ApiResponse({ status: 204, description: 'Extracción eliminada correctamente' })
-  @ApiResponse({ status: 404, description: 'No se encontró la extracción a eliminar' })
-  @ApiResponse({ status: 409, description: 'No se puede eliminar la extracción (conflicto)' })
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    await this.service.remove(id);
-  }
 }

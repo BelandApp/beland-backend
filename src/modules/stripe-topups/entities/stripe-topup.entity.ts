@@ -97,6 +97,12 @@ export class StripeTopup {
   @Column('uuid', {nullable:true})
   owner_id: string;
 
+  @Column('uuid', { nullable: true })
+  user_gift_card_id?: string;
+
+  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
+  gift_card_reserved_amount?: number;
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   holder_name?: string;
 

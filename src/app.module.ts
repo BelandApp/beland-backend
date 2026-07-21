@@ -61,7 +61,7 @@ import { DeliveryStatusModule } from './modules/delivery-status/delivery-status.
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { EventPassModule } from './modules/event-pass/event-pass.module';
 import { UserEventPassModule } from './modules/user-event-pass/user-event-pass.module';
-import { TopupModule } from './modules/binance-pay/topup/topup.module';
+
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { DriversModule } from './modules/profiles/drivers/drivers.module';
 import { MerchantsModule } from './modules/profiles/merchants/merchants.module';
@@ -75,6 +75,7 @@ import { GroupMembersConsumptionModule } from './modules/group-members-consumpti
 import { GroupService } from './modules/group-services/entities/group-service.entity';
 import { GroupServicesModule } from './modules/group-services/group-services.module';
 import { StripeTopupsModule } from './modules/stripe-topups/stripe-topups.module';
+import { BecoinOrangeModule } from './modules/rewards/becoin-orange/becoin-orange.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -174,7 +175,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     CloudinaryModule,
     EventPassModule,
     UserEventPassModule,
-    TopupModule,
+
     DeliveryModule,
     DriversModule,
     MerchantsModule,
@@ -187,6 +188,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     GroupMembersConsumptionModule,
     GroupServicesModule,
     StripeTopupsModule,
+    BecoinOrangeModule,
 
   ],
   controllers: [],

@@ -12,6 +12,7 @@ import { UserGiftCard } from './entities/user-giftcard.entity';
 // SERVICES
 import { GiftCardValidationService } from './services/gift-card-validation.service';
 import { GiftCardMapperService } from './services/gift-card-mapper.service';
+import { GiftCardBalanceService } from './services/gift-card-balance.service';
 
 // USE CASES
 import { CreateGiftCardUseCase } from './use-cases/create-gift-card.use-case';
@@ -40,6 +41,7 @@ import { ToggleGiftCardStatusUseCase } from './use-cases/toggle-gift-card-status
 
     GiftCardValidationService,
     GiftCardMapperService,
+    GiftCardBalanceService,
 
     // =========================================================================
     // USE CASES
@@ -60,6 +62,7 @@ import { ToggleGiftCardStatusUseCase } from './use-cases/toggle-gift-card-status
 
     GiftCardValidationService,
     GiftCardMapperService,
+    GiftCardBalanceService,
 
     // =========================================================================
     // USE CASES

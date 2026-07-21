@@ -8,9 +8,11 @@ import { NotificationsGateway } from '../notification-socket/notification-socket
 import { User } from '../users/entities/users.entity';
 import { UsersRepository } from '../users/users.repository';
 import { EmailModule } from '../email/email.module';
+import { BecoinOrangeModule } from '../rewards/becoin-orange/becoin-orange.module';
+import { WalletsModule } from '../wallets/wallets.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, User]), EmailModule],
+  imports: [TypeOrmModule.forFeature([Order, User]), EmailModule, BecoinOrangeModule, WalletsModule],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersRepository, NotificationsGateway, UsersRepository],
 })

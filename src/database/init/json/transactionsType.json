@@ -21,6 +21,20 @@
     "color": "#ff9800"
   },
   {
+    "code": "ORANGE_REFUND",
+    "name": "Reembolso BeCoin Orange",
+    "description": "Reintegro de BeCoin Orange debido a la cancelación o reembolso de una compra.",
+    "icon": "ticket-refund",
+    "color": "#666"
+  },
+  {
+    "code": "ORANGE_REVOKE",
+    "name": "Revocación BeCoin Orange",
+    "description": "Revocación de BeCoin Orange debido a un contracargo o fraude.",
+    "icon": "ticket-remove",
+    "color": "#f44336"
+  },
+  {
     "code": "WITHDRAW",
     "name": "Retiro",
     "description": "Conversión de BECOIN a USD y transferencia a cuenta bancaria",
@@ -159,5 +173,19 @@
     "description": "Se cancela la orden de compra, se cancelan los payments y se devuelven los BECOIN.",
     "icon": "close-circle",
     "color": "#666"
+  },
+  {
+    "code": "GREEN_REWARD",
+    "name": "Recompensa Green",
+    "description": "Emisión de BeCoin Green por reciclaje u otra actividad sostenible",
+    "icon": "leaf",
+    "color": "#4caf50"
+  },
+  {
+    "code": "GREEN_REVERSAL",
+    "name": "Reversión Green",
+    "description": "Reversión de BeCoin Green por cancelación de orden",
+    "icon": "leaf-off",
+    "color": "#f44336"
   }
 ]

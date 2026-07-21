@@ -8,12 +8,16 @@ import { MerchantsRepository } from './merchants.repository';
 import { Merchant } from './entities/merchant.entity';
 import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { MerchantQueryDto } from './dto/merchant-query.dto';
+import { WalletsService } from 'src/modules/wallets/wallets.service';
 
 @Injectable()
 export class MerchantsService {
   private readonly completeMessage = 'el Comercio';
 
-  constructor(private readonly repository: MerchantsRepository) {}
+  constructor(
+    private readonly repository: MerchantsRepository,
+    private readonly walletsService: WalletsService,
+  ) {}
 
   async findAll(
     query: MerchantQueryDto,
@@ -57,6 +61,12 @@ export class MerchantsService {
         throw new InternalServerErrorException(
           `No se pudo crear ${this.completeMessage}`,
         );
+      
+      // Generar Alias y QR al crear el perfil Merchant
+      if (res.user_id) {
+        await this.walletsService.generateAliasAndQr(res.user_id);
+      }
+      
       return res;
     } catch (error) {
       throw new InternalServerErrorException(error);
@@ -76,6 +86,12 @@ export class MerchantsService {
   async activateMerchant(id: string): Promise<Merchant> {
     try {
       const respuesta = await this.repository.activate(id);
+      
+      // Generar Alias y QR al activar el perfil Merchant
+      if (respuesta.user_id) {
+        await this.walletsService.generateAliasAndQr(respuesta.user_id);
+      }
+      
       return respuesta;
     } catch (error) {
       console.error(error);

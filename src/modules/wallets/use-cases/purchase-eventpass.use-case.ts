@@ -17,6 +17,7 @@ import { TransactionType } from 'src/modules/transaction-type/entities/transacti
 import { TransactionState } from 'src/modules/transaction-state/entities/transaction-state.entity';
 
 import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
+import { WalletPaymentService } from 'src/modules/wallets/wallet-payment.service';
 
 import { TransactionCode } from 'src/modules/transaction-type/enum/transaction-code';
 import { StatusCode } from 'src/modules/transaction-state/enum/status.enum'; 
@@ -47,6 +48,7 @@ export interface PurchaseEventPassUseCaseInput {
 export class PurchaseEventPassUseCase {
   constructor(
     private readonly superadminConfig: SuperadminConfigService,
+    private readonly walletPaymentService: WalletPaymentService,
   ) {}
 
   async execute(
@@ -127,22 +129,22 @@ export class PurchaseEventPassUseCase {
     }
 
     // ==========================================================
-    // SUPERADMIN WALLET
+    // ORGANIZER WALLET
     // ==========================================================
 
-    const superAdminWallet =
+    const organizerWallet =
       await manager.findOne(Wallet, {
         where: {
-          id: this.superadminConfig.getWalletId(),
+          user_id: eventPass.created_by_id,
         },
         lock: {
           mode: 'pessimistic_write',
         },
       });
 
-    if (!superAdminWallet) {
+    if (!organizerWallet) {
       throw new InternalServerErrorException(
-        'Superadmin wallet not found',
+        'Organizer wallet not found',
       );
     }
 
@@ -163,20 +165,49 @@ export class PurchaseEventPassUseCase {
       );
     }
 
-    // ==========================================================
-    // CREDIT SUPERADMIN
-    // ==========================================================
-
     const amountUsd =
       Number(eventPass.total_usd ?? eventPass.price_usd);
 
-    superAdminWallet.usd_balance =
-      Number(superAdminWallet.usd_balance) +
+    // ==========================================================
+    // INTERNAL WALLET DEBIT
+    // ==========================================================
+
+    if (paymentProvider === PaymentProviderEnum.WALLET) {
+      const userWallet = await manager.findOne(Wallet, {
+        where: {
+          user_id: userId,
+        },
+      });
+
+      if (!userWallet) {
+        throw new NotFoundException('User wallet not found');
+      }
+
+      await this.walletPaymentService.processPayment(
+        manager,
+        userWallet.id,
+        amountUsd,
+        {
+          type_id: saleType.id,
+          status_id: completedStatus.id,
+          reference: reference ?? `EVENTPASS-${eventPass.id}`,
+          external_provider: paymentProvider,
+          external_reference_id: paymentReferenceId,
+        }
+      );
+    }
+
+    // ==========================================================
+    // CREDIT ORGANIZER
+    // ==========================================================
+
+    organizerWallet.usd_balance =
+      Number(organizerWallet.usd_balance) +
       amountUsd;
 
     await manager.save(
       Wallet,
-      superAdminWallet,
+      organizerWallet,
     );
 
     // ==========================================================
@@ -184,7 +215,7 @@ export class PurchaseEventPassUseCase {
     // ==========================================================
 
     await manager.save(Transaction, {
-      wallet_id: superAdminWallet.id,
+      wallet_id: organizerWallet.id,
 
       type_id: saleType.id,
 
@@ -193,7 +224,7 @@ export class PurchaseEventPassUseCase {
       amount_usd: amountUsd,
 
       post_balance:
-        superAdminWallet.usd_balance,
+        organizerWallet.usd_balance,
 
       reference:
         reference ??
