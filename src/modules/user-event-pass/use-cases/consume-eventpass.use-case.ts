@@ -24,8 +24,8 @@ export class ConsumeEventPassUseCase {
     // 1️⃣ Buscar entrada adquirida con su EventPass y usuario
     const userPass = await manager.findOne(UserEventPass, {
       where: { id: userEventPassId },
-      relations: { event_pass: true },
       lock: { mode: 'pessimistic_write' },
+      loadEagerRelations: false,
     });
 
     const eventPass = await manager.findOne(EventPass, {

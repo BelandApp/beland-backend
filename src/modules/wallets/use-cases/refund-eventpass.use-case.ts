@@ -36,6 +36,7 @@ export class RefundEventPassUseCase {
     const userPass = await manager.findOne(UserEventPass, {
       where: { id: userEventPassId, user_id: userId },
       lock: { mode: 'pessimistic_write' },
+      loadEagerRelations: false,
     });
 
     if (!userPass) {
