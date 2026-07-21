@@ -348,6 +348,7 @@ export class PurchaseOrderPaymentUseCase {
         lock: {
           mode: 'pessimistic_write',
         },
+        loadEagerRelations: false,
       },
     );
 

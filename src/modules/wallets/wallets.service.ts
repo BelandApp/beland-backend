@@ -352,12 +352,16 @@ export class WalletsService {
 
       const to = await manager.findOne(Wallet, {
         where: { id: to_wallet_id },
-        relations: { user: { profiles: { profile: true } } },
         lock: { mode: 'pessimistic_write' },
       });
       if (!to) throw new NotFoundException('Billetera destino no existe');
       
-      const user = to.user;
+      const user = await manager.findOne(User, {
+        where: { id: to.user_id },
+        relations: { profiles: { profile: true } },
+      });
+      if (!user) throw new NotFoundException('Usuario de destino no existe');
+      
       const profiles = user.profiles?.map(p => p.profile?.name) ?? [];
       const from = await manager.findOne(Wallet, { 
         where: { user_id },
