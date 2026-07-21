@@ -34,6 +34,15 @@ export class WalletPaymentService {
       throw new NotFoundException('Wallet not found');
     }
 
+    console.log('\n====== DEBUG INSUFFICIENT BALANCE ======');
+    console.log('wallet.id:', wallet.id);
+    console.log('wallet.user_id:', wallet.user_id);
+    console.log('wallet.usd_balance (raw):', wallet.usd_balance);
+    console.log('wallet.usd_balance (Number):', Number(wallet.usd_balance));
+    console.log('wallet.locked_balance:', wallet.locked_balance);
+    console.log('amount recibido para debitar:', amount);
+    console.log('========================================\n');
+
     if (Number(wallet.usd_balance) < amount) {
       throw new BadRequestException('Insufficient wallet balance');
     }
