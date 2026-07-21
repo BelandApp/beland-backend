@@ -398,17 +398,17 @@ export class OrdersService {
 
       return savedOrder;
     } catch (err: any) {
-      await queryRunner.rollbackTransaction();
+          await queryRunner.rollbackTransaction();
 
-      // ✅ si ya es un HttpException, mantenerlo
-      if (err instanceof HttpException) {
-        throw err;
-      }
+          console.error('\n==============================');
+          console.error('ERROR ORIGINAL');
+          console.error('Constructor:', err?.constructor?.name);
+          console.error('Message:', err?.message);
+      console.error('Stack:', err?.stack);
+      console.error(err);
+      console.error('==============================\n');
 
-      // ❌ si es error inesperado
-      throw new InternalServerErrorException(
-        'Error interno al crear la orden',
-      );
+      throw err;
     } finally {
       await queryRunner.release();
     }
