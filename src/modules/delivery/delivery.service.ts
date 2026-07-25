@@ -6,7 +6,7 @@ import { firstValueFrom } from 'rxjs';
 export class DeliveryService {
   private readonly mapboxToken = process.env.MAPBOX_TOKEN;
   private readonly baseUrl = process.env.MAPBOX_URL;
-  private readonly costBaseDelivery = 1;
+  private readonly costBaseDelivery = 1.5;
 
   constructor(private readonly http: HttpService) {}
 
