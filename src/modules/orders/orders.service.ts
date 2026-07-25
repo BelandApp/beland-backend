@@ -732,7 +732,7 @@ export class OrdersService {
         const percentage = Number(this.superadminService.recicled_becoin);
 
         const becoinGreenToAdd = 
-          (Number(order.subtotal_amount) * (percentage / 100)) / this.superadminService.getPriceOneBecoin();
+          (Number(order.subtotal_amount) * percentage) / this.superadminService.getPriceOneBecoin();
         
 
         userWallet.becoin_green =
@@ -802,7 +802,7 @@ export class OrdersService {
       const percentage = Number(this.superadminService.recicled_becoin);
 
       const becoinGreenToAdd = 
-          (Number(order.subtotal_amount) * (percentage / 100)) / this.superadminService.getPriceOneBecoin();
+          (Number(order.subtotal_amount) * percentage) / this.superadminService.getPriceOneBecoin();
       
       userWallet.becoin_green =
         Number(userWallet.becoin_green) + becoinGreenToAdd;
