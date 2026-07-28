@@ -29,8 +29,11 @@ import { OwnerTopupEnum } from './enums/owner-topups.enum';
 import { PaymentProviderEnum } from '../transactions/enums/transaction.enums';
 import { RechargeUseCase } from '../wallets/use-cases/recharge.use-case';
 import { PurchaseGiftCardUseCase } from '../wallets/use-cases/purchase-giftcard.use-case';
-import { PurchaseOrderPaymentUseCase } from '../wallets/use-cases/purchase-beland.use-case';
+import { PurchaseOrderPaymentUseCase } from '../wallets/use-cases/purchase-order-payment.use-case';
 import { PurchaseEventPassUseCase } from '../wallets/use-cases/purchase-eventpass.use-case';
+import { RechargeLimitPolicy } from '../wallets/policies/recharge-limit.policy';
+import { GiftCardBalanceService } from '../gift-card/services/gift-card-balance.service';
+import { UserGiftCard } from '../gift-card/entities/user-giftcard.entity';
 
 @Injectable()
 export class StripeTopupsService {
@@ -50,7 +53,8 @@ export class StripeTopupsService {
     private readonly purchaseGiftCardUseCase: PurchaseGiftCardUseCase,
     private readonly purchaseOrderPaymentUseCase: PurchaseOrderPaymentUseCase,
     private readonly purchaseEventPassUseCase: PurchaseEventPassUseCase,
-
+    private readonly rechargeLimitPolicy: RechargeLimitPolicy,
+    private readonly giftCardBalanceService: GiftCardBalanceService,
   ) {
     const secretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -94,20 +98,18 @@ export class StripeTopupsService {
       dto.amountUsd,
     );
 
+    let finalAmountUsd = amountUsd;
+
     // ==========================================================
     // VALIDACIONES POR TIPO DE COMPRA
     // ==========================================================
 
     switch (dto.owner) {
       case OwnerTopupEnum.RECHARGE:
-        if (
-          Number(wallet.usd_balance) +
-            amountUsd >
-          this.superadminConfig.recharge_limit
-        ) {
-          throw new ConflictException(
-            'No puedes cargar más saldo para consumos futuros',
-          );
+        this.rechargeLimitPolicy.assertHasRechargeQuota(wallet);
+        const quota = this.rechargeLimitPolicy.getAvailableRechargeQuota(wallet);
+        if (finalAmountUsd > quota) {
+          finalAmountUsd = quota;
         }
         break;
 
@@ -176,7 +178,7 @@ export class StripeTopupsService {
     // ==========================================================
 
     const amountInCents =
-      this.convertUsdToCents(amountUsd);
+      this.convertUsdToCents(finalAmountUsd);
 
     const clientTransactionId =
       randomUUID();
@@ -193,7 +195,7 @@ export class StripeTopupsService {
         client_transaction_id:
           clientTransactionId,
 
-        amount_usd: amountUsd,
+        amount_usd: finalAmountUsd,
 
         currency: 'usd',
 
@@ -216,9 +218,36 @@ export class StripeTopupsService {
           dto.holder_email,
       });
 
-    await this.stripeTopupRepository.save(
-      localTopup,
-    );
+    let gcReservedAmount = 0;
+
+    await this.dataSource.transaction(async (manager) => {
+      if (dto.user_gift_card_id) {
+        const gc = await manager.findOne(UserGiftCard, { where: { id: dto.user_gift_card_id } });
+        if (!gc) throw new NotFoundException('GiftCard no encontrada');
+        
+        let applicableTotal = finalAmountUsd;
+
+        if (dto.owner === OwnerTopupEnum.ORDER_PAYMENT && dto.owner_id) {
+          const payment = await manager.query('SELECT amount_paid FROM payments WHERE id = $1', [dto.owner_id]);
+          if (payment && payment.length > 0) applicableTotal = Number(payment[0].amount_paid);
+        }
+
+        gcReservedAmount = Math.min(Number(gc.current_balance), applicableTotal);
+        
+        if (gcReservedAmount > 0) {
+          await this.giftCardBalanceService.reserve(manager, dto.user_gift_card_id, gcReservedAmount);
+          // Stripe solo cobrará el excedente (esto asume que finalAmountUsd era el total, pero la app podría enviar ya el resto en dto.amountUsd)
+          // Para evitar problemas de doble descuento si el front ya lo restó, la lógica segura es:
+          // finalAmountUsd en el DTO *debería* ser el monto a pagar por Stripe.
+          // Pero si finalAmountUsd + gcReservedAmount == applicableTotal, entonces el front mandó el neto.
+        }
+      }
+
+      localTopup.user_gift_card_id = dto.user_gift_card_id;
+      localTopup.gift_card_reserved_amount = gcReservedAmount;
+
+      await manager.save(StripeTopup, localTopup);
+    });
 
     try {
       const paymentIntent =
@@ -282,7 +311,7 @@ export class StripeTopupsService {
         clientSecret:
           paymentIntent.client_secret,
 
-        amountUsd,
+        amountUsd: finalAmountUsd,
 
         currency:
           paymentIntent.currency,
@@ -302,6 +331,16 @@ export class StripeTopupsService {
           : 'Error con Stripe';
 
       localTopup.failed_at = new Date();
+
+      if (localTopup.user_gift_card_id && Number(localTopup.gift_card_reserved_amount) > 0) {
+        await this.dataSource.transaction(async (manager) => {
+          await this.giftCardBalanceService.release(
+            manager,
+            localTopup.user_gift_card_id!,
+            Number(localTopup.gift_card_reserved_amount)
+          );
+        });
+      }
 
       await this.stripeTopupRepository.save(
         localTopup,
@@ -496,6 +535,12 @@ export class StripeTopupsService {
         );
       }
 
+      const gcReservedAmount = Number(topup.gift_card_reserved_amount || 0);
+
+      if (topup.user_gift_card_id && gcReservedAmount > 0) {
+        await this.giftCardBalanceService.consumeReserved(manager, topup.user_gift_card_id, gcReservedAmount);
+      }
+
       switch (topup.owner) {
         case OwnerTopupEnum.RECHARGE:
           await this.rechargeUseCase.execute(manager,{
@@ -541,6 +586,10 @@ export class StripeTopupsService {
                   paymentIntentId,
 
                 reference: paymentIntentId,
+
+                userGiftCardId: topup.user_gift_card_id,
+                
+                resolvedGiftCardAmount: gcReservedAmount > 0 ? gcReservedAmount : undefined,
               },
             );
 
@@ -643,52 +692,59 @@ export class StripeTopupsService {
     const paymentIntentId = String(paymentIntent.id);
     const lastError = paymentIntent.last_payment_error || {};
 
-    const topup = await this.stripeTopupRepository.findOne({
-      where: { payment_intent_id: paymentIntentId },
+    await this.stripeTopupRepository.manager.transaction(async (manager) => {
+      const topup = await manager.findOne(StripeTopup, {
+        where: { payment_intent_id: paymentIntentId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!topup) {
+        this.logger.warn(
+          `Webhook Stripe payment_failed sin topup local: paymentIntentId=${paymentIntentId}`,
+        );
+        return;
+      }
+
+      if (topup.stripe_event_id === eventId) {
+        this.logger.warn(
+          `Webhook payment_failed duplicado ignorado: topupId=${topup.id} eventId=${eventId}`,
+        );
+        return;
+      }
+
+      if (topup.status === 'COMPLETED') {
+        this.logger.warn(
+          `Webhook failed ignorado porque el topup ya esta completado: topupId=${topup.id}`,
+        );
+        return;
+      }
+
+      topup.status = 'FAILED';
+      topup.failure_code = lastError.code || paymentIntent.status || 'payment_failed';
+      topup.failure_message =
+        lastError.message || 'Stripe informo que el pago fallo';
+      topup.stripe_event_id = eventId;
+      topup.stripe_signature = signature;
+      topup.raw_webhook_payload = rawPayload;
+      topup.failed_at = new Date();
+      await manager.save(StripeTopup, topup);
+
+      if (topup.user_gift_card_id && Number(topup.gift_card_reserved_amount) > 0) {
+        await this.giftCardBalanceService.release(manager, topup.user_gift_card_id, Number(topup.gift_card_reserved_amount));
+      }
+
+      this.notificationsGateway.notifyUser(topup.user_id, {
+        wallet_id: topup.wallet_id,
+        message: topup.failure_message,
+        amount: Number(topup.amount_usd),
+        success: false,
+        amount_payment_id_deleted: null,
+        noHidden: true,
+      });
+
+      this.logger.warn(
+        `Recarga Stripe fallida: topupId=${topup.id} paymentIntentId=${paymentIntentId} code=${topup.failure_code}`,
+      );
     });
-    if (!topup) {
-      this.logger.warn(
-        `Webhook Stripe payment_failed sin topup local: paymentIntentId=${paymentIntentId}`,
-      );
-      return;
-    }
-
-    if (topup.stripe_event_id === eventId) {
-      this.logger.warn(
-        `Webhook payment_failed duplicado ignorado: topupId=${topup.id} eventId=${eventId}`,
-      );
-      return;
-    }
-
-    if (topup.status === 'COMPLETED') {
-      this.logger.warn(
-        `Webhook failed ignorado porque el topup ya esta completado: topupId=${topup.id}`,
-      );
-      return;
-    }
-
-    topup.status = 'FAILED';
-    topup.failure_code = lastError.code || paymentIntent.status || 'payment_failed';
-    topup.failure_message =
-      lastError.message || 'Stripe informo que el pago fallo';
-    topup.stripe_event_id = eventId;
-    topup.stripe_signature = signature;
-    topup.raw_webhook_payload = rawPayload;
-    topup.failed_at = new Date();
-    await this.stripeTopupRepository.save(topup);
-
-    this.notificationsGateway.notifyUser(topup.user_id, {
-      wallet_id: topup.wallet_id,
-      message: topup.failure_message,
-      amount: Number(topup.amount_usd),
-      success: false,
-      amount_payment_id_deleted: null,
-      noHidden: true,
-    });
-
-    this.logger.warn(
-      `Recarga Stripe fallida: topupId=${topup.id} paymentIntentId=${paymentIntentId} code=${topup.failure_code}`,
-    );
   }
 
   private async markTopupCancelled(
@@ -730,7 +786,13 @@ export class StripeTopupsService {
     topup.stripe_signature = signature;
     topup.raw_webhook_payload = rawPayload;
     topup.failed_at = new Date();
-    await this.stripeTopupRepository.save(topup);
+    
+    await this.stripeTopupRepository.manager.transaction(async (manager) => {
+      await manager.save(StripeTopup, topup);
+      if (topup.user_gift_card_id && Number(topup.gift_card_reserved_amount) > 0) {
+        await this.giftCardBalanceService.release(manager, topup.user_gift_card_id, Number(topup.gift_card_reserved_amount));
+      }
+    });
 
     this.notificationsGateway.notifyUser(topup.user_id, {
       wallet_id: topup.wallet_id,

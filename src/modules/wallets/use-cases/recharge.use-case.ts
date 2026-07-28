@@ -14,11 +14,15 @@ import { SuperadminConfigService } from '../../superadmin-config/superadmin-conf
 import { TransactionCode } from '../../transaction-type/enum/transaction-code';
 import { RechargeDto, RechargeResponseDto } from '../dto/recharge.dto';
 
+import { RechargeLimitPolicy } from '../policies/recharge-limit.policy';
+import { GenerateOrangeRewardUseCase } from '../../rewards/becoin-orange/use-cases/generate-orange-reward.use-case';
 
 @Injectable()
 export class RechargeUseCase {
   constructor(
     private readonly superadminConfig: SuperadminConfigService,
+    private readonly rechargeLimitPolicy: RechargeLimitPolicy,
+    private readonly generateOrangeRewardUseCase: GenerateOrangeRewardUseCase,
   ) {}
 
   async execute(
@@ -50,6 +54,8 @@ export class RechargeUseCase {
       );
     }
 
+    this.rechargeLimitPolicy.assertRechargeWithinLimits(wallet, amountUsd);
+
     const previousBalance = Number(wallet.usd_balance);
 
     // Tipo RECHARGE
@@ -68,21 +74,6 @@ export class RechargeUseCase {
       );
     }
 
-    // Tipo ORANGE
-    const orangeType = await manager.findOne(
-      TransactionType,
-      {
-        where: {
-          code: TransactionCode.ORANGE_CREDIT,
-        },
-      },
-    );
-
-    if (!orangeType) {
-      throw new ConflictException(
-        `No existe ${TransactionCode.ORANGE_CREDIT}`,
-      );
-    }
 
     // Estado
     const completedStatus = await manager.findOne(
@@ -142,25 +133,14 @@ export class RechargeUseCase {
       );
 
       if (orangeFee > 0) {
-        wallet.becoin_orange =
-          Number(wallet.becoin_orange) +
-          orangeFee;
-
-        await manager.save(wallet);
-
-        const orangeTransaction =
-          await manager.save(Transaction, {
-            wallet_id: wallet.id,
-            type_id: orangeType.id,
-            status_id: completedStatus.id,
-            amount_usd: orangeFee * priceOneBecoin,
-            post_balance: wallet.becoin_orange,
-            referenceCode,
-            external_provider: paymentProvider,
-            external_reference_id: paymentReferenceId,
-          });
-        orangeTransactionId =
-          orangeTransaction.id;
+        // En lugar de tocar la BD directamente, delegamos en el UseCase del Dominio Orange
+        orangeTransactionId = await this.generateOrangeRewardUseCase.execute(
+          manager,
+          wallet.id,
+          orangeFee,
+          `Crédito promocional por recarga ${paymentReferenceId}`,
+          paymentReferenceId
+        );
       }
     }
 

@@ -12,7 +12,10 @@ import { SuperadminModule } from 'src/modules/superadmin-config/superadmin-confi
 import { RechargeUseCase } from '../wallets/use-cases/recharge.use-case';
 import { PurchaseEventPassUseCase } from '../wallets/use-cases/purchase-eventpass.use-case';
 import { PurchaseGiftCardUseCase } from '../wallets/use-cases/purchase-giftcard.use-case';
-import { PurchaseOrderPaymentUseCase } from '../wallets/use-cases/purchase-beland.use-case';
+import { PurchaseOrderPaymentUseCase } from '../wallets/use-cases/purchase-order-payment.use-case';
+import { WalletPaymentService } from '../wallets/wallet-payment.service';
+import { WalletsModule } from '../wallets/wallets.module';
+import { GiftCardModule } from '../gift-card/gift-card.module';
 
 @Module({
   imports: [
@@ -25,11 +28,11 @@ import { PurchaseOrderPaymentUseCase } from '../wallets/use-cases/purchase-belan
     ]),
     NotificationsSocketModule,
     SuperadminModule,
+    WalletsModule,
+    GiftCardModule,
   ],
   controllers: [StripeTopupsController],
-  providers: [StripeTopupsService, RechargeUseCase, 
-    PurchaseEventPassUseCase, PurchaseGiftCardUseCase, 
-    PurchaseOrderPaymentUseCase],
+  providers: [StripeTopupsService],
   exports: [StripeTopupsService],
 })
 export class StripeTopupsModule {}

@@ -8,7 +8,7 @@ import {
 import * as QRCode from 'qrcode';
 import { WalletsRepository } from './wallets.repository';
 import { Wallet } from './entities/wallet.entity';
-import { DataSource, QueryRunner } from 'typeorm';
+import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import { RechargeDto } from './dto/recharge.dto';
 import { Transaction } from 'src/modules/transactions/entities/transaction.entity';
 import { TransferDto } from './dto/transfer.dto';
@@ -24,6 +24,15 @@ import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
 import { ProfileEnum } from 'src/modules/users/enums/profiles.enum';
 import { RoleEnum } from 'src/modules/roles/enum/role-validate.enum';
 import { PaymentProviderEnum } from '../transactions/enums/transaction.enums';
+import { PurchaseMerchantUseCase } from './use-cases/purchase-merchant.use-case';
+import { DonationUseCase } from './use-cases/donation.use-case';
+import { SendGiftCardUseCase } from './use-cases/send-giftcard.use-case';
+import { PurchaseGiftCardUseCase } from './use-cases/purchase-giftcard.use-case';
+import { PurchaseGiftCardDto } from './dto/purchase-giftcard.dto';
+import { TransferGiftCardDto } from './dto/transfer-giftcard.dto';
+import { UserGiftCard } from 'src/modules/gift-card/entities/user-giftcard.entity';
+import { RechargeUseCase } from './use-cases/recharge.use-case';
+import { PurchaseBelandUseCase } from './use-cases/purchase-beland.use-case';
 
 @Injectable()
 export class WalletsService {
@@ -35,8 +44,14 @@ export class WalletsService {
     private readonly repository: WalletsRepository,
     private readonly superadminConfig: SuperadminConfigService,
     private readonly dataSource: DataSource, // 👈 acá lo inyectás
-   private readonly notificationsGateway: NotificationsGateway,)
-  {}
+    private readonly notificationsGateway: NotificationsGateway,
+    private readonly purchaseMerchantUseCase: PurchaseMerchantUseCase,
+    private readonly donationUseCase: DonationUseCase,
+    private readonly sendGiftCardUseCase: SendGiftCardUseCase,
+    private readonly purchaseGiftCardUseCase: PurchaseGiftCardUseCase,
+    private readonly rechargeUseCase: RechargeUseCase,
+    private readonly purchaseBelandUseCase: PurchaseBelandUseCase,
+  ) {}
 
   async findAll(
     pageNumber: number,
@@ -188,298 +203,140 @@ export class WalletsService {
   async recharge(
     user_id: string,
     dto: RechargeDto,
-    queryRun?: QueryRunner,
+    externalManager?: EntityManager,
   ): Promise<{ wallet: Wallet }> {
-    let queryRunner: QueryRunner;
-    if (queryRun) {
-      queryRunner = queryRun;
-    } else {
-      const qr = this.dataSource.createQueryRunner();
-      await qr.connect();
-      await qr.startTransaction();
-      queryRunner = qr;
-    }
-
-    try {
-      const paymentReferenceId = String(dto.paymentReferenceId);
-      // 1) Certificar que exista la wallet
-      const wallet = await queryRunner.manager.findOne(Wallet, {
+    const runRecharge = async (activeManager: EntityManager) => {
+      const wallet = await activeManager.findOne(Wallet, {
         where: { user_id },
-        lock: { mode: 'pessimistic_write' },
       });
       if (!wallet) throw new NotFoundException('No se encuentra la billetera');
-
-      if (Number(wallet.usd_balance)+Number(dto.amountUsd) > this.superadminConfig.recharge_limit) {
-        throw new ConflictException("Solo puede tener para consumos futuros hasta 100 USD.");
-      }
-
-      // 2) Certificar que exista el tipo de transacción 'RECHARGE'
-      const type = await queryRunner.manager.findOne(TransactionType, {
-        where: { code: TransactionCode.RECHARGE },
-      });
-      if (!type)
-        throw new ConflictException(
-          'No se encuentra el tipo ',
-          TransactionCode.RECHARGE,
-        );
-
-      const typeOrange = await queryRunner.manager.findOne(TransactionType, {
-        where: { code: TransactionCode.ORANGE_CREDIT },
-      });
-      if (!type)
-        throw new ConflictException(
-          'No se encuentra el tipo ',
-          TransactionCode.ORANGE_CREDIT,
-        );
-
-      // 3) Certificar que exista el estado 'COMPLETED'
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: 'COMPLETED' },
-      });
-      if (!status)
-        throw new ConflictException("No se encuentra el estado 'COMPLETED'");
-
-      // 4) Convertir USD a Becoin con validación
-      const amountUsd = Number(dto.amountUsd);
-
-      const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
-      if (isNaN(amountUsd) || amountUsd <= 0) {
-        throw new BadRequestException('El monto de recarga no es válido');
-      }
-      if (isNaN(priceOneBecoin) || priceOneBecoin < 0) {
-        throw new InternalServerErrorException(
-          'El precio de BeCoin no es válido',
-        );
-      }
-
-      // 1) Calcular BeCoins totales (sin redondear todavía)
-      const rawBecoinAmount = amountUsd / priceOneBecoin;
-
-      // 2) Redondear BeCoins totales
-      const totalBeCoins = Math.floor(rawBecoinAmount);
-
-      // 3) Calcular 5% para orange
-      const orangeFee = Math.floor(totalBeCoins * 0.06);
-
-
-      // 5) Actualizar wallet
-      wallet.usd_balance =
-        Number(wallet.usd_balance) + amountUsd;
-
-      wallet.becoin_orange =
-        Number(wallet.becoin_orange) + orangeFee;
-
-      // 6) Fallback de seguridad
-      if (isNaN(wallet.usd_balance)) 
-        throw new InternalServerErrorException('Error al incrementar el saldo');
-
-
-      // 7) Guardar
-      const walletUpdated = await queryRunner.manager.save(wallet);
-
-
-      // 6) Registrar la transacción del balance general
-      await queryRunner.manager.save(Transaction, {
-        wallet_id: wallet.id,
-        type_id: type.id,
-        status_id: status.id,
-        amount_usd: amountUsd,
-        post_balance: wallet.usd_balance,
-        reference: dto.referenceCode,
-        external_reference_id: paymentReferenceId,
+      
+      const result = await this.rechargeUseCase.execute(activeManager, {
+        walletId: wallet.id,
+        amountUsd: Number(dto.amountUsd),
+        referenceCode: dto.referenceCode,
+        paymentReferenceId: String(dto.paymentReferenceId),
+        paymentProvider: dto.paymentProvider || PaymentProviderEnum.PAYPHONE,
       });
 
-      // 6) Registrar la transacción de las becoin_orange
-      await queryRunner.manager.save(Transaction, {
-        wallet_id: wallet.id,
-        type_id: typeOrange.id,
-        status,
-        amount_usd: +orangeFee*priceOneBecoin,
-        post_balance: wallet.becoin_orange,
-        reference: dto.referenceCode,
-        external_provider: PaymentProviderEnum.PAYPHONE,
-        external_reference_id: paymentReferenceId,
-        clientTransactionId: null,
-      });
-
-      // ✅ Confirmar la transacción
-      if (!queryRun) await queryRunner.commitTransaction();
-
-      // 7) Retornar la wallet actualizada
+      const walletUpdated = await activeManager.findOne(Wallet, { where: { id: result.walletId } });
       return { wallet: walletUpdated };
+    };
+
+    try {
+      if (externalManager) {
+        return await runRecharge(externalManager);
+      } else {
+        return await this.dataSource.transaction(async (manager) => {
+          return await runRecharge(manager);
+        });
+      }
     } catch (error) {
-      // ❌ Deshacer todo si algo falla
-      if (!queryRun) await queryRunner.rollbackTransaction();
       if (this.isClientTransactionDuplicateError(error)) {
-        throw new ConflictException(
-          'La transacción de Payphone ya fue procesada anteriormente.',
-        );
+        throw new ConflictException('La transacción de Payphone ya fue procesada anteriormente.');
       }
       throw error;
-    } finally {
-      // Cerrar el queryRunner
-      if (!queryRun) await queryRunner.release();
     }
   }
 
   //FIN DE FUNCIONES PARA RECARGAS DE SALDO
 
-  // FUNCION GENERICA PARA TRANSFERENCIAS
-  async transfer(
+  async purchaseBecoin(user_id: string, dto: TransferDto): Promise<{ wallet: Wallet }> {
+    const resultData = await this.dataSource.transaction(async (manager) => {
+      const from = await manager.findOne(Wallet, { where: { user_id }, lock: { mode: 'pessimistic_write' } });
+      const to = await manager.findOne(Wallet, { where: { id: dto.toWalletId }, lock: { mode: 'pessimistic_write' } });
+      const result = await this.purchaseMerchantUseCase.execute(manager, {
+        buyerWalletId: from.id,
+        merchantWalletId: to.id,
+        amountUsd: +dto.amountUsd,
+        amountPaymentId: dto.amount_payment_id
+      });
+      const tx = await manager.findOne(Transaction, { where: { id: result.transaction.id }, relations: { related_wallet: { user: true }, type: true, status: true } });
+      return { toId: to.id, merchantUserId: result.merchantUserId, transaction: tx };
+    });
+
+    this.notificationsGateway.notifyUser(resultData.merchantUserId, {
+      wallet_id: resultData.toId, message: "Cobro Realizado con Éxito", amount: +dto.amountUsd, success: true, amount_payment_id_deleted: dto.amount_payment_id || null, noHidden: true,
+    });
+    return resultData.transaction as any;
+  }
+
+  async purchaseGiftCard(userId: string, dto: PurchaseGiftCardDto): Promise<UserGiftCard> {
+    return await this.dataSource.transaction(async (manager) => {
+      const from = await manager.findOne(Wallet, { where: { user_id: userId } });
+      const result = await this.purchaseGiftCardUseCase.execute({
+        manager,
+        buyerWalletId: from.id,
+        recipientWalletId: dto.recipientWalletId,
+        giftCardId: dto.giftCardId,
+        paymentProvider: PaymentProviderEnum.PAYPHONE,
+        paymentReferenceId: dto.paymentReferenceId,
+      });
+      return result;
+    });
+  }
+
+  async purchaseGiftCardTransfer(userId: string, dto: TransferGiftCardDto): Promise<UserGiftCard> {
+    return await this.dataSource.transaction(async (manager) => {
+      const from = await manager.findOne(Wallet, { where: { user_id: userId } });
+      const result = await this.purchaseGiftCardUseCase.execute({
+        manager,
+        buyerWalletId: from.id,
+        recipientWalletId: dto.recipientWalletId,
+        giftCardId: dto.giftCardId,
+        paymentProvider: PaymentProviderEnum.TRANSFER,
+        paymentReferenceId: dto.paymentReferenceId,
+      });
+      return result;
+    });
+  }
+
+  // FUNCION GENERICA PARA TRANSFERENCIAS P2P
+  async sendGiftCardTransfer(
     user_id: string,
     dto: TransferDto,
-    code_transaction_send?: string,
-    code_transaction_received?: string,
-    queryRun?: QueryRunner,
   ): Promise<{ wallet: Wallet }> {
-    
-    let queryRunner: QueryRunner;
-    if (queryRun) {queryRunner=queryRun}
-    else {
-      const queryRun2 = this.dataSource.createQueryRunner();
-      await queryRun2.connect();
-      await queryRun2.startTransaction();
-      queryRunner=queryRun2
-    }
-
-    try {
-
-      // 1) certifico que exista la wallet origen y que tenga los fondos
-      const from = await queryRunner.manager.findOne(Wallet, {
-        where: { user_id },
-        lock: { mode: 'pessimistic_write' },
+    const resultData = await this.dataSource.transaction(async (manager) => {
+      const from = await manager.findOne(Wallet, { 
+        where: { user_id }, 
+        lock: { mode: 'pessimistic_write' } 
       });
-      if (!from) throw new NotFoundException('No se encuentra la Billetera');
-      if (Number(from.usd_balance) < +dto.amountUsd)
-        throw new BadRequestException('Saldo insuficiente');
-
-      // 2) certifico que exista la wallet de destino
-      const to = await queryRunner.manager.findOne(Wallet, {
-        where: { id: dto.toWalletId },
-        lock: { mode: 'pessimistic_write' },
+      if (!from) throw new NotFoundException('No se encuentra la Billetera origen');
+      
+      const to = await manager.findOne(Wallet, { 
+        where: { id: dto.toWalletId }, 
+        lock: { mode: 'pessimistic_write' } 
       });
       if (!to) throw new NotFoundException('Billetera destino no existe');
 
-      // 2 Bis) Si no se especifica el tipo de transaccion lo agrego segun el tipo de usuario 
-      // de la wallet destino.
-      if (!code_transaction_send) {
-        const user: User = await queryRunner.manager.findOne(User, {
-          where: { wallet: {id: to.id} },
-          relations: { profiles: { profile: true } },
-        });
-        if (!user) throw new NotFoundException('Usuario destino no existe');
-        const profiles = user.profiles?.map((p) => p.profile?.name) ?? [];
-
-        if (profiles.includes(ProfileEnum.MERCHANT)) {
-          code_transaction_send = TransactionCode.PURCHASE;
-          code_transaction_received = TransactionCode.SALE;
-        } else if (profiles.includes(ProfileEnum.FOUNDATION)) {
-          code_transaction_send = TransactionCode.DONATION_SEND;
-          code_transaction_received = TransactionCode.DONATION_RECEIVED;
-        } else if (user.role_name === RoleEnum.SUPERADMIN) {
-          code_transaction_send = TransactionCode.PURCHASE_BELAND;
-          code_transaction_received = TransactionCode.SALE_BELAND;
-        } else {
-          code_transaction_send = TransactionCode.GIFTCARD_SEND;
-          code_transaction_received = TransactionCode.GIFTCARD_RECEIVED;
-        }
-      }
-
-      // 3) chequeo que exista el estado y el tipo de transaccion necesarios
-      let type = await queryRunner.manager.findOne(TransactionType, {
-        where: { code: code_transaction_send },
-      });
-      if (!type)
-        throw new ConflictException(
-          `No se encuentra el tipo ${code_transaction_send}`,
-        );
-
-      const status = await queryRunner.manager.findOne(TransactionState, {
-        where: { code: 'COMPLETED' },
-      });
-      if (!status)
-        throw new ConflictException("No se encuentra el estado 'COMPLETED'");
-
-      // 4) Debitar usd_balance
-      from.usd_balance = +from.usd_balance - +dto.amountUsd;
-      const walletUpdate = await queryRunner.manager.save(from);
-
-      // 5) registro egreso del origen
-      const transactionSend = await queryRunner.manager.save(Transaction, {
-        wallet_id: from.id,
-        type,
-        status,
-        amount_usd: -dto.amountUsd,
-        post_balance: from.usd_balance,
-        related_wallet_id: to.id,
-        reference: `${code_transaction_send}-${dto.toWalletId}`,
+      const giftCardResult = await this.sendGiftCardUseCase.execute(manager, {
+        senderWalletId: from.id,
+        recipientWalletId: to.id,
+        amountUsd: +dto.amountUsd,
       });
 
-      // 6) Chequeo que exista el tipo de transaccion necesario
-      type = await queryRunner.manager.findOne(TransactionType, {
-        where: { code: code_transaction_received },
+      const tx = await manager.findOne(Transaction, {
+        where: { id: giftCardResult.transaction.id },
+        relations: { related_wallet: { user: true }, type: true, status: true }
       });
-      if (!type)
-        throw new ConflictException(
-          `No se encuentra el tipo ${code_transaction_received}`,
-        );
+      return { recipientUserId: giftCardResult.recipientUserId, toId: to.id, transaction: tx };
+    });
 
-      // 7) Acreditar destino
-      to.usd_balance = +to.usd_balance + +dto.amountUsd;
-      await queryRunner.manager.save(to);
+    this.notificationsGateway.notifyUser(resultData.recipientUserId, {
+      wallet_id: resultData.toId,
+      message: "Cobro Realizado con Éxito",
+      amount: +dto.amountUsd,
+      success: true,
+      amount_payment_id_deleted: null,
+      noHidden: true,
+    });
 
-      // 8) registro ingreso del destino
-      await queryRunner.manager.save(Transaction, {
-        wallet_id: to.id,
-        type,
-        status,
-        amount_usd: dto.amountUsd,
-        post_balance: to.usd_balance,
-        related_wallet_id: from.id,
-        reference: `${code_transaction_received}-${from.id}`,
-      });
-
-      // 9) Si vino amountID entonces elimino el monto creado.
-      if (dto.amount_payment_id) {
-        await queryRunner.manager.delete(AmountToPayment, {
-          id: dto.amount_payment_id,
-        }); 
-      }
-
-      // COMMIT
-      if (!queryRun) await queryRunner.commitTransaction();
-
-      this.notificationsGateway.notifyUser(to.user_id, {
-        wallet_id: to.id,
-        message: "Cobro Realizado con Éxito",
-        amount: +dto.amountUsd,
-        success: true,
-        amount_payment_id_deleted: dto.amount_payment_id || null,
-        noHidden: true,
-      });   
-
-      // se debe eliminar del front el amount to payment eliminado
-      return await this.dataSource.manager.findOne (Transaction, {
-        where : {id:transactionSend.id},
-        relations: {related_wallet:{user:true}, type:true, status:true}
-      });
-    } catch (error) {
-      // ❌ Deshago todo si algo falla
-      if (!queryRun) await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      // Cierro el queryRunner
-      if (!queryRun) await queryRunner.release();
-    }
+    return resultData.transaction as any;
   }
 
   async purchaseRecarge (user_id:string, to_wallet_id: string, dto: PaymentWithRechargeDto): Promise<{wallet: Wallet}> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-
+    const resultData = await this.dataSource.transaction(async (manager) => {
+      // 1. Efectuar la recarga usando la transacción actual
       const walletRecharge = await this.recharge(
         user_id,
         {
@@ -488,103 +345,97 @@ export class WalletsService {
           paymentReferenceId: dto.paymentReferenceId,
           paymentProvider: PaymentProviderEnum.PAYPHONE,
         },
-        queryRunner
-      ) 
+        manager
+      );
 
-      if (!walletRecharge) throw new ConflictException("Fallo la recarga");
+      if (!walletRecharge) throw new ConflictException("Falló la recarga");
 
-      const amount_payment_id = dto.amount_payment_id;
+      const to = await manager.findOne(Wallet, {
+        where: { id: to_wallet_id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!to) throw new NotFoundException('Billetera destino no existe');
+      
+      const user = await manager.findOne(User, {
+        where: { id: to.user_id },
+        relations: { profiles: { profile: true } },
+      });
+      if (!user) throw new NotFoundException('Usuario de destino no existe');
+      
+      const profiles = user.profiles?.map(p => p.profile?.name) ?? [];
+      const from = await manager.findOne(Wallet, { 
+        where: { user_id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!from) throw new NotFoundException('Billetera origen no existe');
 
-      const transferResult = await this.transfer(
-          user_id,
-          {
-            toWalletId: to_wallet_id,
-            amountUsd: +dto.amountUsd,
-            amount_payment_id,
-          },
-          undefined,
-          undefined,
-          queryRunner
-        );
+      let transactionResult: Transaction;
+      let targetUserId = to.user_id;
 
-      await queryRunner.commitTransaction();
-      return transferResult as any;
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
+      if (profiles.includes(ProfileEnum.MERCHANT)) {
+        const result = await this.purchaseMerchantUseCase.execute(manager, {
+          buyerWalletId: from.id,
+          merchantWalletId: to.id,
+          amountUsd: +dto.amountUsd,
+          amountPaymentId: dto.amount_payment_id
+        });
+        transactionResult = result.transaction;
+      } else if (profiles.includes(ProfileEnum.FOUNDATION)) {
+        const result = await this.donationUseCase.execute(manager, {
+          buyerWalletId: from.id,
+          foundationWalletId: to.id,
+          amountUsd: +dto.amountUsd,
+          amountPaymentId: dto.amount_payment_id
+        });
+        transactionResult = result.transaction;
+        targetUserId = result.foundationUserId;
+      } else if (user.role_name === RoleEnum.SUPERADMIN) {
+        transactionResult = await this.purchaseBeland(from.id, to.id, +dto.amountUsd, dto.referenceCode || `PAYMENT-${to.id}`, dto.amount_payment_id || null, manager);
+      } else {
+        const result = await this.sendGiftCardUseCase.execute(manager, {
+          senderWalletId: from.id,
+          recipientWalletId: to.id,
+          amountUsd: +dto.amountUsd
+        });
+        transactionResult = result.transaction;
+      }
+
+      const tx = await manager.findOne(Transaction, {
+        where: { id: transactionResult.id },
+        relations: { related_wallet: { user: true }, type: true, status: true }
+      });
+      
+      return { targetUserId, toId: to.id, transaction: tx };
+    });
+
+    this.notificationsGateway.notifyUser(resultData.targetUserId, {
+      wallet_id: resultData.toId,
+      message: "Cobro Realizado con Éxito",
+      amount: +dto.amountUsd,
+      success: true,
+      amount_payment_id_deleted: dto.amount_payment_id || null,
+      noHidden: true,
+    });
+
+    return resultData.transaction as any;
   }
 
   async purchaseBeland(
-    wallet_id: string,
+    from_wallet_id: string,
+    to_wallet_id: string,
     amountUsd: number,
     referenceCode: string,
+    amountPaymentId: string | null,
+    manager: EntityManager
   ): Promise<Transaction> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // 1) Chequear que exista la billetera con FOR UPDATE (para evitar race conditions)
-      const wallet: Wallet = await queryRunner.manager.findOne(Wallet, {
-        where: { id: wallet_id }
-      });
-      if (!wallet) throw new NotFoundException('No se encuentra la billetera');
-
-      // 2) Buscar tipo y estado
-      const type: TransactionType = await queryRunner.manager.findOne(
-        TransactionType,
-        {
-          where: { code: 'PURCHASE_BELAND' },
-        },
-      );
-      if (!type)
-        throw new ConflictException(
-          "No se encuentra el tipo 'PURCHASE_BELAND'",
-        );
-
-      const status: TransactionState = await queryRunner.manager.findOne(
-        TransactionState,
-        {
-          where: { code: 'COMPLETED' },
-        },
-      );
-      if (!status)
-        throw new ConflictException("No se encuentra el estado 'COMPLETED'");
-
-      // 3) Validar saldo
-      if (+wallet.usd_balance < amountUsd)
-        throw new ConflictException('Saldo insuficiente');
-
-      wallet.usd_balance = +wallet.usd_balance - +amountUsd;
-
-      // 4) Actualizar billetera
-      await queryRunner.manager.save(wallet);
-
-      // 5) Registrar transacción
-      const tx: Transaction = queryRunner.manager.create(Transaction, {
-        wallet_id: wallet.id,
-        type_id: type.id,
-        status_id: status.id,
-        amount_usd: amountUsd,
-        post_balance: wallet.usd_balance,
-        reference: referenceCode,
-      });
-      const txSaved = await queryRunner.manager.save(tx);
-
-      // 6) Confirmar transacción
-      await queryRunner.commitTransaction();
-      return txSaved;
-    } catch (error) {
-      // Si algo falla, revertimos todo
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      // Liberar el queryRunner
-      await queryRunner.release();
-    }
+    const result = await this.purchaseBelandUseCase.execute(manager, {
+      buyerWalletId: from_wallet_id,
+      destinationWalletId: to_wallet_id,
+      amountUsd,
+      referenceCode,
+      amountPaymentId,
+    });
+    return result.transaction;
   }
   //FIN DE DIFERENTES TIPOS DE COMPRAS
   async generateAliasAndQr (user_id: string): Promise<Wallet> {
@@ -647,7 +498,7 @@ export class WalletsService {
       .createQueryBuilder()
       .select('wallet')
       .from(Wallet, 'wallet')
-      .where('wallet.qr IS NULL OR wallet.qr = \'\'')
+      .where("wallet.qr IS NULL OR wallet.qr = ''")
       .getMany();
 
     let updated = 0;

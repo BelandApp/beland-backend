@@ -35,6 +35,9 @@ import { RespCobroDto } from './dto/resp-cobro.dto';
 import { PaymentWithRechargeDto } from './dto/payment-with-recharge.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { PurchaseGiftCardDto } from './dto/purchase-giftcard.dto';
+import { TransferGiftCardDto } from './dto/transfer-giftcard.dto';
+import { UserGiftCard } from 'src/modules/gift-card/entities/user-giftcard.entity';
 
 @ApiTags('wallets')
 @Controller('wallets')
@@ -254,12 +257,7 @@ export class WalletsController {
     @Req() req: Request,
     @Body() dto: TransferDto,
   ): Promise<{ wallet: Wallet }> {
-    return await this.service.transfer(
-      req.user?.id,
-      dto,
-      TransactionCode.GIFTCARD_SEND,
-      TransactionCode.GIFTCARD_RECEIVED,
-    );
+    return await this.service.sendGiftCardTransfer(req.user?.id, dto);
   }
 
   // COMPRAS CON BECOIN EN WALLET
@@ -274,10 +272,10 @@ export class WalletsController {
     @Req() req: Request,
     @Body() dto: TransferDto,
   ): Promise<{ wallet: Wallet }> {
-    return await this.service.transfer(req.user?.id, dto);
+    return await this.service.purchaseBecoin(req.user?.id, dto);
   }
 
-  //COMPRAS DIRECTO CON TARJETA O PAYPHONE.
+  // COMPRAS DIRECTO CON TARJETA O PAYPHONE.
   @Post('purchase-recharge/:to_wallet_id')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -298,4 +296,31 @@ export class WalletsController {
     return this.service.purchaseRecarge(req.user.id, to_wallet_id,  dto);
   }
 
+  // COMPRA DE GIFTCARDS (PAYPHONE)
+  @Post('purchase-giftcard')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Comprar una Gift Card mediante Payphone',
+  })
+  @ApiResponse({ status: 201, description: 'Compra Exitosa' })
+  async purchaseGiftCard(
+    @Body() dto: PurchaseGiftCardDto,
+    @Req() req: Request,
+  ): Promise<UserGiftCard> {
+    return await this.service.purchaseGiftCard(req.user.id, dto);
+  }
+
+  // COMPRA DE GIFTCARDS (TRANSFERENCIA)
+  @Post('purchase-giftcard/transfer')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Comprar una Gift Card mediante Transferencia Bancaria',
+  })
+  @ApiResponse({ status: 201, description: 'Compra Exitosa' })
+  async purchaseGiftCardTransfer(
+    @Body() dto: TransferGiftCardDto,
+    @Req() req: Request,
+  ): Promise<UserGiftCard> {
+    return await this.service.purchaseGiftCardTransfer(req.user.id, dto);
+  }
 }

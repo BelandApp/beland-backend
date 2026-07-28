@@ -21,6 +21,7 @@ import { FlexibleAuthGuard } from '../auth/guards/flexible-auth.guard';
 import { RespGetArrayDto } from 'src/dto/resp-app.dto';
 import { EventPass } from '../event-pass/entities/event-pass.entity';
 import { PurchaseWhitRechargeDto } from './dto/purchaseWhitRecarge.dto';
+import { TransferEventPassDto } from './dto/transfer-eventpass.dto';
 
 @ApiTags('user-event-passes')
 @ApiBearerAuth('JWT-auth')
@@ -120,6 +121,22 @@ export class UserEventPassController {
     const user_id = (req.user as any).id;
 
     return this.service.purchaseEventPassWhitRecharge(
+      user_id,
+      dto,
+    );
+  }
+
+  @Post('purchase-transfer')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Comprar un EventPass con Transferencia Bancaria' })
+  @ApiResponse({ status: 201, description: 'Compra realizada correctamente' })
+  async purchaseEventPassTransfer(
+    @Body() dto: TransferEventPassDto,
+    @Req() req: Request,
+  ): Promise<UserEventPass> {
+    const user_id = (req.user as any).id;
+
+    return this.service.purchaseEventPassTransfer(
       user_id,
       dto,
     );

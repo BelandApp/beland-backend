@@ -7,13 +7,12 @@ import { UserEventPassRepository } from './user-event-pass.repository';
 import { NotificationsGateway } from '../notification-socket/notification-socket.gateway';
 import { User } from '../users/entities/users.entity';
 import { UsersRepository } from '../users/users.repository';
-import { WalletsService } from '../wallets/wallets.service';
-import { WalletsRepository } from '../wallets/wallets.repository';
-import { Wallet } from '../wallets/entities/wallet.entity';
+import { WalletsModule } from '../wallets/wallets.module';
+import { ConsumeEventPassUseCase } from './use-cases/consume-eventpass.use-case';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEventPass, User, Wallet])],
+  imports: [TypeOrmModule.forFeature([UserEventPass, User]), WalletsModule],
   controllers: [UserEventPassController],
-  providers: [UserEventPassService, UserEventPassRepository, NotificationsGateway, UsersRepository, WalletsService, WalletsRepository],
+  providers: [UserEventPassService, UserEventPassRepository, NotificationsGateway, UsersRepository, ConsumeEventPassUseCase],
 })
 export class UserEventPassModule {}

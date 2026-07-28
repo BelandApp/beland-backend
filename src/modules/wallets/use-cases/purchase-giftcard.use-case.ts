@@ -2,10 +2,14 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 
 import { EntityManager, IsNull } from 'typeorm';
+
+import { WalletPaymentService } from 'src/modules/wallets/wallet-payment.service';
+import { SuperadminConfigService } from 'src/modules/superadmin-config/superadmin-config.service';
 
 import { Wallet } from '../../wallets/entities/wallet.entity';
 
@@ -39,6 +43,11 @@ export interface PurchaseGiftCardUseCaseInput {
 
 @Injectable()
 export class PurchaseGiftCardUseCase {
+  constructor(
+    private readonly walletPaymentService: WalletPaymentService,
+    private readonly superadminConfig: SuperadminConfigService,
+  ) {}
+
   async execute(
     input: PurchaseGiftCardUseCaseInput,
   ): Promise<UserGiftCard> {
@@ -115,76 +124,107 @@ export class PurchaseGiftCardUseCase {
     }
 
     // =========================================================================
-    // BALANCE
+    // STATUS COMPLETED
     // =========================================================================
 
-    if (
-      Number(buyerWallet.usd_balance) <
-      Number(giftCard.amount)
-    ) {
-      throw new ConflictException(
-        'Insufficient balance',
-      );
-    }
-
-    buyerWallet.usd_balance =
-      Number(buyerWallet.usd_balance) -
-      Number(giftCard.amount);
-
-    await manager.save(Wallet, buyerWallet);
-
-    // =========================================================================
-    // TRANSACTION TYPE
-    // =========================================================================
-
-    const type = await manager.findOne(
-      TransactionType,
-      {
-        where: {
-          code:
-            TransactionCode.GIFTCARD_SEND,
-        },
-      },
-    );
-
-    if (!type) {
-      throw new ConflictException(
-        'PURCHASE_GIFTCARD type not found',
-      );
-    }
-
-    const status = await manager.findOne(
-      TransactionState,
-      {
+    const completedStatus =
+      await manager.findOne(TransactionState, {
         where: {
           code: 'COMPLETED',
         },
-      },
-    );
+      });
 
-    if (!status) {
+    if (!completedStatus) {
       throw new ConflictException(
         'COMPLETED state not found',
       );
     }
 
     // =========================================================================
-    // REGISTER TRANSACTION
+    // TRANSACTION TYPE
+    // =========================================================================
+
+    const type = await manager.findOne(TransactionType, {
+      where: {
+        code: TransactionCode.GIFTCARD_SEND,
+      },
+    });
+
+    if (!type) {
+      throw new ConflictException('PURCHASE_GIFTCARD type not found');
+    }
+
+    // =========================================================================
+    // SUPERADMIN WALLET
+    // =========================================================================
+
+    const superAdminWallet =
+      await manager.findOne(Wallet, {
+        where: {
+          id: this.superadminConfig.getWalletId(),
+        },
+        lock: {
+          mode: 'pessimistic_write',
+        },
+      });
+
+    if (!superAdminWallet) {
+      throw new InternalServerErrorException(
+        'Superadmin wallet not found',
+      );
+    }
+
+    // =========================================================================
+    // INTERNAL WALLET DEBIT
+    // =========================================================================
+
+    if (paymentProvider === PaymentProviderEnum.WALLET) {
+      await this.walletPaymentService.processPayment(
+        manager,
+        buyerWallet.id,
+        Number(giftCard.amount),
+        {
+          type_id: type.id,
+          status_id: completedStatus.id,
+          reference: reference ?? `GIFTCARD-${giftCard.id}`,
+          external_provider: paymentProvider,
+          external_reference_id: paymentReferenceId,
+        },
+      );
+    }
+
+    // =========================================================================
+    // CREDIT SUPERADMIN
+    // =========================================================================
+
+    superAdminWallet.usd_balance =
+      Number(superAdminWallet.usd_balance) +
+      Number(giftCard.amount);
+
+    await manager.save(
+      Wallet,
+      superAdminWallet,
+    );
+
+    // =========================================================================
+    // TRANSACTION
     // =========================================================================
 
     await manager.save(Transaction, {
-      wallet_id: buyerWallet.id,
+      wallet_id: superAdminWallet.id,
 
       type_id: type.id,
 
-      status_id: status.id,
+      status_id: completedStatus.id,
 
-      amount_usd: -Number(giftCard.amount),
+      amount_usd: Number(giftCard.amount),
 
       post_balance:
-        buyerWallet.usd_balance,
+        superAdminWallet.usd_balance,
 
-      reference,
+      reference:
+        reference ??
+        `GIFTCARD-${giftCard.id}`,
 
       external_provider:
         paymentProvider,

@@ -10,13 +10,16 @@ export class SuperadminConfigService implements OnModuleInit {
   private superadminId: string;
   private superadminEmail: string;
   private readonly priceOneBecoin = 0.05;
-  private readonly priceDelivery = 1;
-  public readonly recicled_becoin = 2;
+  private readonly priceDelivery = 1.5;
   public readonly recharge_limit = 100;
+
+  public readonly recicled_becoin = 0.02;
   public readonly recharge_commission_payphone = 0.06;
   public readonly recharge_commission_stripe = 0.06;
   public readonly recharge_commission_transfer = 0.03;
-
+  
+  public readonly max_orange_discount_percent = 0.15;
+ 
 
   constructor(private readonly dataSource: DataSource) {}
 
@@ -68,5 +71,9 @@ export class SuperadminConfigService implements OnModuleInit {
       return 0;
   }
 }
+
+  getMaxOrangeDiscountPercent(): number {
+    return Number(this.max_orange_discount_percent);
+  }
 }
 

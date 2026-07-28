@@ -119,6 +119,16 @@ export class UserGiftCard {
   })
   current_balance: number;
 
+  // 🔒 Saldo reservado temporalmente
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+    nullable: false,
+  })
+  reserved_balance: number;
+
   // 📅 Fecha de uso total
   @Column({
     type: 'timestamp',

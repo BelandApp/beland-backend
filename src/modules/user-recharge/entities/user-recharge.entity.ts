@@ -44,11 +44,14 @@ export class RechargeTransfer {
   @Column('uuid')
   status_id: string;
 
-  @ManyToOne(() => Transaction)
+  @ManyToOne(() => Transaction, { nullable: true })
   @JoinColumn({ name: 'transaction_id' })
   transaction: Transaction;
-  @Column('uuid')
+  @Column({ type: 'uuid', nullable: true })
   transaction_id: string;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  refunded_amount: number;
 
   @CreateDateColumn({ name: 'created_at' })
   created_at: Date;
