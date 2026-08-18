@@ -76,6 +76,7 @@ import { GroupService } from './modules/group-services/entities/group-service.en
 import { GroupServicesModule } from './modules/group-services/group-services.module';
 import { StripeTopupsModule } from './modules/stripe-topups/stripe-topups.module';
 import { BecoinOrangeModule } from './modules/rewards/becoin-orange/becoin-orange.module';
+import { FeedModule } from './modules/feed/feed.module';
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -189,6 +190,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     GroupServicesModule,
     StripeTopupsModule,
     BecoinOrangeModule,
+    FeedModule,
 
   ],
   controllers: [],

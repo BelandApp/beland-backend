@@ -93,7 +93,12 @@ export class CartsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Query('address_id', ParseUUIDPipe) address_id: string,
   ) {
-    return this.service.update(id, {address_id});
+    return this.service.update(id, {
+      address_id,
+      delivery_cost: 0,
+      distance_km: 0,
+      duration_min: 0
+    });
   }
 
   @Put('payment-type/:id')

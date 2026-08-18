@@ -82,6 +82,24 @@ export class UserEventPassService {
   ): Promise<UserEventPass> {
     try {
       return await this.dataSource.transaction(async (manager) => {
+        // VALIDACIÓN ESTRICTA DEL MONTO REPORTADO POR PAYPHONE
+        const eventPass = await manager.findOne(EventPass, {
+          where: { id: dto.event_pass_id },
+        });
+
+        if (!eventPass) {
+          throw new NotFoundException('Event pass no encontrado');
+        }
+
+        const authorizedPrice = Number(eventPass.total_usd ?? eventPass.price_usd);
+        const reportedAmount = Number(dto.amountUsd);
+
+        if (Number(authorizedPrice.toFixed(2)) !== Number(reportedAmount.toFixed(2))) {
+          throw new ConflictException(
+            `El monto reportado (${reportedAmount}) no coincide con el precio autorizado (${authorizedPrice}). Si el cargo en pasarela externa ya fue ejecutado, requiere conciliación manual o refund.`
+          );
+        }
+
         const savedPass = await this.purchaseEventPassUseCase.execute(manager, {
           eventPassId: dto.event_pass_id,
           userId,

@@ -102,7 +102,7 @@ export class EventPassController {
     // Sobrescribo created_by_id con el usuario que hace la petición
     filters.created_by_id = (req.user as any).id;
 
-      return await this.service.findAll(pageNumber, limitNumber, filters);
+      return await this.service.findAll(pageNumber, limitNumber, filters, true);
     }
 
   @Get(':id')
