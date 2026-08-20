@@ -114,6 +114,15 @@ export class PurchaseEventPassUseCase {
     const amountUsd =
       Number(eventPass.total_usd ?? eventPass.price_usd);
 
+    console.log('\n====== DEBUG COMPRA EVENTPASS ======');
+    console.log('EventPass ID:', eventPass.id);
+    console.log('EventPass Cargado completo:', JSON.stringify(eventPass, null, 2));
+    console.log('Valor raw total_usd:', eventPass.total_usd, ' (Type:', typeof eventPass.total_usd, ')');
+    console.log('Valor raw price_usd:', eventPass.price_usd, ' (Type:', typeof eventPass.price_usd, ')');
+    console.log('amountUsd calculado (despues de Number):', amountUsd, ' (Type:', typeof amountUsd, ')');
+    console.log('¿Entra al bloque financiero (amountUsd > 0)?:', amountUsd > 0);
+    console.log('====================================\n');
+
     if (amountUsd > 0) {
       // ==========================================================
       // STATUS COMPLETED
