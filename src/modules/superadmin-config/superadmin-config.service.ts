@@ -14,9 +14,9 @@ export class SuperadminConfigService implements OnModuleInit {
   public readonly recharge_limit = 100;
 
   public readonly recicled_becoin = 0.02;
-  public readonly recharge_commission_payphone = 0.06;
-  public readonly recharge_commission_stripe = 0.06;
-  public readonly recharge_commission_transfer = 0.03;
+  public readonly recharge_commission_payphone = 0.02;
+  public readonly recharge_commission_stripe = 0.02;
+  public readonly recharge_commission_transfer = 0.04;
   
   public readonly max_orange_discount_percent = 0.15;
  

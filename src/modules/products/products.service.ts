@@ -11,6 +11,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { OrderDto } from 'src/common/dto/order.dto';
 import { Product } from './entities/product.entity';
 import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
+import { ProductLike } from './entities/product-like.entity';
 
 @Injectable()
 export class ProductsService {
@@ -74,5 +75,26 @@ export class ProductsService {
   // Nuevo método de servicio para buscar soft-deleted
   async findSoftDeletedProducts(): Promise<Product[]> {
     return this.repo.findSoftDeleted();
+  }
+
+  // SOCIAL LIKES
+  async likeProduct(productId: string, userId: string): Promise<void> {
+    await this.findOne(productId); // Verifica existencia (tira NotFoundException si no existe)
+    
+    const likeRepo = this.repo.manager.getRepository(ProductLike);
+    try {
+      await likeRepo.insert({ product_id: productId, user_id: userId });
+    } catch (error: any) {
+      // Ignorar error de unicidad para ser idempotente
+      if (error.code === '23505' || error.message?.includes('unique constraint')) {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  async unlikeProduct(productId: string, userId: string): Promise<void> {
+    const likeRepo = this.repo.manager.getRepository(ProductLike);
+    await likeRepo.delete({ product_id: productId, user_id: userId });
   }
 }

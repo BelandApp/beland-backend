@@ -40,6 +40,8 @@ import { SpendOrangeUseCase } from '../rewards/becoin-orange/use-cases/spend-ora
 import { FinancialReversalService, ReversalPayload } from '../wallets/financial-reversal.service';
 import { PurchaseOrderPaymentUseCase } from '../wallets/use-cases/purchase-order-payment.use-case';
 import { PaymentProviderEnum } from '../transactions/enums/transaction.enums';
+import { DeliveryService } from '../delivery/delivery.service';
+
 @Injectable()
 export class OrdersService {
   private readonly completeMessage = 'la orden';
@@ -67,6 +69,7 @@ export class OrdersService {
     private readonly spendOrangeUseCase: SpendOrangeUseCase,
     private readonly financialReversalService: FinancialReversalService,
     private readonly purchaseOrderPaymentUseCase: PurchaseOrderPaymentUseCase,
+    private readonly deliveryService: DeliveryService,
   ) {}
 
   async generateUniqueCode(manager?: EntityManager): Promise<string> {
@@ -256,6 +259,13 @@ export class OrdersService {
           DeliveryStatusCode.PENDING,
         );
 
+      if (!cart.address_id) {
+        throw new BadRequestException('El carrito no tiene una dirección de entrega asignada');
+      }
+
+      // Recálculo del delivery (Backend como única fuente de verdad)
+      const deliveryInfo = await this.deliveryService.calculateFinalDeliveryForAddress(cart.address_id);
+
       // 5b) Crear orden
       const {
         id: _cartId,
@@ -272,9 +282,10 @@ export class OrdersService {
 
       const order = queryRunner.manager.create(Order, {
         ...createOrder,
+        delivery_cost: deliveryInfo.cost, // Sobreescribimos el costo
         user_id,
         subtotal_amount: +total_amount,
-        total_amount: +total_amount + +createOrder.delivery_cost,
+        total_amount: +total_amount + +deliveryInfo.cost, // Re-sumamos con el costo correcto
         payment_type_id: paymentType.id,
         status_id: statusOrder.id,
       });
@@ -731,9 +742,9 @@ export class OrdersService {
 
         const percentage = Number(this.superadminService.recicled_becoin);
 
-        const becoinGreenToAdd = 
-          (Number(order.subtotal_amount) * percentage) / this.superadminService.getPriceOneBecoin();
-        
+        const becoinGreenToAdd = Math.floor(
+          (Number(order.subtotal_amount) * percentage) / this.superadminService.getPriceOneBecoin()
+        );
 
         userWallet.becoin_green =
           Number(userWallet.becoin_green) + becoinGreenToAdd;

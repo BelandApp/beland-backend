@@ -18,15 +18,20 @@ export class EventPassRepository {
     page: number,
     limit: number,
     filters?: EventPassFiltersDto,
+    isUserEndpoint: boolean = false,
     ): Promise<RespGetArrayDto<EventPass>> {
     const query = this.repository.createQueryBuilder('event');
 
     // FILTROS DINÁMICOS
-    if (filters) {
-        if (filters.is_active !== undefined) {
-        query.andWhere('event.is_active = :is_active', { is_active: filters.is_active });
-        }
+    if (!isUserEndpoint) {
+      // Catálogo general: forzamos a mostrar solo los activos
+      query.andWhere('event.is_active = true');
+    } else if (filters && filters.is_active !== undefined) {
+      // Endpoint personal: mantiene comportamiento original (puede ver inactivos)
+      query.andWhere('event.is_active = :is_active', { is_active: filters.is_active });
+    }
 
+    if (filters) {
         if (filters.name) {
         query.andWhere('event.name ILIKE :name', { name: `%${filters.name}%` });
         }

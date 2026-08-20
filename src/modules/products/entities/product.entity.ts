@@ -4,6 +4,8 @@ import { GroupType } from '../../group-type/entities/group-type.entity';
 import { InventoryItem } from '../../inventory-items/entities/inventory-item.entity';
 import { OrderItem } from '../../order-items/entities/order-item.entity';
 import { RecycledItem } from '../../recycled-items/entities/recycled-item.entity';
+import { ProductMedia } from './product-media.entity';
+import { ProductLike } from './product-like.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -75,4 +77,10 @@ export class Product {
 
   @OneToMany(() => OrderItem, (item) => item.product)
   order_items: OrderItem[];
+
+  @OneToMany(() => ProductMedia, (media) => media.product)
+  media: ProductMedia[];
+
+  @OneToMany(() => ProductLike, (like) => like.product)
+  likes: ProductLike[];
 }

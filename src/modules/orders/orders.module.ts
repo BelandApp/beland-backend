@@ -10,9 +10,10 @@ import { UsersRepository } from '../users/users.repository';
 import { EmailModule } from '../email/email.module';
 import { BecoinOrangeModule } from '../rewards/becoin-orange/becoin-orange.module';
 import { WalletsModule } from '../wallets/wallets.module';
+import { DeliveryModule } from '../delivery/delivery.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, User]), EmailModule, BecoinOrangeModule, WalletsModule],
+  imports: [TypeOrmModule.forFeature([Order, User]), EmailModule, BecoinOrangeModule, WalletsModule, DeliveryModule],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersRepository, NotificationsGateway, UsersRepository],
 })
