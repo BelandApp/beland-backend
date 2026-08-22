@@ -48,6 +48,15 @@ export class Product {
   @Column({ type: 'boolean', default: false, nullable: true })
   is_circular: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  is_experience: boolean;
+
+  @Column({ type: 'varchar', length: 100, default: 'Beland' })
+  creator_name: string;
+
+  @Column({ type: 'simple-array', nullable: true })
+  tags: string[];
+
   @Column({ type: 'text', nullable: true })
   image_url: string;
 

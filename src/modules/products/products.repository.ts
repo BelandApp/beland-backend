@@ -76,6 +76,8 @@ export class ProductRepository extends Repository<Product> {
       where.category = { id: category_id };
     }
 
+    where.is_experience = false;
+
     this.logger.log(
       `[ProductRepository] WHERE final: ${JSON.stringify(where)}`,
     );

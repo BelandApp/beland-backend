@@ -26,6 +26,7 @@ export class FeedService {
     
     qb.leftJoinAndSelect('product.media', 'media')
       .loadRelationCountAndMap('product.likesCount', 'product.likes')
+      .andWhere('product.is_experience = :isExp', { isExp: false })
       .orderBy('product.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
