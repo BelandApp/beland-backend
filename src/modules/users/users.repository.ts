@@ -6,6 +6,8 @@ import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { Cart } from '../cart/entities/cart.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import * as QRCode from 'qrcode';
+import { ProcessPendingRewardUseCase } from '../rewards/becoin-code/use-cases/process-pending-reward.use-case';
+import { forwardRef, Inject } from '@nestjs/common';
 
 @Injectable()
 export class UsersRepository {
@@ -15,6 +17,8 @@ export class UsersRepository {
     @InjectRepository(User)
     private readonly userORMRepository: Repository<User>,
     private readonly dataSource: DataSource,
+    @Inject(forwardRef(() => ProcessPendingRewardUseCase))
+    private readonly processPendingRewardUseCase: ProcessPendingRewardUseCase,
   ) {}
 
   private createQueryBuilder(alias = 'user') {
@@ -204,6 +208,15 @@ async findOne(id: string, deleted: boolean = false): Promise<User | null> {
       await this.createWalletAndCart(queryRunner, userCreated);
 
       await queryRunner.commitTransaction();
+
+      try {
+        const wallet = await this.dataSource.manager.findOne(Wallet, { where: { user_id: userCreated.id } });
+        if (wallet) {
+          await this.processPendingRewardUseCase.execute(userCreated.email, userCreated.id, wallet.id);
+        }
+      } catch (err) {
+        this.logger.error(`Fallo al procesar recompensa pendiente post-registro (UsersRepository/Auth0 fallback) para ${userCreated.email}`, err);
+      }
 
       return userCreated;
     } catch (error) {
