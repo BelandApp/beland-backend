@@ -29,6 +29,7 @@ import { AuthService } from '../auth/auth.service'; // Importar AuthService
 const QRCode = require('qrcode'); // Importar qrcode aquí para que esté disponible en el contexto
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { ChangePasswordUserDto } from './dto/change-password-user.dto';
+import { ProcessPendingRewardUseCase } from '../rewards/becoin-code/use-cases/process-pending-reward.use-case';
 
 // Constantes para los nombres de roles
 
@@ -43,6 +44,7 @@ export class UsersService {
     private dataSource: DataSource,
     @Inject(forwardRef(() => AuthService)) // Inyectar AuthService con forwardRef
     private readonly authService: AuthService,
+    private readonly processPendingRewardUseCase: ProcessPendingRewardUseCase,
   ) {}
 
   // ==============================================
@@ -196,6 +198,15 @@ export class UsersService {
 
       // Retornar el usuario recién creado, asegurando que las relaciones estén cargadas
       user = await this.usersRepository.findById(savedUser.id);
+      
+      try {
+        if (user.wallet) {
+          await this.processPendingRewardUseCase.execute(user.email, user.id, user.wallet.id);
+        }
+      } catch (err) {
+        this.logger.error(`Fallo al procesar recompensa pendiente post-registro (Auth0) para ${user.email}`, err);
+      }
+
       const { token } = await this.authService.createToken(user); // Generar JWT local
       return { user, token };
     } catch (error) {
@@ -528,6 +539,13 @@ export class UsersService {
       this.logger.log(
         `create(): Usuario ${savedUser.email} creado exitosamente.`,
       );
+
+      try {
+        await this.processPendingRewardUseCase.execute(savedUser.email, savedUser.id, newWallet.id);
+      } catch (err) {
+        this.logger.error(`Fallo al procesar recompensa pendiente post-registro (Local) para ${savedUser.email}`, err);
+      }
+
       return plainToInstance(UserDto, savedUser, {
         excludeExtraneousValues: true,
       });

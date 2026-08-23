@@ -66,6 +66,7 @@ export class BecoinCodeService {
           reward_code_id: rewardCode.id,
           user_id: user ? user.id : null,
           status: RedemptionStatus.PENDING,
+          claimed_amount: rewardCode.amount,
         });
 
         // Al intentar guardar, si el email ya existe, PostgreSQL lanzará un error de unicidad.

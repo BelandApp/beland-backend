@@ -26,6 +26,8 @@ import { WalletsModule } from 'src/modules/wallets/wallets.module';
 import { CartModule } from 'src/modules/cart/cart.module';
 import { Auth0Strategy } from './strategy/auth0.strategy';
 
+import { BecoinCodeModule } from '../rewards/becoin-code/becoin-code.module';
+
 @Global()
 @Module({
   imports: [
@@ -47,6 +49,7 @@ import { Auth0Strategy } from './strategy/auth0.strategy';
     ConfigModule,
     HttpModule,
     RolesModule,
+    BecoinCodeModule,
   ],
   controllers: [AuthController],
   providers: [

@@ -46,6 +46,9 @@ export class RewardRedemption {
   })
   status: RedemptionStatus;
 
+  @Column({ type: 'numeric', precision: 14, scale: 2, nullable: true })
+  claimed_amount: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
