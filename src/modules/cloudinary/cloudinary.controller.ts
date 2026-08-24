@@ -74,6 +74,41 @@ async uploadImage(
   }
 
   // ===============================
+  // 🎥 SUBIR UN SOLO VIDEO
+  // ===============================
+  @Post('upload-video')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadImageDto })
+  @ApiOperation({ summary: 'Subir un solo video' })
+  @ApiResponse({ status: 200, description: 'Video subido exitosamente' })
+  async uploadVideo(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 50_000_000,
+            message: 'El archivo debe ser menor a 50Mb',
+          }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ): Promise<string> {
+    const allowedMime = ['video/mp4', 'video/webm'];
+
+    if (!file || !allowedMime.includes(file.mimetype)) {
+      throw new BadRequestException('Solo se permiten videos MP4 o WEBM');
+    }
+
+    console.log('File video recibido:', file.originalname, file.mimetype);
+
+    const result = await this.service.uploadImage(file);
+    return result as string;
+  }
+
+
+  // ===============================
   // 🖼️ SUBIR VARIAS IMÁGENES
   // ===============================
   @Post('upload-images')

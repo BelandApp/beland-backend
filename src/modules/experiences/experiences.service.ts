@@ -5,6 +5,7 @@ import { Product } from '../products/entities/product.entity';
 import { ProductLike } from '../products/entities/product-like.entity';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
+import { ProductMedia } from '../products/entities/product-media.entity';
 
 @Injectable()
 export class ExperiencesService {
@@ -15,6 +16,8 @@ export class ExperiencesService {
     private readonly productRepo: Repository<Product>,
     @InjectRepository(ProductLike)
     private readonly likeRepo: Repository<ProductLike>,
+    @InjectRepository(ProductMedia)
+    private readonly mediaRepo: Repository<ProductMedia>,
   ) {}
 
   private mapToResponse(product: any) {
@@ -64,32 +67,71 @@ export class ExperiencesService {
   }
 
   async create(dto: CreateExperienceDto) {
-    const newProduct = this.productRepo.create({
-      name: dto.name,
-      description: dto.description,
-      price: dto.price,
-      creator_name: dto.creator_name || 'Beland',
-      tags: dto.tags || [],
-      is_experience: true,
-      cost: 0,
-      quantity: 0,
-      is_circular: false,
+    let savedProductId: string;
+
+    await this.productRepo.manager.transaction(async (manager) => {
+      const newProduct = manager.create(Product, {
+        name: dto.name,
+        description: dto.description,
+        price: dto.price,
+        creator_name: dto.creator_name || 'Beland',
+        tags: dto.tags || [],
+        image_url: dto.image_url,
+        is_experience: true,
+        cost: 0,
+        quantity: 0,
+        is_circular: false,
+      });
+
+      const saved = await manager.save(newProduct);
+      savedProductId = saved.id;
+
+      if (dto.video_url) {
+        await manager.save(ProductMedia, {
+          product_id: saved.id,
+          url: dto.video_url,
+          type: 'video',
+        });
+      }
     });
 
-    const saved = await this.productRepo.save(newProduct);
-    return this.findOne(saved.id);
+    return this.findOne(savedProductId!);
   }
 
   async update(id: string, dto: UpdateExperienceDto) {
     // Validar que exista y sea experience
     await this.findOne(id);
     
-    await this.productRepo.update(id, {
-      ...(dto.name && { name: dto.name }),
-      ...(dto.description !== undefined && { description: dto.description }),
-      ...(dto.price !== undefined && { price: dto.price }),
-      ...(dto.creator_name !== undefined && { creator_name: dto.creator_name }),
-      ...(dto.tags !== undefined && { tags: dto.tags }),
+    await this.productRepo.manager.transaction(async (manager) => {
+      await manager.update(Product, id, {
+        ...(dto.name && { name: dto.name }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.price !== undefined && { price: dto.price }),
+        ...(dto.creator_name !== undefined && { creator_name: dto.creator_name }),
+        ...(dto.tags !== undefined && { tags: dto.tags }),
+        ...(dto.image_url !== undefined && { image_url: dto.image_url }),
+      });
+
+      if (dto.video_url !== undefined) {
+        const existingMedia = await manager.findOne(ProductMedia, {
+          where: { product_id: id, type: 'video' },
+        });
+
+        if (existingMedia) {
+          if (dto.video_url === '') {
+            await manager.remove(existingMedia);
+          } else {
+            existingMedia.url = dto.video_url;
+            await manager.save(existingMedia);
+          }
+        } else if (dto.video_url !== '') {
+          await manager.save(ProductMedia, {
+            product_id: id,
+            url: dto.video_url,
+            type: 'video',
+          });
+        }
+      }
     });
 
     return this.findOne(id);
