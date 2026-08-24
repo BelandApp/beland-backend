@@ -77,6 +77,7 @@ async function bootstrap() {
       'http://localhost:9080',
       'http://localhost:8081',
       'http://localhost:9002',
+      'https://beland-experience.netlify.app/',
       /https:\/\/\w+\-beland\-\d+\.exp\.direct$/,
       /https:\/\/\w+\-anonymous\-\d+\.exp\.direct$/,
     ],
