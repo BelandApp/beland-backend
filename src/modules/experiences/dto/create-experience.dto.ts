@@ -27,4 +27,14 @@ export class CreateExperienceDto {
   @IsString({ each: true })
   @ArrayMaxSize(3, { message: 'El máximo de tags permitidos es 3' })
   tags?: string[];
+
+  @ApiPropertyOptional({ description: 'URL del video de la experiencia' })
+  @IsOptional()
+  @IsString()
+  video_url?: string;
+
+  @ApiPropertyOptional({ description: 'URL de la imagen principal de la experiencia' })
+  @IsOptional()
+  @IsString()
+  image_url?: string;
 }
