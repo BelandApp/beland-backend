@@ -11,10 +11,12 @@ import { EmailModule } from '../email/email.module';
 import { BecoinOrangeModule } from '../rewards/becoin-orange/becoin-orange.module';
 import { WalletsModule } from '../wallets/wallets.module';
 import { DeliveryModule } from '../delivery/delivery.module';
+import { ProcessPendingRewardUseCase } from '../rewards/becoin-code/use-cases/process-pending-reward.use-case';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Order, User]), EmailModule, BecoinOrangeModule, WalletsModule, DeliveryModule],
   controllers: [OrdersController],
-  providers: [OrdersService, OrdersRepository, NotificationsGateway, UsersRepository],
+  providers: [OrdersService, OrdersRepository, NotificationsGateway, UsersRepository, 
+    ProcessPendingRewardUseCase],
 })
 export class OrdersModule {}
