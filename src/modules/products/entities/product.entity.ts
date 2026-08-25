@@ -5,7 +5,7 @@ import { InventoryItem } from '../../inventory-items/entities/inventory-item.ent
 import { OrderItem } from '../../order-items/entities/order-item.entity';
 import { RecycledItem } from '../../recycled-items/entities/recycled-item.entity';
 import { ProductMedia } from './product-media.entity';
-import { ProductLike } from './product-like.entity';
+
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -90,6 +90,6 @@ export class Product {
   @OneToMany(() => ProductMedia, (media) => media.product)
   media: ProductMedia[];
 
-  @OneToMany(() => ProductLike, (like) => like.product)
-  likes: ProductLike[];
+  @Column({ type: 'int', default: 0 })
+  likes: number;
 }

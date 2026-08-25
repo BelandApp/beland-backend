@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ExperiencePurchaseItemDto {
@@ -26,13 +26,29 @@ export class CreateExperiencePurchaseDto {
   @IsNotEmpty()
   total_amount: number;
 
-  @ApiProperty({ description: 'ID de transacción de Payphone' })
+  @ApiProperty({ description: 'Indica si es una reserva' })
+  @IsBoolean()
+  @IsNotEmpty()
+  is_reserved: boolean;
+
+  @ApiProperty({ description: 'Método de pago (PAYPHONE o TRANSFER)' })
   @IsString()
   @IsNotEmpty()
-  payphone_transaction_id: string;
+  @IsIn(['PAYPHONE', 'TRANSFER'])
+  payment_method: string;
 
-  @ApiPropertyOptional({ description: 'Email del comprador (opcional)' })
+  @ApiPropertyOptional({ description: 'ID de transacción de Payphone' })
   @IsOptional()
   @IsString()
-  email?: string;
+  payphone_transaction_id?: string;
+
+  @ApiProperty({ description: 'Email del comprador' })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({ description: 'Teléfono del comprador' })
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
 }

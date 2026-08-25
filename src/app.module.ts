@@ -78,7 +78,7 @@ import { StripeTopupsModule } from './modules/stripe-topups/stripe-topups.module
 import { BecoinOrangeModule } from './modules/rewards/becoin-orange/becoin-orange.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { ExperiencesModule } from './modules/experiences/experiences.module';
-import { BecoinCodeModule } from './modules/rewards/becoin-code/becoin-code.module';
+
 const isTs = process.env.NODE_ENV !== 'production';
 
 @Module({
@@ -194,7 +194,7 @@ const isTs = process.env.NODE_ENV !== 'production';
     BecoinOrangeModule,
     FeedModule,
     ExperiencesModule,
-    BecoinCodeModule,
+
 
   ],
   controllers: [],
