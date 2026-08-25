@@ -432,39 +432,15 @@ export class ProductsController {
 
   @Post(':id/like')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Dar like a un producto' })
-  @ApiParam({ name: 'id', description: 'UUID del producto' })
-  @ApiResponse({ status: 200, description: 'Like registrado exitosamente (idempotente).' })
-  @ApiResponse({ status: 401, description: 'No autenticado.' })
-  @ApiResponse({ status: 404, description: 'Producto no encontrado.' })
-  async likeProduct(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
-    const userId = this.getUserId(req);
-    this.logger.log(`POST /products/${id}/like: Usuario ${userId} solicita dar like.`);
+  @ApiOperation({ summary: 'Dar like a un producto (Público)' })
+  @ApiResponse({ status: 200, description: 'Like registrado exitosamente.' })
+  async likeProduct(@Param('id', ParseUUIDPipe) id: string) {
+    this.logger.log(`POST /products/${id}/like: Incrementando likes.`);
     try {
-      await this.productsService.likeProduct(id, userId);
-    } catch (error) {
+      const likes = await this.productsService.likeProduct(id);
+      return { likes };
+    } catch (error: any) {
       this.logger.error(`Error al dar like: ${(error as Error).message}`);
-      throw error;
-    }
-  }
-
-  @Delete(':id/like')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(FlexibleAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Quitar like a un producto' })
-  @ApiParam({ name: 'id', description: 'UUID del producto' })
-  @ApiResponse({ status: 200, description: 'Like removido exitosamente (idempotente).' })
-  @ApiResponse({ status: 401, description: 'No autenticado.' })
-  async unlikeProduct(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
-    const userId = this.getUserId(req);
-    this.logger.log(`DELETE /products/${id}/like: Usuario ${userId} solicita quitar like.`);
-    try {
-      await this.productsService.unlikeProduct(id, userId);
-    } catch (error) {
-      this.logger.error(`Error al quitar like: ${(error as Error).message}`);
       throw error;
     }
   }

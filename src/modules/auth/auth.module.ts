@@ -25,8 +25,9 @@ import { AuthController } from './auth.controller';
 import { WalletsModule } from 'src/modules/wallets/wallets.module';
 import { CartModule } from 'src/modules/cart/cart.module';
 import { Auth0Strategy } from './strategy/auth0.strategy';
+import { ExperiencesModule } from '../experiences/experiences.module';
 
-import { BecoinCodeModule } from '../rewards/becoin-code/becoin-code.module';
+
 
 @Global()
 @Module({
@@ -49,7 +50,7 @@ import { BecoinCodeModule } from '../rewards/becoin-code/becoin-code.module';
     ConfigModule,
     HttpModule,
     RolesModule,
-    BecoinCodeModule,
+    ExperiencesModule,
   ],
   controllers: [AuthController],
   providers: [

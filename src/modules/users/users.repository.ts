@@ -6,7 +6,7 @@ import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { Cart } from '../cart/entities/cart.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import * as QRCode from 'qrcode';
-import { ProcessPendingRewardUseCase } from '../rewards/becoin-code/use-cases/process-pending-reward.use-case';
+import { ProcessPendingPurchasesUseCase } from '../experiences/use-cases/process-pending-purchases.use-case';
 import { forwardRef, Inject } from '@nestjs/common';
 
 @Injectable()
@@ -17,8 +17,8 @@ export class UsersRepository {
     @InjectRepository(User)
     private readonly userORMRepository: Repository<User>,
     private readonly dataSource: DataSource,
-    @Inject(forwardRef(() => ProcessPendingRewardUseCase))
-    private readonly processPendingRewardUseCase: ProcessPendingRewardUseCase,
+    @Inject(forwardRef(() => ProcessPendingPurchasesUseCase))
+    private readonly processPendingPurchasesUseCase: ProcessPendingPurchasesUseCase,
   ) {}
 
   private createQueryBuilder(alias = 'user') {
@@ -212,10 +212,11 @@ async findOne(id: string, deleted: boolean = false): Promise<User | null> {
       try {
         const wallet = await this.dataSource.manager.findOne(Wallet, { where: { user_id: userCreated.id } });
         if (wallet) {
-          await this.processPendingRewardUseCase.execute(userCreated.email, userCreated.id, wallet.id);
+          // Se necesita el teléfono, si el usuario local no lo tiene en este punto, podríamos pasar un string vacío o intentar obtenerlo
+          await this.processPendingPurchasesUseCase.execute(userCreated.email, userCreated.phone ? userCreated.phone.toString() : '', userCreated.id, wallet.id);
         }
       } catch (err) {
-        this.logger.error(`Fallo al procesar recompensa pendiente post-registro (UsersRepository/Auth0 fallback) para ${userCreated.email}`, err);
+        this.logger.error(`Fallo al procesar compras pendientes post-registro (UsersRepository/Auth0 fallback) para ${userCreated.email}`, err);
       }
 
       return userCreated;

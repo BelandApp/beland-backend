@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from '../products/entities/product.entity';
-import { ProductLike } from '../products/entities/product-like.entity';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
 import { ProductMedia } from '../products/entities/product-media.entity';
@@ -14,8 +13,6 @@ export class ExperiencesService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
-    @InjectRepository(ProductLike)
-    private readonly likeRepo: Repository<ProductLike>,
     @InjectRepository(ProductMedia)
     private readonly mediaRepo: Repository<ProductMedia>,
   ) {}
@@ -32,7 +29,7 @@ export class ExperiencesService {
       price: Number(product.price || 0),
       creator: product.creator_name || 'Beland',
       tags: product.tags || [],
-      likes: Number(product.likesCount || 0),
+      likes: Number(product.likes || 0),
       image_url: imageMedia ? imageMedia.url : (product.image_url || ''),
       video_url: videoMedia ? videoMedia.url : '',
     };
@@ -42,7 +39,6 @@ export class ExperiencesService {
     const qb = this.productRepo.createQueryBuilder('product');
     
     qb.leftJoinAndSelect('product.media', 'media')
-      .loadRelationCountAndMap('product.likesCount', 'product.likes')
       .where('product.is_experience = :isExp', { isExp: true })
       .orderBy('product.created_at', 'DESC');
 
@@ -54,7 +50,6 @@ export class ExperiencesService {
     const qb = this.productRepo.createQueryBuilder('product');
     
     qb.leftJoinAndSelect('product.media', 'media')
-      .loadRelationCountAndMap('product.likesCount', 'product.likes')
       .where('product.id = :id', { id })
       .andWhere('product.is_experience = :isExp', { isExp: true });
 
@@ -144,21 +139,4 @@ export class ExperiencesService {
     await this.productRepo.softDelete(id);
   }
 
-  async likeExperience(id: string, userId: string) {
-    // Verificar que es experience
-    await this.findOne(id);
-    
-    try {
-      await this.likeRepo.insert({ product_id: id, user_id: userId });
-    } catch (error: any) {
-      if (error.code === '23505' || error.message?.includes('unique constraint')) {
-        return; // Idempotente
-      }
-      throw error;
-    }
-  }
-
-  async unlikeExperience(id: string, userId: string) {
-    await this.likeRepo.delete({ product_id: id, user_id: userId });
-  }
 }

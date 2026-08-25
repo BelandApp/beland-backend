@@ -83,24 +83,4 @@ export class ExperiencesController {
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.experiencesService.remove(id);
   }
-
-  @Post(':id/like')
-  @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(FlexibleAuthGuard)
-  @ApiOperation({ summary: 'Dar like a una Experience' })
-  async likeExperience(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
-    const userId = this.getUserId(req);
-    await this.experiencesService.likeExperience(id, userId);
-  }
-
-  @Delete(':id/like')
-  @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(FlexibleAuthGuard)
-  @ApiOperation({ summary: 'Quitar like a una Experience' })
-  async unlikeExperience(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
-    const userId = this.getUserId(req);
-    await this.experiencesService.unlikeExperience(id, userId);
-  }
 }
