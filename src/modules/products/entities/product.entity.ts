@@ -4,6 +4,8 @@ import { GroupType } from '../../group-type/entities/group-type.entity';
 import { InventoryItem } from '../../inventory-items/entities/inventory-item.entity';
 import { OrderItem } from '../../order-items/entities/order-item.entity';
 import { RecycledItem } from '../../recycled-items/entities/recycled-item.entity';
+import { ProductMedia } from './product-media.entity';
+
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -46,6 +48,15 @@ export class Product {
   @Column({ type: 'boolean', default: false, nullable: true })
   is_circular: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  is_experience: boolean;
+
+  @Column({ type: 'varchar', length: 100, default: 'Beland' })
+  creator_name: string;
+
+  @Column({ type: 'simple-array', nullable: true })
+  tags: string[];
+
   @Column({ type: 'text', nullable: true })
   image_url: string;
 
@@ -75,4 +86,10 @@ export class Product {
 
   @OneToMany(() => OrderItem, (item) => item.product)
   order_items: OrderItem[];
+
+  @OneToMany(() => ProductMedia, (media) => media.product)
+  media: ProductMedia[];
+
+  @Column({ type: 'int', default: 0 })
+  likes: number;
 }

@@ -111,131 +111,142 @@ export class PurchaseEventPassUseCase {
       );
     }
 
-    // ==========================================================
-    // STATUS COMPLETED
-    // ==========================================================
-
-    const completedStatus =
-      await manager.findOne(TransactionState, {
-        where: {
-          code: StatusCode.COMPLETED,
-        },
-      });
-
-    if (!completedStatus) {
-      throw new ConflictException(
-        'Completed status not found',
-      );
-    }
-
-    // ==========================================================
-    // ORGANIZER WALLET
-    // ==========================================================
-
-    const organizerWallet =
-      await manager.findOne(Wallet, {
-        where: {
-          user_id: eventPass.created_by_id,
-        },
-        lock: {
-          mode: 'pessimistic_write',
-        },
-      });
-
-    if (!organizerWallet) {
-      throw new InternalServerErrorException(
-        'Organizer wallet not found',
-      );
-    }
-
-    // ==========================================================
-    // SALE TYPE
-    // ==========================================================
-
-    const saleType =
-      await manager.findOne(TransactionType, {
-        where: {
-          code: TransactionCode.SALE_EVENTPASS,
-        },
-      });
-
-    if (!saleType) {
-      throw new ConflictException(
-        'SALE_EVENTPASS type not found',
-      );
-    }
-
     const amountUsd =
       Number(eventPass.total_usd ?? eventPass.price_usd);
 
-    // ==========================================================
-    // INTERNAL WALLET DEBIT
-    // ==========================================================
+    console.log('\n====== DEBUG COMPRA EVENTPASS ======');
+    console.log('EventPass ID:', eventPass.id);
+    console.log('EventPass Cargado completo:', JSON.stringify(eventPass, null, 2));
+    console.log('Valor raw total_usd:', eventPass.total_usd, ' (Type:', typeof eventPass.total_usd, ')');
+    console.log('Valor raw price_usd:', eventPass.price_usd, ' (Type:', typeof eventPass.price_usd, ')');
+    console.log('amountUsd calculado (despues de Number):', amountUsd, ' (Type:', typeof amountUsd, ')');
+    console.log('¿Entra al bloque financiero (amountUsd > 0)?:', amountUsd > 0);
+    console.log('====================================\n');
 
-    if (paymentProvider === PaymentProviderEnum.WALLET) {
-      const userWallet = await manager.findOne(Wallet, {
-        where: {
-          user_id: userId,
-        },
-      });
+    if (amountUsd > 0) {
+      // ==========================================================
+      // STATUS COMPLETED
+      // ==========================================================
 
-      if (!userWallet) {
-        throw new NotFoundException('User wallet not found');
+      const completedStatus =
+        await manager.findOne(TransactionState, {
+          where: {
+            code: StatusCode.COMPLETED,
+          },
+        });
+
+      if (!completedStatus) {
+        throw new ConflictException(
+          'Completed status not found',
+        );
       }
 
-      await this.walletPaymentService.processPayment(
-        manager,
-        userWallet.id,
-        amountUsd,
-        {
-          type_id: saleType.id,
-          status_id: completedStatus.id,
-          reference: reference ?? `EVENTPASS-${eventPass.id}`,
-          external_provider: paymentProvider,
-          external_reference_id: paymentReferenceId,
+      // ==========================================================
+      // ORGANIZER WALLET
+      // ==========================================================
+
+      const organizerWallet =
+        await manager.findOne(Wallet, {
+          where: {
+            user_id: eventPass.created_by_id,
+          },
+          lock: {
+            mode: 'pessimistic_write',
+          },
+        });
+
+      if (!organizerWallet) {
+        throw new InternalServerErrorException(
+          'Organizer wallet not found',
+        );
+      }
+
+      // ==========================================================
+      // SALE TYPE
+      // ==========================================================
+
+      const saleType =
+        await manager.findOne(TransactionType, {
+          where: {
+            code: TransactionCode.SALE_EVENTPASS,
+          },
+        });
+
+      if (!saleType) {
+        throw new ConflictException(
+          'SALE_EVENTPASS type not found',
+        );
+      }
+
+      // ==========================================================
+      // INTERNAL WALLET DEBIT
+      // ==========================================================
+
+      if (paymentProvider === PaymentProviderEnum.WALLET) {
+        const userWallet = await manager.findOne(Wallet, {
+          where: {
+            user_id: userId,
+          },
+        });
+
+        if (!userWallet) {
+          throw new NotFoundException('User wallet not found');
         }
+
+        await this.walletPaymentService.processPayment(
+          manager,
+          userWallet.id,
+          amountUsd,
+          {
+            type_id: saleType.id,
+            status_id: completedStatus.id,
+            reference: reference ?? `EVENTPASS-${eventPass.id}`,
+            external_provider: paymentProvider,
+            external_reference_id: paymentReferenceId,
+          }
+        );
+      }
+
+      // ==========================================================
+      // CREDIT ORGANIZER
+      // ==========================================================
+
+      organizerWallet.usd_balance =
+        Number(organizerWallet.usd_balance) +
+        amountUsd;
+
+      await manager.save(
+        Wallet,
+        organizerWallet,
       );
+
+      // ==========================================================
+      // TRANSACTION
+      // ==========================================================
+
+      await manager.save(Transaction, {
+        wallet_id: organizerWallet.id,
+
+        type_id: saleType.id,
+
+        status_id: completedStatus.id,
+
+        amount_usd: amountUsd,
+
+        post_balance:
+          organizerWallet.usd_balance,
+
+        reference:
+          reference ??
+          `EVENTPASS-${eventPass.id}`,
+
+        external_provider:
+          paymentProvider,
+
+        external_reference_id:
+          paymentReferenceId,
+      });
     }
-
-    // ==========================================================
-    // CREDIT ORGANIZER
-    // ==========================================================
-
-    organizerWallet.usd_balance =
-      Number(organizerWallet.usd_balance) +
-      amountUsd;
-
-    await manager.save(
-      Wallet,
-      organizerWallet,
-    );
-
-    // ==========================================================
-    // TRANSACTION
-    // ==========================================================
-
-    await manager.save(Transaction, {
-      wallet_id: organizerWallet.id,
-
-      type_id: saleType.id,
-
-      status_id: completedStatus.id,
-
-      amount_usd: amountUsd,
-
-      post_balance:
-        organizerWallet.usd_balance,
-
-      reference:
-        reference ??
-        `EVENTPASS-${eventPass.id}`,
-
-      external_provider:
-        paymentProvider,
-
-      external_reference_id:
-        paymentReferenceId,
-    });
 
     // ==========================================================
     // USER EVENT PASS

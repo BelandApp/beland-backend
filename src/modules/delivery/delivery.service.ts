@@ -1,6 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { UserAddressService } from '../user-address/user-address.service';
+import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 
 @Injectable()
 export class DeliveryService {
@@ -8,7 +10,11 @@ export class DeliveryService {
   private readonly baseUrl = process.env.MAPBOX_URL;
   private readonly costBaseDelivery = 1.5;
 
-  constructor(private readonly http: HttpService) {}
+  constructor(
+    private readonly http: HttpService,
+    private readonly userAddressService: UserAddressService,
+    private readonly superadminConfigService: SuperadminConfigService,
+  ) {}
 
   async getRouteData(
     driver: { lat: number; lon: number },
@@ -78,5 +84,36 @@ export class DeliveryService {
       durationMin,
       cost: Number(cost.toFixed(2)),
     };
+  }
+
+  async calculateFinalDeliveryForAddress(customerAddressId: string): Promise<{ distanceKm: number, durationMin: number, cost: number }> {
+    const customerAddress = await this.userAddressService.findOne(customerAddressId);
+    if (!customerAddress || !customerAddress.latitude || !customerAddress.longitude) {
+      throw new BadRequestException('La dirección de entrega no es válida o no tiene coordenadas');
+    }
+
+    const superadminId = this.superadminConfigService.getSuperadminId();
+    if (!superadminId) {
+      throw new InternalServerErrorException('No se ha configurado un SuperAdmin en el sistema');
+    }
+
+    const [superadminAddresses] = await this.userAddressService.findAll(superadminId, 1, 10);
+    if (!superadminAddresses || superadminAddresses.length === 0) {
+      throw new InternalServerErrorException('El SuperAdmin no tiene una dirección configurada');
+    }
+
+    const originAddress = superadminAddresses.find(a => a.isDefault === true);
+    if (!originAddress) {
+      throw new InternalServerErrorException('El SuperAdmin no tiene configurada una dirección principal (isDefault) para envíos');
+    }
+
+    if (!originAddress.latitude || !originAddress.longitude) {
+      throw new InternalServerErrorException('La dirección principal del SuperAdmin no tiene coordenadas configuradas');
+    }
+
+    return this.getDeliveryInfo(
+      { lat: Number(originAddress.latitude), lon: Number(originAddress.longitude) },
+      { lat: Number(customerAddress.latitude), lon: Number(customerAddress.longitude) }
+    );
   }
 }

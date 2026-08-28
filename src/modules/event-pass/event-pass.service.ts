@@ -30,10 +30,11 @@ export class EventPassService {
     pageNumber: number,
     limitNumber: number,
     filters?: EventPassFiltersDto,
+    isUserEndpoint: boolean = false,
   ): Promise<RespGetArrayDto<EventPass>> {
     this.logger.log(`🔍 Buscando entradas (página ${pageNumber}, límite ${limitNumber})`);
     try {
-      const response = await this.repository.findAll(pageNumber, limitNumber, filters);
+      const response = await this.repository.findAll(pageNumber, limitNumber, filters, isUserEndpoint);
       this.logger.log(`✅ ${response.data.length} entradas obtenidas correctamente`);
       return response;
     } catch (error) {

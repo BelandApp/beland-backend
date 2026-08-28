@@ -25,6 +25,9 @@ import { AuthController } from './auth.controller';
 import { WalletsModule } from 'src/modules/wallets/wallets.module';
 import { CartModule } from 'src/modules/cart/cart.module';
 import { Auth0Strategy } from './strategy/auth0.strategy';
+import { ExperiencesModule } from '../experiences/experiences.module';
+
+
 
 @Global()
 @Module({
@@ -47,6 +50,7 @@ import { Auth0Strategy } from './strategy/auth0.strategy';
     ConfigModule,
     HttpModule,
     RolesModule,
+    ExperiencesModule,
   ],
   controllers: [AuthController],
   providers: [

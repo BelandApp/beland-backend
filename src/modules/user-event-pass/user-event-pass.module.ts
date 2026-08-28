@@ -9,10 +9,13 @@ import { User } from '../users/entities/users.entity';
 import { UsersRepository } from '../users/users.repository';
 import { WalletsModule } from '../wallets/wallets.module';
 import { ConsumeEventPassUseCase } from './use-cases/consume-eventpass.use-case';
+import { ProcessPendingPurchasesUseCase } from '../experiences/use-cases/process-pending-purchases.use-case';
+import { GenerateOrangeRewardUseCase } from '../rewards/becoin-orange/use-cases/generate-orange-reward.use-case';
 
 @Module({
   imports: [TypeOrmModule.forFeature([UserEventPass, User]), WalletsModule],
   controllers: [UserEventPassController],
-  providers: [UserEventPassService, UserEventPassRepository, NotificationsGateway, UsersRepository, ConsumeEventPassUseCase],
+  providers: [UserEventPassService, UserEventPassRepository, NotificationsGateway, 
+    UsersRepository, ConsumeEventPassUseCase, ProcessPendingPurchasesUseCase, GenerateOrangeRewardUseCase],
 })
 export class UserEventPassModule {}

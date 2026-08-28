@@ -30,6 +30,7 @@ import { RoleEnum } from '../roles/enum/role-validate.enum';
 import { UserProfile } from '../users/entities/profile-user.entity';
 import { Payload } from './dto/payload.dto';
 import { ValidProfileNames } from '../users/enums/profiles.enum';
+import { ProcessPendingPurchasesUseCase } from '../experiences/use-cases/process-pending-purchases.use-case';
 
 @Injectable()
 export class AuthService {
@@ -44,6 +45,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
     public dataSource: DataSource,
+    private readonly processPendingPurchasesUseCase: ProcessPendingPurchasesUseCase,
   ) {}
 
   async getProfile (user_id: string): Promise<User> {
@@ -441,6 +443,16 @@ if (existingVerification) {
       this.logger.log(
         `signupRegister(): Usuario ${userSavePayload.email} registrado exitosamente.`,
       );
+
+      try {
+        const wallet = await this.dataSource.manager.findOne(Wallet, { where: { user_id: userSavePayload.id } });
+        if (wallet) {
+          // Acá enviamos también el teléfono, ya que la compra exige teléfono
+          await this.processPendingPurchasesUseCase.execute(userSavePayload.email, userSavePayload.phone.toString(), userSavePayload.id, wallet.id);
+        }
+      } catch (err) {
+        this.logger.error(`Fallo al procesar compras pendientes post-registro (Signup) para ${userSavePayload.email}`, err);
+      }
 
       if (!userSavePayload) {
         throw new InternalServerErrorException(

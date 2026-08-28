@@ -427,4 +427,21 @@ export class ProductsController {
       throw error;
     }
   }
+
+  // --- RUTAS SOCIALES ---
+
+  @Post(':id/like')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Dar like a un producto (Público)' })
+  @ApiResponse({ status: 200, description: 'Like registrado exitosamente.' })
+  async likeProduct(@Param('id', ParseUUIDPipe) id: string) {
+    this.logger.log(`POST /products/${id}/like: Incrementando likes.`);
+    try {
+      const likes = await this.productsService.likeProduct(id);
+      return { likes };
+    } catch (error: any) {
+      this.logger.error(`Error al dar like: ${(error as Error).message}`);
+      throw error;
+    }
+  }
 }

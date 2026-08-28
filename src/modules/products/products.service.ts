@@ -12,6 +12,7 @@ import { OrderDto } from 'src/common/dto/order.dto';
 import { Product } from './entities/product.entity';
 import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
 
+
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
@@ -74,5 +75,21 @@ export class ProductsService {
   // Nuevo método de servicio para buscar soft-deleted
   async findSoftDeletedProducts(): Promise<Product[]> {
     return this.repo.findSoftDeleted();
+  }
+
+  // SOCIAL LIKES
+  async likeProduct(productId: string): Promise<number> {
+    // Verificar que existe
+    const product = await this.repo.findOne({ where: { id: productId } });
+    if (!product) {
+      throw new NotFoundException(`Product ${productId} not found`);
+    }
+
+    // Incrementar atómicamente el contador (evita condiciones de carrera)
+    await this.repo.manager.increment(Product, { id: productId }, 'likes', 1);
+
+    // Obtener el valor actualizado
+    const updatedProduct = await this.repo.findOne({ where: { id: productId }, select: ['likes'] });
+    return updatedProduct?.likes || 0;
   }
 }

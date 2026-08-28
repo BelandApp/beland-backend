@@ -8,8 +8,6 @@ import {
 import { Cart } from './entities/cart.entity';
 import { CartsRepository } from './cart.repository';
 import { DeliveryService } from '../delivery/delivery.service';
-import { SuperadminConfigService } from '../superadmin-config/superadmin-config.service';
-import { UserAddressService } from '../user-address/user-address.service';
 
 @Injectable()
 export class CartsService {
@@ -18,8 +16,6 @@ export class CartsService {
   constructor(
     private readonly repository: CartsRepository,
     private readonly deliveryService: DeliveryService,
-    private readonly superadminConfigService: SuperadminConfigService,
-    private readonly userAddressService: UserAddressService,
   ) {}
 
   async findByUser(user_id: string): Promise<Cart> {
@@ -94,34 +90,7 @@ export class CartsService {
         throw new BadRequestException('El carrito no tiene una dirección de entrega asignada');
       }
 
-      const customerAddress = await this.userAddressService.findOne(cart.address_id);
-      if (!customerAddress || !customerAddress.latitude || !customerAddress.longitude) {
-        throw new BadRequestException('La dirección de entrega no es válida o no tiene coordenadas');
-      }
-
-      const superadminId = this.superadminConfigService.getSuperadminId();
-      if (!superadminId) {
-        throw new InternalServerErrorException('No se ha configurado un SuperAdmin en el sistema');
-      }
-
-      const [superadminAddresses] = await this.userAddressService.findAll(superadminId, 1, 10);
-      if (!superadminAddresses || superadminAddresses.length === 0) {
-        throw new InternalServerErrorException('El SuperAdmin no tiene una dirección configurada');
-      }
-
-      let originAddress = superadminAddresses.find(a => a.isDefault);
-      if (!originAddress) {
-        originAddress = superadminAddresses[0];
-      }
-
-      if (!originAddress.latitude || !originAddress.longitude) {
-        throw new InternalServerErrorException('La dirección del SuperAdmin no tiene coordenadas configuradas');
-      }
-
-      const deliveryInfo = await this.deliveryService.getDeliveryInfo(
-        { lat: Number(originAddress.latitude), lon: Number(originAddress.longitude) },
-        { lat: Number(customerAddress.latitude), lon: Number(customerAddress.longitude) },
-      );
+      const deliveryInfo = await this.deliveryService.calculateFinalDeliveryForAddress(cart.address_id);
 
       await this.repository.update(id, {
         distance_km: deliveryInfo.distanceKm,
