@@ -2,6 +2,7 @@ export enum RoleEnum {
   USER = 'USER',
   ADMIN = 'ADMIN',
   SUPERADMIN = 'SUPERADMIN',
+  COMMERCE= "COMMERCE"
 }
 
 export type ValidRoleNames = `${RoleEnum}`;
