@@ -19,7 +19,7 @@ import { BecoinOrangeModule } from '../rewards/becoin-orange/becoin-orange.modul
     SuperadminModule,
     BecoinOrangeModule,
   ],
-  controllers: [ExperiencesController, ExperiencePurchasesController],
+  controllers: [ExperiencePurchasesController, ExperiencesController],
   providers: [ExperiencesService, ExperiencePurchasesService, ProcessPendingPurchasesUseCase],
   exports: [ExperiencesService, ExperiencePurchasesService, ProcessPendingPurchasesUseCase],
 })

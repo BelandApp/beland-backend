@@ -27,12 +27,31 @@ export class ExperiencePurchasesController {
     };
   }
 
+  @Patch(':id/status/paid')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(FlexibleAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
+  @ApiOperation({ summary: 'Cambiar el estado de una reserva a PAGADO' })
+  @ApiResponse({ status: 200, description: 'Estado actualizado' })
+  @ApiResponse({ status: 400, description: 'Transición inválida o reserva ya procesada' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'No autorizado.' })
+  async markAsPaid(@Param('id', ParseUUIDPipe) id: string) {
+    const purchase = await this.purchasesService.updateStatusToPaid(id);
+    return {
+      purchase_id: purchase.id,
+      status: purchase.status,
+      orange_reward_amount: purchase.orange_reward_amount,
+    };
+  }
+
   @Patch(':id/status/delivered')
   @HttpCode(HttpStatus.OK)
   @UseGuards(FlexibleAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiOperation({ summary: 'Cambiar el estado de una compra o reserva a ENTREGADO' })
   @ApiResponse({ status: 200, description: 'Estado actualizado' })
+  @ApiResponse({ status: 400, description: 'Transición inválida' })
   @ApiResponse({ status: 401, description: 'No autenticado.' })
   @ApiResponse({ status: 403, description: 'No autorizado.' })
   async markAsDelivered(@Param('id', ParseUUIDPipe) id: string) {

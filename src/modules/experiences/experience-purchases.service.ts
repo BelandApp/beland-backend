@@ -141,13 +141,59 @@ export class ExperiencePurchasesService {
     });
   }
 
+  async updateStatusToPaid(id: string): Promise<ExperiencePurchase> {
+    return await this.dataSource.transaction(async (manager) => {
+      const purchase = await manager.findOne(ExperiencePurchase, {
+        where: { id },
+      });
+
+      if (!purchase) {
+        throw new BadRequestException(`Compra ${id} no encontrada.`);
+      }
+
+      if (purchase.status === 'PAGADO') {
+        throw new BadRequestException(`La compra ya se encuentra en estado PAGADO.`);
+      }
+
+      if (purchase.status === 'ENTREGADO') {
+        throw new BadRequestException(`La compra ya fue ENTREGADA, no se puede volver a PAGADO.`);
+      }
+
+      if (purchase.status !== 'RESERVADO' || !purchase.is_reserved) {
+        throw new BadRequestException(`Solo se puede marcar como PAGADO una compra en estado RESERVADO.`);
+      }
+
+      // Calculate Orange Reward
+      let orangeAmount = 0;
+      let providerEnum = PaymentProviderEnum.PAYPHONE;
+      if (purchase.payment_method === 'TRANSFER') {
+         providerEnum = PaymentProviderEnum.TRANSFER;
+      }
+      
+      const commissionPercent = this.superadminConfig.getRechargeCommission(providerEnum);
+      if (commissionPercent > 0) {
+        const priceOneBecoin = Number(this.superadminConfig.getPriceOneBecoin());
+        const totalBeCoins = Math.floor(Number(purchase.total_amount) / priceOneBecoin);
+        orangeAmount = Math.floor(totalBeCoins * commissionPercent);
+      }
+
+      purchase.status = 'PAGADO';
+      purchase.orange_reward_amount = orangeAmount;
+      
+      return await manager.save(ExperiencePurchase, purchase);
+    });
+  }
+
   async updateStatusToDelivered(id: string): Promise<ExperiencePurchase> {
     const purchase = await this.purchaseRepo.findOne({ where: { id } });
     if (!purchase) {
       throw new BadRequestException(`Compra ${id} no encontrada.`);
     }
     if (purchase.status === 'ENTREGADO') {
-      return purchase;
+      throw new BadRequestException(`La compra ya se encuentra en estado ENTREGADO.`);
+    }
+    if (purchase.status !== 'PAGADO' && purchase.status !== 'RESERVADO') {
+      throw new BadRequestException(`La compra no está en un estado válido para ser entregada.`);
     }
     purchase.status = 'ENTREGADO';
     return await this.purchaseRepo.save(purchase);
