@@ -80,6 +80,7 @@ async function bootstrap() {
       'https://beland-experience.netlify.app',
       'https://experiencies.beland.app',
       'https://be-p.store',
+      'https://beland-experiences-vert.vercel.app',
       /https:\/\/\w+\-beland\-\d+\.exp\.direct$/,
       /https:\/\/\w+\-anonymous\-\d+\.exp\.direct$/,
     ],
